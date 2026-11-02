@@ -1,0 +1,12 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Dependency install scripts stay disabled unless explicitly needed.
+# These packages ship prebuilt platform binaries and work without their scripts.
+allowBuilds:
+  esbuild: false
+  # preinstall only checks the Node version (.nvmrc already pins it)
+  prisma: false
+  # postinstall downloads the schema engine; the Prisma CLI fetches it on first use
+  '@prisma/engines': false

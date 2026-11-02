@@ -1,0 +1,10 @@
+pnpm-lock.yaml
+dist
+.next
+coverage
+.agile
+.claude
+.agents
+CLAUDE.md
+apps/web/AGENTS.md
+apps/api/src/generated

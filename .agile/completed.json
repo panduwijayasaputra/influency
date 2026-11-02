@@ -1,0 +1,25 @@
+{
+  "stories": [
+    {
+      "id": "US-001",
+      "feature": "project-foundation",
+      "title": "Monorepo Workspace & Tooling",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-03"
+    },
+    {
+      "id": "US-002",
+      "feature": "project-foundation",
+      "title": "Local Infrastructure & Environment Config",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-03"
+    },
+    {
+      "id": "US-003",
+      "feature": "project-foundation",
+      "title": "API Skeleton: Health, Request ID & Error Format",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-03"
+    }
+  ]
+}

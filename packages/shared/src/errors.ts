@@ -1,0 +1,37 @@
+import { z } from 'zod';
+
+/** API error codes with their HTTP status and default user-facing message (Bahasa Indonesia). */
+export const ERRORS = {
+  VALIDATION_FAILED: { status: 400, message: 'Data yang dikirim tidak valid.' },
+  AUTH_REQUIRED: { status: 401, message: 'Silakan masuk terlebih dahulu.' },
+  FORBIDDEN: { status: 403, message: 'Anda tidak memiliki akses.' },
+  CREATOR_NOT_APPROVED: { status: 403, message: 'Profil kreator belum disetujui.' },
+  NOT_FOUND: { status: 404, message: 'Data tidak ditemukan.' },
+  POST_NOT_AVAILABLE: { status: 404, message: 'Postingan tidak tersedia.' },
+  TOPUP_NOT_FOUND: { status: 404, message: 'Top-up tidak ditemukan.' },
+  INSUFFICIENT_COINS: { status: 402, message: 'Saldo Koin tidak cukup.' },
+  OFFER_CHANGED: {
+    status: 409,
+    message: 'Harga atau penawaran telah berubah. Silakan periksa kembali.',
+  },
+  ALREADY_ENTITLED: { status: 409, message: 'Anda sudah memiliki akses ke konten ini.' },
+  DUPLICATE_REQUEST: { status: 409, message: 'Permintaan ganda terdeteksi.' },
+  PAYMENT_PENDING: { status: 409, message: 'Pembayaran masih diproses.' },
+  PAYOUT_ON_HOLD: { status: 409, message: 'Pencairan sedang ditahan.' },
+  PAYMENT_VERIFICATION_FAILED: { status: 400, message: 'Verifikasi pembayaran gagal.' },
+  INTERNAL_ERROR: { status: 500, message: 'Terjadi kesalahan pada server. Silakan coba lagi.' },
+} as const satisfies Record<string, { status: number; message: string }>;
+
+export type ErrorCode = keyof typeof ERRORS;
+
+/** Body of every API error response (handoff §11.5). `details` is null when there are none. */
+export const errorResponseSchema = z.object({
+  error: z.object({
+    code: z.string(),
+    message: z.string(),
+    requestId: z.string(),
+    details: z.record(z.string(), z.unknown()).nullable(),
+  }),
+});
+
+export type ErrorResponse = z.infer<typeof errorResponseSchema>;
