@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
 import type { Writable } from 'node:stream';
 import fastifyCookie from '@fastify/cookie';
+import fastifyRateLimit from '@fastify/rate-limit';
 import { type FastifyRequest, LogController } from 'fastify';
 import type { NestApplicationOptions } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
@@ -52,6 +53,8 @@ export function configureApp(app: NestFastifyApplication): NestFastifyApplicatio
   const fastify = app.getHttpAdapter().getInstance();
   // Queued by Fastify and loaded before ready(), so configureApp stays synchronous.
   void fastify.register(fastifyCookie);
+  // Opt-in per handler through @RateLimit + RateLimitGuard (createRateLimit), never global hooks.
+  void fastify.register(fastifyRateLimit, { global: false });
   // Raw image uploads (PUT /creators/me/avatar|banner, local-driver PUT /dev-storage/*); limits and types are checked in the services.
   fastify.addContentTypeParser(
     /^image\//,
@@ -79,7 +82,8 @@ export async function createApp(options?: NestApplicationOptions): Promise<NestF
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     createFastifyAdapter({ logger: options?.logger !== false }),
-    options,
+    // rawBody: signed webhooks are verified against the exact bytes (req.rawBody).
+    { ...options, rawBody: true },
   );
   return configureApp(app);
 }

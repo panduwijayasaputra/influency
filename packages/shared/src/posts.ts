@@ -9,12 +9,15 @@ export const POST_STATUSES = [
   'PROCESSING',
   'PENDING_REVIEW',
   'PUBLISHED',
-  'HIDDEN',
+  'ARCHIVED',
   'REMOVED',
 ] as const;
 export type PostStatus = (typeof POST_STATUSES)[number];
-/** Statuses in which visibility and media may change; live posts (PUBLISHED, PENDING_REVIEW) only allow caption edits. */
-export const POST_EDITABLE_STATUSES = ['DRAFT', 'HIDDEN'] as const satisfies readonly PostStatus[];
+/**
+ * Statuses in which visibility and media may change. PUBLISHED, PENDING_REVIEW and ARCHIVED allow caption (and offer
+ * price) edits only, so media someone paid for is never removed (US-047).
+ */
+export const POST_EDITABLE_STATUSES = ['DRAFT'] as const satisfies readonly PostStatus[];
 export const isPostEditable = (status: PostStatus): boolean =>
   (POST_EDITABLE_STATUSES as readonly PostStatus[]).includes(status);
 
@@ -38,23 +41,16 @@ export const updatePostSchema = z
   .refine((input) => Object.keys(input).length > 0, 'Tidak ada perubahan.');
 export type UpdatePostInput = z.infer<typeof updatePostSchema>;
 
-/** Placeholder limits (TBD business decision) for per-post unlock offers. */
-export const POST_OFFER_MIN_PRICE_COINS = 1;
-export const POST_OFFER_MAX_PRICE_COINS = 10_000;
-export const POST_OFFER_MIN_DURATION_DAYS = 1;
-export const POST_OFFER_MAX_DURATION_DAYS = 365;
-export const SECONDS_PER_DAY = 86_400;
+/** LOCKED (Monetization Spec v1 §2): one per-post unlock price in whole Koin; access is permanent. */
+export const POST_OFFER_MIN_PRICE_COINS = 5;
+export const POST_OFFER_MAX_PRICE_COINS = 1_000;
 
-/** Body of PUT /creators/me/posts/:id/offer. Whole Koin, whole days. */
-export const setPostOfferSchema = z.object({
+/** Body of PUT /creators/me/posts/:id/offer. Strict: unknown keys such as the old durationDays are rejected. */
+export const setPostOfferSchema = z.strictObject({
   priceCoins: z
     .int('Harga harus bilangan bulat Koin.')
     .min(POST_OFFER_MIN_PRICE_COINS, `Harga minimal ${POST_OFFER_MIN_PRICE_COINS} Koin.`)
     .max(POST_OFFER_MAX_PRICE_COINS, `Harga maksimal ${POST_OFFER_MAX_PRICE_COINS} Koin.`),
-  durationDays: z
-    .int('Durasi harus bilangan bulat hari.')
-    .min(POST_OFFER_MIN_DURATION_DAYS, `Durasi minimal ${POST_OFFER_MIN_DURATION_DAYS} hari.`)
-    .max(POST_OFFER_MAX_DURATION_DAYS, `Durasi maksimal ${POST_OFFER_MAX_DURATION_DAYS} hari.`),
 });
 export type SetPostOfferInput = z.infer<typeof setPostOfferSchema>;
 
@@ -62,10 +58,26 @@ export type SetPostOfferInput = z.infer<typeof setPostOfferSchema>;
 export const postOfferSchema = z.object({
   version: z.int(),
   priceCoins: z.int(),
-  durationSeconds: z.int(),
   createdAt: z.string(),
 });
 export type PostOffer = z.infer<typeof postOfferSchema>;
+
+/**
+ * Placeholder (TBD business decision): max bytes of a dedicated cover upload (5 MiB). Must stay ≤ the API's raw-image
+ * body cap. Accepted types are POST_IMAGE_TYPES.
+ */
+export const POST_COVER_MAX_BYTES = 5 * 1024 * 1024;
+
+/** Body of PUT /creators/me/posts/:id/cover: use one of the post's READY media as the cover source. */
+export const setPostCoverSchema = z.strictObject({ mediaId: z.uuid('Media tidak valid.') });
+export type SetPostCoverInput = z.infer<typeof setPostCoverSchema>;
+
+/** A premium post's cover: only its generated preview is ever served. mediaId is null for a dedicated upload. */
+export const postCoverSchema = z.object({
+  mediaId: z.string().nullable(),
+  previewUrl: z.string(),
+});
+export type PostCover = z.infer<typeof postCoverSchema>;
 
 /** The caller's own post (studio endpoints). Dates are ISO strings. */
 export const studioPostSchema = z.object({
@@ -74,7 +86,8 @@ export const studioPostSchema = z.object({
   visibility: z.enum(POST_VISIBILITIES),
   status: z.enum(POST_STATUSES),
   offer: postOfferSchema.nullable(),
-  /** First publish time; kept when a hidden post is published again. */
+  cover: postCoverSchema.nullable(),
+  /** First publish time; kept when an archived post is restored. */
   publishedAt: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -86,7 +99,7 @@ export type StudioPostList = z.infer<typeof studioPostListSchema>;
 /** Number of newest published posts the public feed returns. */
 export const PUBLIC_FEED_LIMIT = 30;
 
-/** Public feed item. Safe preview only: never media ids, keys or URLs. */
+/** Public feed item. Safe preview only: never media ids, keys, provider ids or original URLs. */
 export const publicPostSchema = z.object({
   id: z.string(),
   visibility: z.enum(POST_VISIBILITIES),
@@ -94,9 +107,32 @@ export const publicPostSchema = z.object({
   publishedAt: z.string(),
   imageCount: z.int(),
   videoCount: z.int(),
-  /** Current offer terms; null for FREE posts. */
-  offer: z.object({ priceCoins: z.int(), durationSeconds: z.int() }).nullable(),
+  /** Current offer price (access is permanent); null for FREE posts. */
+  offer: z.object({ priceCoins: z.int() }).nullable(),
+  /** PREMIUM only: URL of the generated (blurred) cover preview; null → generic locked placeholder. */
+  previewUrl: z.string().nullable(),
+  /** Likes of the post (US-051); shown on every published post, also to logged-out visitors. */
+  likeCount: z.int(),
 });
 export type PublicPost = z.infer<typeof publicPostSchema>;
 export const publicPostListSchema = z.object({ posts: z.array(publicPostSchema) });
 export type PublicPostList = z.infer<typeof publicPostListSchema>;
+
+/** GET /creators/:slug/posts/:postId. Like the feed item (no media refs); owner/admin may see non-published posts. */
+export const publicPostDetailSchema = publicPostSchema.extend({
+  status: z.enum(POST_STATUSES),
+  /** null only for a never-published post, visible to its owner/admin. */
+  publishedAt: z.string().nullable(),
+  /** full = show the media viewer; locked = paywall preview. (hidden is a 404.) */
+  access: z.enum(['full', 'locked']),
+  /**
+   * null = anonymous. canLike = the server-side like rule (published, and access or PREMIUM_LIKES_WITHOUT_ACCESS).
+   * canReport = published and not the viewer's own post (US-042).
+   */
+  viewer: z.object({ liked: z.boolean(), canLike: z.boolean(), canReport: z.boolean() }).nullable(),
+});
+export type PublicPostDetail = z.infer<typeof publicPostDetailSchema>;
+
+/** PUT / DELETE /posts/:id/like (US-051). */
+export const postLikeResponseSchema = z.object({ liked: z.boolean(), likeCount: z.int() });
+export type PostLikeResponse = z.infer<typeof postLikeResponseSchema>;

@@ -125,6 +125,76 @@
       "title": "Publish a Post",
       "status": "ready_for_uat",
       "completedAt": "2026-11-03"
+    },
+    {
+      "id": "US-046",
+      "feature": "creator-content",
+      "title": "Permanent Unlock Offer (5–1,000 Koin)",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-03"
+    },
+    {
+      "id": "US-047",
+      "feature": "creator-content",
+      "title": "Archive & Restore a Post",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-04"
+    },
+    {
+      "id": "US-020",
+      "feature": "content-access",
+      "title": "Server-Side Access Check",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-04"
+    },
+    {
+      "id": "US-048",
+      "feature": "creator-content",
+      "title": "Safe Cover & Blurred Preview for Premium Posts",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-04"
+    },
+    {
+      "id": "US-021",
+      "feature": "content-access",
+      "title": "Short-Lived Media Access for Entitled Viewers",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-04"
+    },
+    {
+      "id": "US-014",
+      "feature": "public-creator-page",
+      "title": "Post Detail & Paywall Preview",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-04"
+    },
+    {
+      "id": "US-049",
+      "feature": "creator-content",
+      "title": "Upload Limits & Stale Upload Cleanup",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-04"
+    },
+    {
+      "id": "US-051",
+      "feature": "engagement",
+      "title": "Like a Post",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-04"
+    },
+    {
+      "id": "US-052",
+      "feature": "engagement",
+      "title": "Comment on a Post",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-04"
+    },
+    {
+      "id": "US-042",
+      "feature": "admin-operations",
+      "title": "Report Content & Moderation Queue",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-04"
     }
   ]
 }

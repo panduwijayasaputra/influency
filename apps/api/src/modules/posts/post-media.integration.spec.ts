@@ -177,7 +177,16 @@ describe('studio post media', () => {
     expect(res.headers['cache-control']).toBe('no-store');
     const body = mediaUploadResponseSchema.parse(res.json());
     expect(Object.keys(res.json<{ media: object }>().media).sort()).toEqual(
-      ['byteSize', 'contentType', 'createdAt', 'durationSeconds', 'id', 'kind', 'status'].sort(),
+      [
+        'byteSize',
+        'contentType',
+        'createdAt',
+        'durationSeconds',
+        'id',
+        'kind',
+        'rejectionReason',
+        'status',
+      ].sort(),
     );
     expect(body.media).toMatchObject({
       kind: 'IMAGE',
@@ -278,8 +287,10 @@ describe('studio post media', () => {
     await vi.waitFor(() => expect(memory.objects.has(key)).toBe(false));
     expect((await prisma.mediaAsset.findUniqueOrThrow({ where: { id } })).status).toBe('REJECTED');
     expect(
-      studioMediaListSchema.parse((await list('creatorA', POSTS.a)).json()).media.map((m) => m.id),
-    ).not.toContain(id);
+      studioMediaListSchema
+        .parse((await list('creatorA', POSTS.a)).json())
+        .media.find((m) => m.id === id),
+    ).toMatchObject({ status: 'REJECTED', rejectionReason: 'UNSUPPORTED_TYPE' });
     expect(errorOf(await complete('creatorA', POSTS.a, id)).code).toBe('MEDIA_UPLOAD_MISSING');
     expect((await content('creatorA', POSTS.a, id)).statusCode).toBe(404);
   });

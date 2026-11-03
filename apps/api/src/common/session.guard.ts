@@ -40,3 +40,16 @@ export class SessionGuard implements CanActivate {
     return true;
   }
 }
+
+/** Public routes: sets `req.authSession` for a live session, otherwise continues anonymously. */
+@Injectable()
+export class OptionalSessionGuard extends SessionGuard {
+  override async canActivate(ctx: ExecutionContext): Promise<boolean> {
+    try {
+      await super.canActivate(ctx);
+    } catch (err) {
+      if (!(err instanceof DomainError && err.code === 'AUTH_REQUIRED')) throw err;
+    }
+    return true;
+  }
+}

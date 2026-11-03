@@ -21,6 +21,7 @@ const post: StudioPost = {
   visibility: 'FREE',
   status: 'DRAFT',
   offer: null,
+  cover: null,
   publishedAt: null,
   createdAt: '2026-11-03T00:00:00.000Z',
   updatedAt: '2026-11-03T00:00:00.000Z',
@@ -100,13 +101,19 @@ describe('PostForm', () => {
     expect(screen.getByRole('button', { name: 'Simpan' })).toBeEnabled();
   });
 
+  it('locks the visibility of an archived post', () => {
+    render(<PostForm post={{ ...post, status: 'ARCHIVED' }} />);
+    expect(screen.getByLabelText('Premium')).toBeDisabled();
+    expect(screen.getByText('Jenis post tidak bisa diubah setelah post terbit.')).toBeVisible();
+  });
+
   it('locks the visibility of a live post but still saves its caption', async () => {
     const live: StudioPost = { ...post, status: 'PUBLISHED' };
     const fetchMock = stubFetch(() => Promise.resolve(Response.json(live)));
     render(<PostForm post={live} />);
     expect(screen.getByLabelText('Gratis')).toBeDisabled();
     expect(screen.getByLabelText('Premium')).toBeDisabled();
-    expect(screen.getByText('Sembunyikan post dulu untuk mengubah jenis post.')).toBeVisible();
+    expect(screen.getByText('Jenis post tidak bisa diubah setelah post terbit.')).toBeVisible();
     fireEvent.change(screen.getByLabelText('Caption (opsional)'), { target: { value: 'Baru' } });
     fireEvent.click(screen.getByRole('button', { name: 'Simpan' }));
 

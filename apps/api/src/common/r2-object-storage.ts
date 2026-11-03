@@ -1,6 +1,12 @@
 import { AwsClient } from 'aws4fetch';
 import type { Env, R2_VARS } from './env.js';
-import type { ObjectHead, ObjectStorage, StoredObject, UploadUrl } from './object-storage.js';
+import type {
+  DownloadUrl,
+  ObjectHead,
+  ObjectStorage,
+  StoredObject,
+  UploadUrl,
+} from './object-storage.js';
 
 type R2Config = Pick<Env, (typeof R2_VARS)[number]>;
 
@@ -79,6 +85,16 @@ export class R2ObjectStorage implements ObjectStorage {
       aws: { signQuery: true, allHeaders: true },
     });
     return { url: signed.url, headers, expiresAt: new Date(Date.now() + expiresInSeconds * 1000) };
+  }
+
+  async createDownloadUrl(key: string, expiresInSeconds: number): Promise<DownloadUrl> {
+    const url = new URL(this.url(key));
+    url.searchParams.set('X-Amz-Expires', String(expiresInSeconds));
+    const signed = await this.client.sign(url.toString(), {
+      method: 'GET',
+      aws: { signQuery: true },
+    });
+    return { url: signed.url, expiresAt: new Date(Date.now() + expiresInSeconds * 1000) };
   }
 
   private url(key: string): string {

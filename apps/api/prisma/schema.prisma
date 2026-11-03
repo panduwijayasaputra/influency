@@ -34,6 +34,12 @@ model User {
   roles                     UserRole[]
   creatorProfile            CreatorProfile?
   creatorApplicationReviews CreatorApplicationReview[] @relation("CreatorApplicationReviewer")
+  postLikes                 PostLike[]
+  postComments              PostComment[]              @relation("PostCommentAuthor")
+  deletedPostComments       PostComment[]              @relation("PostCommentDeleter")
+  postReports               PostReport[]
+  moderationActionsTaken    ModerationAction[]         @relation("ModerationActionAdmin")
+  moderationActionsReceived ModerationAction[]         @relation("ModerationActionTarget")
 
   @@map("users")
 }
@@ -175,7 +181,7 @@ enum PostStatus {
   PROCESSING
   PENDING_REVIEW
   PUBLISHED
-  HIDDEN
+  ARCHIVED
   REMOVED
 
   @@map("post_status")
@@ -184,32 +190,44 @@ enum PostStatus {
 /// A creator's post (US-015). Owned by the creator profile; never deleted by the app.
 /// CHECK (migration): char_length(caption) <= 2000 (POST_CAPTION_MAX_LENGTH).
 model Post {
-  id               String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  creatorProfileId String         @map("creator_profile_id") @db.Uuid
-  visibility       PostVisibility
-  status           PostStatus     @default(DRAFT)
-  caption          String         @default("")
-  publishedAt      DateTime?      @map("published_at") @db.Timestamptz(3)
-  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
-  creatorProfile   CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Restrict)
-  media            MediaAsset[]
-  offers           PostOffer[]
+  id                String               @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  creatorProfileId  String               @map("creator_profile_id") @db.Uuid
+  visibility        PostVisibility
+  status            PostStatus           @default(DRAFT)
+  caption           String               @default("")
+  publishedAt       DateTime?            @map("published_at") @db.Timestamptz(3)
+  /// US-048: cover source when it is one of this post's media (null for a dedicated upload or no cover).
+  coverMediaId      String?              @map("cover_media_id") @db.Uuid
+  /// US-048: generated public-safe preview `post-previews/<uuid>`, new key on every change; never the source's key.
+  /// CHECK posts_cover_has_preview (migration): a media cover always has a preview.
+  previewKey        String?              @unique @map("preview_key")
+  createdAt         DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  creatorProfile    CreatorProfile       @relation(fields: [creatorProfileId], references: [id], onDelete: Restrict)
+  media             MediaAsset[]         @relation("PostMedia")
+  coverMedia        MediaAsset?          @relation("PostCover", fields: [coverMediaId], references: [id], onDelete: Restrict)
+  offers            PostOffer[]
+  archiveEpisodes   PostArchiveEpisode[]
+  likes             PostLike[]
+  comments          PostComment[]
+  reports           PostReport[]
+  moderationActions ModerationAction[]
 
   @@index([creatorProfileId, createdAt])
+  @@index([coverMediaId])
   @@map("posts")
 }
 
-/// US-018 per-post unlock pricing. Append-only: a change inserts version + 1; the current offer is the highest
+/// US-018/US-046 per-post unlock price; access is permanent and price_coins is CHECKed to 5–1,000 (LOCKED).
+/// Append-only: a change inserts version + 1; the current offer is the highest
 /// version. Purchases reference a row and snapshot its terms, so existing buyers keep what they paid for.
 model PostOffer {
-  id              String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  postId          String   @map("post_id") @db.Uuid
-  version         Int
-  priceCoins      BigInt   @map("price_coins")
-  durationSeconds Int      @map("duration_seconds")
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  post            Post     @relation(fields: [postId], references: [id], onDelete: Restrict)
+  id         String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  postId     String   @map("post_id") @db.Uuid
+  version    Int
+  priceCoins BigInt   @map("price_coins")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Restrict)
 
   @@unique([postId, version])
   @@map("post_offers")
@@ -233,28 +251,159 @@ enum MediaStatus {
   @@map("media_status")
 }
 
+/// US-049: why a media row is REJECTED (shown in the studio). Null on rows rejected before US-049.
+enum MediaRejectionReason {
+  UPLOAD_EXPIRED
+  PROCESSING_TIMEOUT
+  PROCESSING_FAILED
+  TOO_LARGE
+  TOO_LONG
+  UNSUPPORTED_TYPE
+
+  @@map("media_rejection_reason")
+}
+
 /// Media attached to a post (US-016 images, US-017 video). Bytes live in private storage / the video provider; the API decides access.
-/// CHECK (migration): media_assets_storage_ref — IMAGE has object_key only, VIDEO has video_uid only.
+/// CHECK (migration): media_assets_storage_ref — IMAGE has object_key only, VIDEO has video_uid only;
+/// media_assets_rejection_reason_status — a rejection reason only on REJECTED rows (US-049).
 model MediaAsset {
-  id              String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  postId          String      @map("post_id") @db.Uuid
+  id              String                @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  postId          String                @map("post_id") @db.Uuid
   kind            MediaKind
-  status          MediaStatus @default(PENDING_UPLOAD)
+  status          MediaStatus           @default(PENDING_UPLOAD)
   /// IMAGE only: server-generated `post-media/<uuid>`; never from the client.
-  objectKey       String?     @unique @map("object_key")
+  objectKey       String?               @unique @map("object_key")
   /// VIDEO only: provider video id (Stream uid / stub uuid). Never returned to clients.
-  videoUid        String?     @unique @map("video_uid")
+  videoUid        String?               @unique @map("video_uid")
   /// VIDEO only, once READY and the provider knows it.
-  durationSeconds Int?        @map("duration_seconds")
+  durationSeconds Int?                  @map("duration_seconds")
   /// Declared at upload request; replaced by the magic-byte type on READY.
-  contentType     String      @map("content_type")
+  contentType     String                @map("content_type")
   /// Declared at upload request; replaced by the stored size on READY.
-  byteSize        Int         @map("byte_size")
-  uploadExpiresAt DateTime    @map("upload_expires_at") @db.Timestamptz(3)
-  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
-  post            Post        @relation(fields: [postId], references: [id], onDelete: Restrict)
+  byteSize        Int                   @map("byte_size")
+  uploadExpiresAt DateTime              @map("upload_expires_at") @db.Timestamptz(3)
+  rejectionReason MediaRejectionReason? @map("rejection_reason")
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  post            Post                  @relation("PostMedia", fields: [postId], references: [id], onDelete: Restrict)
+  coverOf         Post[]                @relation("PostCover")
 
   @@index([postId, createdAt])
+  /// Stale-upload sweep (US-049).
+  @@index([status, uploadExpiresAt])
   @@map("media_assets")
+}
+
+/// US-047 archive history. Archive inserts an open episode; restore sets restored_at once; rows are never otherwise
+/// updated or deleted. Partial unique index (migration): one open episode per post. US-050 reads archived_at for grants.
+model PostArchiveEpisode {
+  id         String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  postId     String    @map("post_id") @db.Uuid
+  archivedAt DateTime  @default(now()) @map("archived_at") @db.Timestamptz(3)
+  restoredAt DateTime? @map("restored_at") @db.Timestamptz(3)
+  post       Post      @relation(fields: [postId], references: [id], onDelete: Restrict)
+
+  @@index([postId, archivedAt])
+  @@map("post_archive_episodes")
+}
+
+/// US-051: one like per (post, user); like = insert ON CONFLICT DO NOTHING, unlike = delete.
+model PostLike {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  postId    String   @map("post_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Restrict)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([postId, userId])
+  @@index([userId])
+  @@map("post_likes")
+}
+
+/// US-052: plain-text comment. Soft-deleted only (deleted_at); every read filters deleted_at IS NULL.
+/// CHECK post_comments_body_length (migration): char_length(body) BETWEEN 1 AND 500 (POST_COMMENT_MAX_LENGTH).
+/// CHECK post_comments_deleted_consistent (migration): deleted_at and deleted_by_user_id are set together.
+model PostComment {
+  id              String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  postId          String    @map("post_id") @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  body            String
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
+  deletedByUserId String?   @map("deleted_by_user_id") @db.Uuid
+  post            Post      @relation(fields: [postId], references: [id], onDelete: Restrict)
+  user            User      @relation("PostCommentAuthor", fields: [userId], references: [id], onDelete: Restrict)
+  deletedBy       User?     @relation("PostCommentDeleter", fields: [deletedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([postId, id])
+  @@index([userId, createdAt])
+  @@index([deletedByUserId])
+  @@map("post_comments")
+}
+
+enum PostReportReason {
+  SPAM
+  SEXUAL_CONTENT
+  VIOLENCE
+  HARASSMENT
+  ILLEGAL
+  COPYRIGHT
+  OTHER
+
+  @@map("post_report_reason")
+}
+
+enum ModerationActionType {
+  DISMISS
+  HIDE
+  UNHIDE
+  REMOVE
+  SUSPEND_USER
+  UNSUSPEND_USER
+
+  @@map("moderation_action_type")
+}
+
+/// US-042: append-only log of admin moderation decisions; never updated or deleted.
+/// CHECK moderation_actions_target (migration): post actions set post_id only, user actions target_user_id only.
+/// CHECK moderation_actions_note_length (migration): note ≤ 500 (MODERATION_NOTE_MAX_LENGTH).
+model ModerationAction {
+  id              String               @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  adminId         String               @map("admin_id") @db.Uuid
+  action          ModerationActionType
+  postId          String?              @map("post_id") @db.Uuid
+  targetUserId    String?              @map("target_user_id") @db.Uuid
+  note            String?
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  admin           User                 @relation("ModerationActionAdmin", fields: [adminId], references: [id], onDelete: Restrict)
+  post            Post?                @relation(fields: [postId], references: [id], onDelete: Restrict)
+  targetUser      User?                @relation("ModerationActionTarget", fields: [targetUserId], references: [id], onDelete: Restrict)
+  resolvedReports PostReport[]
+
+  @@index([adminId])
+  @@index([postId, createdAt])
+  @@index([targetUserId, createdAt])
+  @@map("moderation_actions")
+}
+
+/// US-042: a user's report on a post. Open while resolved_by_action_id is null; resolved once, never deleted.
+/// Partial UNIQUE post_reports_one_open (migration): one open report per (post, reporter).
+/// CHECKs (migration): note ≤ 500; reason OTHER has a note.
+model PostReport {
+  id                 String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  postId             String            @map("post_id") @db.Uuid
+  reporterId         String            @map("reporter_id") @db.Uuid
+  reason             PostReportReason
+  note               String?
+  resolvedByActionId String?           @map("resolved_by_action_id") @db.Uuid
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  post               Post              @relation(fields: [postId], references: [id], onDelete: Restrict)
+  reporter           User              @relation(fields: [reporterId], references: [id], onDelete: Restrict)
+  resolvedByAction   ModerationAction? @relation(fields: [resolvedByActionId], references: [id], onDelete: Restrict)
+
+  @@index([postId, createdAt])
+  @@index([reporterId])
+  @@index([resolvedByActionId])
+  @@map("post_reports")
 }

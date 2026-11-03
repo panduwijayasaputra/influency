@@ -35,9 +35,26 @@ describe('parseEnv', () => {
       UPLOAD_URL_TTL_SECONDS: 300,
       VIDEO_DRIVER: 'stub',
       VIDEO_UPLOAD_TTL_SECONDS: 1800,
+      VIDEO_PROCESSING_TIMEOUT_SECONDS: 7200,
+      MEDIA_SWEEP_INTERVAL_SECONDS: 300,
+      MEDIA_ACCESS_TTL_SECONDS: 1800,
       POST_MODERATION_REQUIRED: false,
+      PREMIUM_COVER_CLEAR_ALLOWED: false,
+      PREMIUM_LIKES_WITHOUT_ACCESS: false,
+      PREMIUM_COMMENTS_READ_WITHOUT_ACCESS: false,
+      PREMIUM_COMMENTS_WRITE_WITHOUT_ACCESS: false,
+      COMMENT_RATE_LIMIT_PER_MINUTE: 10,
       MIDTRANS_IS_PRODUCTION: false,
     });
+  });
+
+  it('accepts a disabled media sweep and bounds the media cleanup settings', () => {
+    const env = parseEnv({ ...BASE, MEDIA_SWEEP_INTERVAL_SECONDS: '0' });
+    expect(env.MEDIA_SWEEP_INTERVAL_SECONDS).toBe(0);
+    expect(env.CLOUDFLARE_STREAM_WEBHOOK_SECRET).toBeUndefined();
+    expect(() => parseEnv({ ...BASE, MEDIA_SWEEP_INTERVAL_SECONDS: '3601' })).toThrow();
+    expect(() => parseEnv({ ...BASE, VIDEO_PROCESSING_TIMEOUT_SECONDS: '599' })).toThrow();
+    expect(() => parseEnv({ ...BASE, VIDEO_PROCESSING_TIMEOUT_SECONDS: '86401' })).toThrow();
   });
 
   it('defaults to local storage without any R2 variables', () => {
@@ -83,6 +100,17 @@ describe('parseEnv', () => {
     expect(() => parseEnv({ ...BASE, UPLOAD_URL_TTL_SECONDS: ttl })).toThrow(
       /- UPLOAD_URL_TTL_SECONDS:/,
     );
+  });
+
+  it('bounds MEDIA_ACCESS_TTL_SECONDS to 10–30 minutes', () => {
+    expect(parseEnv({ ...BASE, MEDIA_ACCESS_TTL_SECONDS: '600' }).MEDIA_ACCESS_TTL_SECONDS).toBe(
+      600,
+    );
+    for (const value of ['599', '1801']) {
+      expect(() => parseEnv({ ...BASE, MEDIA_ACCESS_TTL_SECONDS: value })).toThrow(
+        'MEDIA_ACCESS_TTL_SECONDS',
+      );
+    }
   });
 
   it('rejects an unknown STORAGE_DRIVER', () => {
@@ -145,6 +173,44 @@ describe('parseEnv', () => {
     );
     expect(() => parseEnv({ ...BASE, POST_MODERATION_REQUIRED: 'yes' })).toThrow(
       /- POST_MODERATION_REQUIRED:/,
+    );
+  });
+
+  it('parses PREMIUM_LIKES_WITHOUT_ACCESS (default false = only viewers with access)', () => {
+    expect(parseEnv(BASE).PREMIUM_LIKES_WITHOUT_ACCESS).toBe(false);
+    expect(
+      parseEnv({ ...BASE, PREMIUM_LIKES_WITHOUT_ACCESS: 'true' }).PREMIUM_LIKES_WITHOUT_ACCESS,
+    ).toBe(true);
+    expect(() => parseEnv({ ...BASE, PREMIUM_LIKES_WITHOUT_ACCESS: '1' })).toThrow(
+      /- PREMIUM_LIKES_WITHOUT_ACCESS:/,
+    );
+  });
+
+  it.each([
+    'PREMIUM_COMMENTS_READ_WITHOUT_ACCESS',
+    'PREMIUM_COMMENTS_WRITE_WITHOUT_ACCESS',
+  ] as const)('parses %s (default false = only viewers with access)', (name) => {
+    expect(parseEnv(BASE)[name]).toBe(false);
+    expect(parseEnv({ ...BASE, [name]: 'true' })[name]).toBe(true);
+    expect(() => parseEnv({ ...BASE, [name]: '1' })).toThrow(new RegExp(`- ${name}:`));
+  });
+
+  it('parses COMMENT_RATE_LIMIT_PER_MINUTE (default 10, at least 1)', () => {
+    expect(
+      parseEnv({ ...BASE, COMMENT_RATE_LIMIT_PER_MINUTE: '3' }).COMMENT_RATE_LIMIT_PER_MINUTE,
+    ).toBe(3);
+    expect(() => parseEnv({ ...BASE, COMMENT_RATE_LIMIT_PER_MINUTE: '0' })).toThrow(
+      /- COMMENT_RATE_LIMIT_PER_MINUTE:/,
+    );
+  });
+
+  it('parses PREMIUM_COVER_CLEAR_ALLOWED (default false = blurred only)', () => {
+    expect(parseEnv(BASE).PREMIUM_COVER_CLEAR_ALLOWED).toBe(false);
+    expect(
+      parseEnv({ ...BASE, PREMIUM_COVER_CLEAR_ALLOWED: 'true' }).PREMIUM_COVER_CLEAR_ALLOWED,
+    ).toBe(true);
+    expect(() => parseEnv({ ...BASE, PREMIUM_COVER_CLEAR_ALLOWED: '1' })).toThrow(
+      /- PREMIUM_COVER_CLEAR_ALLOWED:/,
     );
   });
 

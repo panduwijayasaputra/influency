@@ -5,10 +5,12 @@ import { CsrfGuard } from './csrf.guard.js';
 import { ENV, type Env, parseEnv } from './env.js';
 import { LocalObjectStorage } from './local-object-storage.js';
 import { OBJECT_STORAGE, type ObjectStorage } from './object-storage.js';
+import { PreviewGenerator } from './preview-generator.js';
 import { PrismaService } from './prisma.service.js';
 import { R2ObjectStorage } from './r2-object-storage.js';
 import { AdminGuard, ApprovedCreatorGuard } from './role.guards.js';
-import { SessionGuard } from './session.guard.js';
+import { RateLimitGuard } from './rate-limit.guard.js';
+import { OptionalSessionGuard, SessionGuard } from './session.guard.js';
 import { StubVideoProvider } from './stub-video-provider.js';
 import { VIDEO_PROVIDER } from './video-provider.js';
 
@@ -33,7 +35,10 @@ import { VIDEO_PROVIDER } from './video-provider.js';
       inject: [ENV, OBJECT_STORAGE],
     },
     PrismaService,
+    PreviewGenerator,
     SessionGuard,
+    OptionalSessionGuard,
+    RateLimitGuard,
     AdminGuard,
     ApprovedCreatorGuard,
     { provide: APP_GUARD, useClass: CsrfGuard },
@@ -43,7 +48,10 @@ import { VIDEO_PROVIDER } from './video-provider.js';
     OBJECT_STORAGE,
     VIDEO_PROVIDER,
     PrismaService,
+    PreviewGenerator,
     SessionGuard,
+    OptionalSessionGuard,
+    RateLimitGuard,
     AdminGuard,
     ApprovedCreatorGuard,
   ],

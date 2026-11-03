@@ -4,7 +4,12 @@ import {
   isPostEditable,
   POST_CAPTION_MAX_LENGTH,
   POST_STATUSES,
+  postLikeResponseSchema,
+  publicPostDetailSchema,
+  publicPostSchema,
+  setPostCoverSchema,
   setPostOfferSchema,
+  studioPostSchema,
   updatePostSchema,
 } from './index.js';
 
@@ -59,31 +64,123 @@ describe('updatePostSchema', () => {
 });
 
 describe('setPostOfferSchema', () => {
-  it.each([
-    { priceCoins: 1, durationDays: 1 },
-    { priceCoins: 10_000, durationDays: 365 },
-  ])('accepts the limits %j', (input) => {
+  it.each([{ priceCoins: 5 }, { priceCoins: 1_000 }])('accepts the limits %j', (input) => {
     expect(setPostOfferSchema.parse(input)).toEqual(input);
   });
 
   it.each([
-    [{ priceCoins: 0, durationDays: 7 }, 'priceCoins', 'Harga minimal 1 Koin.'],
-    [{ priceCoins: -1, durationDays: 7 }, 'priceCoins', 'Harga minimal 1 Koin.'],
-    [{ priceCoins: 10_001, durationDays: 7 }, 'priceCoins', 'Harga maksimal 10000 Koin.'],
-    [{ priceCoins: 1.5, durationDays: 7 }, 'priceCoins', 'Harga harus bilangan bulat Koin.'],
-    [{ priceCoins: '5', durationDays: 7 }, 'priceCoins', 'Harga harus bilangan bulat Koin.'],
-    [{ durationDays: 7 }, 'priceCoins', 'Harga harus bilangan bulat Koin.'],
-    [{ priceCoins: 5, durationDays: 0 }, 'durationDays', 'Durasi minimal 1 hari.'],
-    [{ priceCoins: 5, durationDays: 366 }, 'durationDays', 'Durasi maksimal 365 hari.'],
-    [{ priceCoins: 5, durationDays: 0.5 }, 'durationDays', 'Durasi harus bilangan bulat hari.'],
+    [{ priceCoins: 4 }, 'priceCoins', 'Harga minimal 5 Koin.'],
+    [{ priceCoins: 0 }, 'priceCoins', 'Harga minimal 5 Koin.'],
+    [{ priceCoins: 1_001 }, 'priceCoins', 'Harga maksimal 1000 Koin.'],
+    [{ priceCoins: 1.5 }, 'priceCoins', 'Harga harus bilangan bulat Koin.'],
+    [{ priceCoins: '5' }, 'priceCoins', 'Harga harus bilangan bulat Koin.'],
+    [{}, 'priceCoins', 'Harga harus bilangan bulat Koin.'],
   ])('rejects %j', (input, path, message) => {
     const result = setPostOfferSchema.safeParse(input);
     expect(result.error?.issues[0]).toMatchObject({ path: [path], message });
+  });
+
+  it('rejects an access duration (offers are permanent)', () => {
+    const result = setPostOfferSchema.safeParse({ priceCoins: 5, durationDays: 7 });
+    expect(result.error?.issues[0]).toMatchObject({
+      code: 'unrecognized_keys',
+      keys: ['durationDays'],
+    });
   });
 });
 
 describe('isPostEditable', () => {
   it.each(POST_STATUSES)('%s', (status) => {
-    expect(isPostEditable(status)).toBe(status === 'DRAFT' || status === 'HIDDEN');
+    expect(isPostEditable(status)).toBe(status === 'DRAFT');
+  });
+});
+
+describe('setPostCoverSchema', () => {
+  const mediaId = '0190a000-0000-7000-8000-000000240001';
+
+  it('accepts a media uuid', () => {
+    expect(setPostCoverSchema.parse({ mediaId })).toEqual({ mediaId });
+  });
+
+  it.each([{ mediaId: 'abc' }, {}, { mediaId, atSeconds: 3 }])('rejects %j', (input) => {
+    expect(setPostCoverSchema.safeParse(input).success).toBe(false);
+  });
+});
+
+describe('cover fields', () => {
+  const studio = {
+    id: 'p',
+    caption: '',
+    visibility: 'PREMIUM',
+    status: 'DRAFT',
+    offer: null,
+    publishedAt: null,
+    createdAt: 'c',
+    updatedAt: 'u',
+  };
+  const publicPost = {
+    id: 'p',
+    visibility: 'PREMIUM',
+    caption: '',
+    publishedAt: 'p',
+    imageCount: 1,
+    videoCount: 0,
+    offer: { priceCoins: 5 },
+    likeCount: 0,
+  };
+
+  it.each([null, { mediaId: null, previewUrl: '/x' }, { mediaId: 'm', previewUrl: '/x' }])(
+    'studio cover %j',
+    (cover) => {
+      expect(studioPostSchema.parse({ ...studio, cover }).cover).toEqual(cover);
+    },
+  );
+
+  it.each([null, '/api/v1/creators/a/posts/p/preview/x'])('public previewUrl %j', (previewUrl) => {
+    expect(publicPostSchema.parse({ ...publicPost, previewUrl }).previewUrl).toBe(previewUrl);
+  });
+});
+
+describe('publicPostDetailSchema', () => {
+  const locked = {
+    id: 'p',
+    visibility: 'PREMIUM',
+    status: 'PUBLISHED',
+    caption: '',
+    publishedAt: '2026-11-01T00:00:00.000Z',
+    imageCount: 1,
+    videoCount: 0,
+    offer: { priceCoins: 5 },
+    previewUrl: null,
+    access: 'locked',
+    likeCount: 3,
+    viewer: null,
+  };
+
+  it('accepts a locked premium post and an owner draft without publishedAt', () => {
+    expect(publicPostDetailSchema.parse(locked).access).toBe('locked');
+    const draft = { ...locked, status: 'DRAFT', publishedAt: null, access: 'full' };
+    expect(publicPostDetailSchema.parse(draft).publishedAt).toBeNull();
+  });
+
+  it('accepts a logged-in viewer and requires likeCount', () => {
+    const viewer = { liked: true, canLike: false, canReport: true };
+    expect(publicPostDetailSchema.parse({ ...locked, viewer }).viewer).toEqual(viewer);
+    expect(publicPostDetailSchema.safeParse({ ...locked, likeCount: undefined }).success).toBe(
+      false,
+    );
+  });
+
+  it('rejects hidden (a 404, never a body)', () => {
+    expect(publicPostDetailSchema.safeParse({ ...locked, access: 'hidden' }).success).toBe(false);
+  });
+});
+
+describe('postLikeResponseSchema', () => {
+  it('parses a like result', () => {
+    expect(postLikeResponseSchema.parse({ liked: true, likeCount: 1 })).toEqual({
+      liked: true,
+      likeCount: 1,
+    });
   });
 });

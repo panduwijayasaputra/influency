@@ -87,7 +87,7 @@ describe('GET /creators/:slug/posts', () => {
     const post = async (
       creatorProfileId: string,
       visibility: 'FREE' | 'PREMIUM',
-      status: 'DRAFT' | 'PUBLISHED' | 'HIDDEN' | 'PENDING_REVIEW' | 'REMOVED',
+      status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | 'PENDING_REVIEW' | 'REMOVED',
       publishedAt: Date | null,
     ) =>
       (
@@ -103,12 +103,12 @@ describe('GET /creators/:slug/posts', () => {
     await media(premium, 'VIDEO', 'READY');
     await prisma.postOffer.createMany({
       data: [
-        { postId: premium, version: 1, priceCoins: 5n, durationSeconds: 604_800 },
-        { postId: premium, version: 2, priceCoins: 8n, durationSeconds: 604_800 },
+        { postId: premium, version: 1, priceCoins: 5n },
+        { postId: premium, version: 2, priceCoins: 8n },
       ],
     });
     await post(creatorId, 'FREE', 'DRAFT', null);
-    await post(creatorId, 'FREE', 'HIDDEN', new Date());
+    await post(creatorId, 'FREE', 'ARCHIVED', new Date());
     await post(creatorId, 'FREE', 'PENDING_REVIEW', new Date());
     await post(creatorId, 'FREE', 'REMOVED', new Date());
     await post(suspendedId, 'FREE', 'PUBLISHED', new Date());
@@ -147,14 +147,16 @@ describe('GET /creators/:slug/posts', () => {
     expect(res.headers['cache-control']).toBe('no-store');
     const { posts } = publicPostListSchema.parse(res.json());
     expect(posts.map((p) => p.id)).toEqual([premium, free]);
-    expect(posts[0]).toEqual({
+    expect(res.json<{ posts: unknown[] }>().posts[0]).toEqual({
       id: premium,
       visibility: 'PREMIUM',
       caption: 'PUBLISHED post',
       publishedAt: '2026-11-02T00:00:00.000Z',
       imageCount: 0,
       videoCount: 1,
-      offer: { priceCoins: 8, durationSeconds: 604_800 },
+      offer: { priceCoins: 8 },
+      previewUrl: null,
+      likeCount: 0,
     });
     expect(posts[1]).toMatchObject({ imageCount: 2, videoCount: 0, offer: null });
   });

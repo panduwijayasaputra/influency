@@ -4,7 +4,7 @@ type Op = 'put' | 'get' | 'head' | 'delete';
 
 /**
  * In-memory `ObjectStorage` for tests (override `OBJECT_STORAGE`). Set `failNext.<op>` to make the next call of that op reject.
- * Upload URLs are `memory://upload/<key>`; simulate the browser PUT with `objects.set(key, …)`.
+ * Upload URLs are `memory://upload/<key>`, download URLs `memory://download/<key>`; simulate the browser PUT with `objects.set(key, …)`.
  */
 export function createMemoryStorage() {
   const objects = new Map<string, StoredObject>();
@@ -28,6 +28,11 @@ export function createMemoryStorage() {
       Promise.resolve({
         url: `memory://upload/${key}`,
         headers: { 'content-type': contentType },
+        expiresAt: new Date(Date.now() + expiresInSeconds * 1000),
+      }),
+    createDownloadUrl: (key, expiresInSeconds) =>
+      Promise.resolve({
+        url: `memory://download/${key}`,
         expiresAt: new Date(Date.now() + expiresInSeconds * 1000),
       }),
   };

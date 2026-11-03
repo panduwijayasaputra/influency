@@ -14,6 +14,8 @@ const post = (overrides: Partial<PublicPost>): PublicPost => ({
   imageCount: 0,
   videoCount: 0,
   offer: null,
+  previewUrl: null,
+  likeCount: 0,
   ...overrides,
 });
 
@@ -32,7 +34,7 @@ describe('CreatorPosts', () => {
         caption: 'Premium satu',
         visibility: 'PREMIUM',
         videoCount: 1,
-        offer: { priceCoins: 8, durationSeconds: 7 * 86_400 },
+        offer: { priceCoins: 8 },
       }),
       post({ caption: 'Gratis satu', imageCount: 2 }),
     ]);
@@ -43,9 +45,37 @@ describe('CreatorPosts', () => {
     expect(free).not.toHaveTextContent('Koin');
     expect(premium).toHaveTextContent('Premium satu');
     expect(premium).toHaveTextContent('1 video');
-    expect(within(premium).getByText(/8 Koin · 7/)).toHaveTextContent('8 Koin · 7 hari');
+    expect(within(premium).getByText(/8 Koin/)).toHaveTextContent('8 Koin · akses permanen');
+    expect(premium).not.toHaveTextContent('hari');
     expect(container.querySelector('img, video')).toBeNull();
+    expect(within(premium).getByTestId('locked-placeholder')).toBeInTheDocument();
+    expect(within(free).queryByTestId('locked-placeholder')).toBeNull();
     expect(getPublicPosts).toHaveBeenCalledWith('claudiandreya');
+  });
+
+  it('shows the generated preview on a premium card', async () => {
+    const previewUrl = '/api/v1/creators/claudiandreya/posts/p/preview/x';
+    const { container } = await renderFeed([
+      post({ visibility: 'PREMIUM', offer: { priceCoins: 5 }, previewUrl }),
+    ]);
+    const premium = screen.getByRole('region', { name: 'Premium' });
+    expect(container.querySelectorAll('img')).toHaveLength(1);
+    expect(premium.querySelector('img')).toHaveAttribute('src', previewUrl);
+    expect(within(premium).queryByTestId('locked-placeholder')).toBeNull();
+  });
+
+  it('links every card to its post detail page', async () => {
+    const posts = [post({}), post({ visibility: 'PREMIUM', offer: { priceCoins: 5 } })];
+    await renderFeed(posts);
+    expect(screen.getAllByRole('link').map((a) => a.getAttribute('href'))).toEqual(
+      posts.map((p) => `/claudiandreya/posts/${p.id}`),
+    );
+  });
+
+  it('shows the like count only when a post has likes', async () => {
+    await renderFeed([post({ caption: 'Populer', likeCount: 3 }), post({ caption: 'Belum' })]);
+    expect(screen.getByText(/· 3 suka$/)).toBeInTheDocument();
+    expect(screen.getAllByText(/suka/)).toHaveLength(1);
   });
 
   it('shows "Tanpa caption" and omits an empty section', async () => {

@@ -15,6 +15,12 @@ export interface UploadUrl {
   expiresAt: Date;
 }
 
+/** A presigned single-object GET. */
+export interface DownloadUrl {
+  url: string;
+  expiresAt: Date;
+}
+
 /** Private object storage (Cloudflare R2 or local files). Keys are server-generated, never taken from clients. */
 export interface ObjectStorage {
   put(key: string, body: Uint8Array, contentType: string): Promise<void>;
@@ -26,6 +32,8 @@ export interface ObjectStorage {
   delete(key: string): Promise<void>;
   /** Presigned PUT for one key; the signed content type must be sent as-is. Never log the URL. */
   createUploadUrl(key: string, contentType: string, expiresInSeconds: number): Promise<UploadUrl>;
+  /** Presigned GET for one key. Never log the URL. */
+  createDownloadUrl(key: string, expiresInSeconds: number): Promise<DownloadUrl>;
 }
 
 /** Injection token for the `ObjectStorage` (`@Inject(OBJECT_STORAGE) storage: ObjectStorage`). */

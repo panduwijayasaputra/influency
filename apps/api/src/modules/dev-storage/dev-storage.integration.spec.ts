@@ -92,6 +92,66 @@ describe('dev storage upload route (STORAGE_DRIVER=local)', () => {
   });
 });
 
+describe('dev storage download route (STORAGE_DRIVER=local)', () => {
+  const DOWNLOAD_KEY = 'post-media/0190a000-0000-7000-8000-0000001d0f21';
+  let dir: string;
+  let storage: LocalObjectStorage;
+  let app: NestFastifyApplication;
+
+  beforeAll(async () => {
+    dir = mkdtempSync(join(tmpdir(), 'influency-dev-storage-'));
+    storage = new LocalObjectStorage(dir);
+    await storage.put(DOWNLOAD_KEY, PNG, 'image/png');
+    app = await boot(storage);
+  });
+
+  afterAll(async () => {
+    await app.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  const get = (url: string) => app.inject({ method: 'GET', url });
+
+  it('serves the bytes with the stored type for a valid download URL', async () => {
+    const res = await get((await storage.createDownloadUrl(DOWNLOAD_KEY, 300)).url);
+    expect(res.statusCode).toBe(200);
+    expect(res.rawPayload).toEqual(PNG);
+    expect(res.headers['content-type']).toBe('image/png');
+    expect(res.headers['cache-control']).toBe('private, no-store');
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+  });
+
+  it('rejects tampered, missing, expired and upload-issued signatures', async () => {
+    const { url } = await storage.createDownloadUrl(DOWNLOAD_KEY, 300);
+    const upload = await storage.createUploadUrl(DOWNLOAD_KEY, 'image/png', 300);
+    for (const res of [
+      await get(url.replace(/sig=.*/, 'sig=AAAA')),
+      await get(url.replace(/&sig=.*/, '')),
+      await get(url.replace(/exp=\d+/, `exp=${Math.floor(Date.now() / 1000) - 1}`)),
+      await get(upload.url),
+    ]) {
+      expect(res.statusCode).toBe(403);
+      expect(res.json<{ error: { code: string } }>().error.code).toBe('FORBIDDEN');
+    }
+  });
+
+  it('does not accept a download URL as an upload URL', async () => {
+    const { url } = await storage.createDownloadUrl(DOWNLOAD_KEY, 300);
+    const res = await app.inject({
+      method: 'PUT',
+      url,
+      headers: { 'content-type': 'image/png' },
+      payload: PNG,
+    });
+    expect(res.statusCode).toBe(403);
+  });
+
+  it('is 404 for a validly signed but missing object', async () => {
+    const missing = 'post-media/0190a000-0000-7000-8000-0000001d0f22';
+    expect((await get((await storage.createDownloadUrl(missing, 300)).url)).statusCode).toBe(404);
+  });
+});
+
 describe('dev storage upload route (other drivers)', () => {
   it('is 404 when the storage is not local', async () => {
     const app = await boot(createMemoryStorage().storage);
@@ -102,6 +162,11 @@ describe('dev storage upload route (other drivers)', () => {
       payload: PNG,
     });
     expect(res.statusCode).toBe(404);
+    const download = await app.inject({
+      method: 'GET',
+      url: `/api/v1/dev-storage/${KEY}?exp=9999999999&sig=x`,
+    });
+    expect(download.statusCode).toBe(404);
     await app.close();
   });
 });

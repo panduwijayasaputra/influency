@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { POST_VIDEO_MAX_BYTES } from '@influency/shared';
+import sharp from 'sharp';
 import { detectVideoType } from './image-type.js';
 import type { ObjectStorage } from './object-storage.js';
 import type {
+  VideoPlayback,
   VideoProvider,
   VideoStatus,
   VideoUpload,
@@ -51,6 +53,21 @@ export class StubVideoProvider implements VideoProvider {
     }
     if (Date.now() < entry.readyAt) return status('processing');
     return { state: 'ready', durationSeconds: null, byteSize: entry.byteSize };
+  }
+
+  /** The stub can't decode video: once ready, a generated gray frame stands in for the thumbnail (dev only). */
+  async getThumbnail(uid: string): Promise<Uint8Array | null> {
+    if ((await this.getStatus(uid)).state !== 'ready') return null;
+    return sharp({ create: { width: 640, height: 360, channels: 3, background: '#808080' } })
+      .jpeg()
+      .toBuffer();
+  }
+
+  /** A short-lived storage download URL played in `<video>` (dev only). */
+  async createPlaybackUrl(uid: string, expiresInSeconds: number): Promise<VideoPlayback | null> {
+    if ((await this.getStatus(uid)).state !== 'ready') return null;
+    const download = await this.storage.createDownloadUrl(KEY_PREFIX + uid, expiresInSeconds);
+    return { ...download, player: 'video' };
   }
 
   async delete(uid: string): Promise<void> {

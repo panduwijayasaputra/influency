@@ -12,6 +12,8 @@ const POSTS = {
       imageCount: 1,
       videoCount: 0,
       offer: null,
+      previewUrl: null,
+      likeCount: 0,
     },
   ],
 };

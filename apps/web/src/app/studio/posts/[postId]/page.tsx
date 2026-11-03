@@ -2,9 +2,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { isPostEditable } from '@influency/shared';
+import { PostMediaViewer } from '@/components/post-media-viewer';
 import { getMyPost, getMyPostMedia } from '@/lib/api/studio-posts';
 import { POST_STATUS_LABELS } from '../labels';
 import { PostForm } from '../post-form';
+import { PostCover } from './post-cover';
 import { PostMedia } from './post-media';
 import { PostOfferForm } from './post-offer-form';
 import { PostStatusActions } from './post-status-actions';
@@ -29,8 +31,26 @@ async function PostEditor({ params }: { params: Promise<{ postId: string }> }) {
       <p className="text-sm text-muted-foreground">Status: {POST_STATUS_LABELS[post.status]}</p>
       <PostStatusActions post={post} />
       <PostForm post={post} />
-      {post.visibility === 'PREMIUM' && <PostOfferForm postId={post.id} offer={post.offer} />}
-      <PostMedia postId={post.id} media={media.media} locked={!isPostEditable(post.status)} />
+      {post.visibility === 'PREMIUM' && (
+        <>
+          <PostOfferForm postId={post.id} offer={post.offer} />
+          <PostCover postId={post.id} cover={post.cover} />
+        </>
+      )}
+      <PostMedia
+        postId={post.id}
+        media={media.media}
+        locked={!isPostEditable(post.status)}
+        coverMediaId={post.visibility === 'PREMIUM' ? (post.cover?.mediaId ?? null) : undefined}
+      />
+      {media.media.some((item) => item.status === 'READY') && (
+        <section aria-labelledby="preview-heading" className="flex flex-col gap-3">
+          <h2 id="preview-heading" className="text-lg font-semibold">
+            Pratinjau
+          </h2>
+          <PostMediaViewer postId={post.id} />
+        </section>
+      )}
     </div>
   );
 }

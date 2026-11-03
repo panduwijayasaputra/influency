@@ -4,11 +4,14 @@ import {
   type CreateMediaUploadInput,
   isPostEditable,
   mediaKindOf,
+  type MediaRejectionReason,
+  type MediaStatus,
   type PostStatus,
   type MediaUploadResponse,
   POST_IMAGE_MAX_BYTES,
   POST_IMAGE_TYPES,
   POST_MEDIA_MAX_PER_POST,
+  POST_VIDEO_MAX_BYTES,
   POST_VIDEO_MAX_DURATION_SECONDS,
   type StudioMedia,
 } from '@influency/shared';
@@ -24,20 +27,27 @@ import { PrismaService } from '../../common/prisma.service.js';
 import {
   VIDEO_PROVIDER,
   type VideoProvider,
-  type VideoStatus,
   type VideoUpload,
 } from '../../common/video-provider.js';
 import type { MediaAsset, Prisma } from '../../generated/prisma/client.js';
 
 const KEY_PREFIX = 'post-media/';
+/** Max stale rows handled per sweep run; the next run picks up the rest. */
+const SWEEP_BATCH = 100;
+
+/** A row's state after a refresh. */
+interface Refreshed {
+  status: MediaStatus;
+  reason?: MediaRejectionReason;
+}
 
 /**
  * Media of the caller's own posts. Images: presigned upload slot → client PUT → complete (size + magic-byte check).
  * Videos: provider upload slot → client upload → complete/list poll the provider (PROCESSING → READY | REJECTED).
  * Every query is scoped to the creator profile, so a foreign post or media id is the same NOT_FOUND as an unknown one.
+ * Expired slots and videos stuck in PROCESSING are rejected (bytes deleted) by `refresh`, which complete, list, the
+ * stale-upload sweep and the provider webhook share (US-049). Rows only move forward; READY and REJECTED are final.
  */
-// shortcut: abandoned PENDING_UPLOAD rows/objects (incl. oversized ones never completed) stay in storage; add a cleanup job with the worker (Phase 5).
-// shortcut: a video stuck in PROCESSING keeps counting toward the limit until deleted; add a sweeper or Stream webhook with the worker (Phase 5).
 @Injectable()
 export class PostMediaService {
   private readonly logger = new Logger(PostMediaService.name);
@@ -130,31 +140,25 @@ export class PostMediaService {
     // A rejected upload can't be retried; the client asks for a new slot.
     if (row.status === 'REJECTED') throw new DomainError('MEDIA_UPLOAD_MISSING');
 
-    // Expired slots stop counting toward the limit, so completing one late could exceed it.
-    if (row.status === 'PENDING_UPLOAD' && row.uploadExpiresAt <= new Date()) {
-      await this.reject(row);
-      throw new DomainError('MEDIA_UPLOAD_MISSING');
-    }
+    // Expired slots stop counting toward the limit, so completing one late could exceed it: refresh rejects them.
+    const refreshed = await this.refresh(row, new Date());
+    if (refreshed.status === 'REJECTED') throw rejectionError(refreshed.reason);
     if (row.kind === 'VIDEO') {
-      const status = await this.video.getStatus(row.videoUid!);
-      if (status?.state === 'pending_upload') throw new DomainError('MEDIA_UPLOAD_MISSING');
-      if (!(await this.applyVideoStatus(row, status))) {
-        throw new DomainError('VIDEO_PROCESSING_FAILED');
-      }
+      if (refreshed.status === 'PENDING_UPLOAD') throw new DomainError('MEDIA_UPLOAD_MISSING');
       return toStudioMedia(await this.findOwned(creatorProfileId, postId, mediaId));
     }
     const head = await this.storage.head(row.objectKey!);
     if (!head) throw new DomainError('MEDIA_UPLOAD_MISSING');
     // R2 presigned PUTs can't cap the size: check before downloading anything.
     if (head.size > POST_IMAGE_MAX_BYTES) {
-      await this.reject(row);
+      await this.reject(row, 'TOO_LARGE');
       throw new DomainError('FILE_TOO_LARGE', { maxBytes: POST_IMAGE_MAX_BYTES });
     }
     const object = await this.storage.get(row.objectKey!);
     if (!object) throw new DomainError('MEDIA_UPLOAD_MISSING');
     const type = detectImageType(object.body);
     if (!type || !(POST_IMAGE_TYPES as readonly string[]).includes(type)) {
-      await this.reject(row);
+      await this.reject(row, 'UNSUPPORTED_TYPE');
       throw new DomainError('UNSUPPORTED_FILE_TYPE');
     }
     // The presigned URL stays valid until it expires, so the checked bytes move to a key the client can't write to.
@@ -180,24 +184,29 @@ export class PostMediaService {
       select: { id: true },
     });
     if (!post) throw new DomainError('NOT_FOUND');
-    const processing = await this.prisma.mediaAsset.findMany({
-      where: { postId, kind: 'VIDEO', status: 'PROCESSING' },
+    const now = new Date();
+    const stale = await this.prisma.mediaAsset.findMany({
+      where: {
+        postId,
+        OR: [
+          { kind: 'VIDEO', status: 'PROCESSING' },
+          { status: 'PENDING_UPLOAD', uploadExpiresAt: { lte: now } },
+        ],
+      },
     });
     // A provider outage leaves rows PROCESSING; the list itself still answers.
     await Promise.all(
-      processing.map((row) =>
-        this.video
-          .getStatus(row.videoUid!)
-          .then((status) => this.applyVideoStatus(row, status))
-          .catch((err: unknown) => {
-            this.logger.warn(
-              `video status check failed for media ${row.id}: ${(err as Error).message}`,
-            );
-          }),
+      stale.map((row) =>
+        this.refresh(row, now).catch((err: unknown) => {
+          this.logger.warn(
+            `video status check failed for media ${row.id}: ${(err as Error).message}`,
+          );
+        }),
       ),
     );
+    // In-flight PENDING_UPLOAD rows stay hidden; failed ones are listed so the creator can remove or retry them.
     const rows = await this.prisma.mediaAsset.findMany({
-      where: { postId, status: { in: ['READY', 'PROCESSING'] } },
+      where: { postId, status: { in: ['READY', 'PROCESSING', 'REJECTED'] } },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
     return rows.map(toStudioMedia);
@@ -212,16 +221,34 @@ export class PostMediaService {
     return { body: object.body, contentType: row.contentType };
   }
 
-  /** Under the post-row lock, so a concurrent publish never ends up with a live post missing its media. */
+  /**
+   * Under the post-row lock, so a concurrent publish never ends up with a live post missing its media.
+   * A REJECTED item may be removed in any post status: viewers never see it (US-049).
+   * Deleting the cover's source also clears the cover and its preview (US-048).
+   */
   async remove(creatorProfileId: string, postId: string, mediaId: string): Promise<void> {
-    const row = await this.prisma.$transaction(async (tx) => {
-      await lockEditablePost(tx, creatorProfileId, postId);
+    const { row, previewKey } = await this.prisma.$transaction(async (tx) => {
+      const status = await lockOwnedPost(tx, creatorProfileId, postId);
       const media = await tx.mediaAsset.findFirst({ where: { id: mediaId, postId } });
       if (!media) throw new DomainError('NOT_FOUND');
+      if (media.status !== 'REJECTED' && !isPostEditable(status)) {
+        throw new DomainError('POST_LOCKED');
+      }
+      const cover = await tx.post.findFirst({
+        where: { id: postId, coverMediaId: media.id },
+        select: { previewKey: true },
+      });
+      if (cover) {
+        await tx.post.update({
+          where: { id: postId },
+          data: { coverMediaId: null, previewKey: null },
+        });
+      }
       await tx.mediaAsset.delete({ where: { id: media.id } });
-      return media;
+      return { row: media, previewKey: cover?.previewKey ?? null };
     });
     this.cleanup(row);
+    if (previewKey) this.deleteObject(previewKey);
   }
 
   private async findOwned(
@@ -238,15 +265,77 @@ export class PostMediaService {
   }
 
   /**
-   * Moves a video row to the provider's state with conditional updates, so a concurrent delete/complete wins cleanly.
-   * A missing or failed video is rejected; returns false then.
+   * A verified provider event for `uid`: re-reads the provider's state through refresh, so duplicate, replayed or
+   * out-of-order events never regress a row. Unknown videos are acknowledged. Provider errors propagate (500, retry).
    */
-  private async applyVideoStatus(row: MediaAsset, status: VideoStatus | null): Promise<boolean> {
-    if (!status || status.state === 'error') {
-      await this.reject(row);
-      return false;
+  async handleVideoEvent(uid: string): Promise<void> {
+    const row = await this.prisma.mediaAsset.findUnique({ where: { videoUid: uid } });
+    if (!row) {
+      this.logger.log('stream webhook for an unknown video');
+      return;
     }
+    const { status } = await this.refresh(row, new Date());
+    this.logger.log(`stream webhook for media ${row.id}: ${status}`);
+  }
+
+  /**
+   * Marks stale uploads failed and deletes their bytes: expired upload slots, and videos still PROCESSING
+   * VIDEO_PROCESSING_TIMEOUT_SECONDS after their slot expired (the provider is asked once more first).
+   * System job, not creator-scoped. Returns the rows handled; a provider error skips that row until the next run.
+   */
+  async sweep(now = new Date()): Promise<number> {
+    const timeoutMs = this.env.VIDEO_PROCESSING_TIMEOUT_SECONDS * 1000;
+    const rows = await this.prisma.mediaAsset.findMany({
+      where: {
+        OR: [
+          { status: 'PENDING_UPLOAD', uploadExpiresAt: { lte: now } },
+          {
+            kind: 'VIDEO',
+            status: 'PROCESSING',
+            uploadExpiresAt: { lte: new Date(now.getTime() - timeoutMs) },
+          },
+        ],
+      },
+      orderBy: [{ uploadExpiresAt: 'asc' }, { id: 'asc' }],
+      take: SWEEP_BATCH,
+    });
+    // Sequential: keeps provider calls flat.
+    for (const row of rows) {
+      try {
+        await this.refresh(row, now);
+      } catch (err) {
+        this.logger.warn(`stale media sweep failed for media ${row.id}: ${(err as Error).message}`);
+      }
+    }
+    return rows.length;
+  }
+
+  /**
+   * Moves a row to its next state with conditional updates, so concurrent callers (complete, list, sweep, webhook)
+   * never regress it. Expired slots are rejected without asking the provider; a video follows the provider's state,
+   * re-checked against the size/duration limits and the processing timeout. Provider errors propagate, row unchanged.
+   */
+  private async refresh(row: MediaAsset, now: Date): Promise<Refreshed> {
+    if (row.status === 'READY' || row.status === 'REJECTED') {
+      return { status: row.status, reason: row.rejectionReason ?? undefined };
+    }
+    if (row.status === 'PENDING_UPLOAD' && row.uploadExpiresAt <= now) {
+      return this.rejected(row, 'UPLOAD_EXPIRED');
+    }
+    if (row.kind === 'IMAGE') return { status: row.status };
+    const status = await this.video.getStatus(row.videoUid!);
+    if (!status || status.state === 'error') return this.rejected(row, 'PROCESSING_FAILED');
+    if (status.state === 'pending_upload') return { status: row.status };
     if (status.state === 'ready') {
+      if (
+        status.durationSeconds != null &&
+        status.durationSeconds > POST_VIDEO_MAX_DURATION_SECONDS
+      ) {
+        return this.rejected(row, 'TOO_LONG');
+      }
+      if (status.byteSize != null && status.byteSize > POST_VIDEO_MAX_BYTES) {
+        return this.rejected(row, 'TOO_LARGE');
+      }
       await this.prisma.mediaAsset.updateMany({
         where: { id: row.id, status: { in: ['PENDING_UPLOAD', 'PROCESSING'] } },
         data: {
@@ -255,21 +344,30 @@ export class PostMediaService {
           byteSize: status.byteSize ?? row.byteSize,
         },
       });
-    } else if (status.state === 'processing') {
-      await this.prisma.mediaAsset.updateMany({
-        where: { id: row.id, status: 'PENDING_UPLOAD' },
-        data: { status: 'PROCESSING' },
-      });
+      return { status: 'READY' };
     }
-    return true;
+    const deadline =
+      row.uploadExpiresAt.getTime() + this.env.VIDEO_PROCESSING_TIMEOUT_SECONDS * 1000;
+    if (deadline <= now.getTime()) return this.rejected(row, 'PROCESSING_TIMEOUT');
+    await this.prisma.mediaAsset.updateMany({
+      where: { id: row.id, status: 'PENDING_UPLOAD' },
+      data: { status: 'PROCESSING' },
+    });
+    return { status: 'PROCESSING' };
   }
 
-  private async reject(row: MediaAsset): Promise<void> {
-    await this.prisma.mediaAsset.updateMany({
+  private async rejected(row: MediaAsset, reason: MediaRejectionReason): Promise<Refreshed> {
+    await this.reject(row, reason);
+    return { status: 'REJECTED', reason };
+  }
+
+  /** Conditional; only the caller whose update won deletes the bytes (a concurrent poll may have just made it READY). */
+  private async reject(row: MediaAsset, reason: MediaRejectionReason): Promise<void> {
+    const { count } = await this.prisma.mediaAsset.updateMany({
       where: { id: row.id, status: { in: ['PENDING_UPLOAD', 'PROCESSING'] } },
-      data: { status: 'REJECTED' },
+      data: { status: 'REJECTED', rejectionReason: reason },
     });
-    this.cleanup(row);
+    if (count === 1) this.cleanup(row);
   }
 
   /** Best effort removal of a removed/rejected row's bytes. */
@@ -293,18 +391,43 @@ export class PostMediaService {
   }
 }
 
-/** Locks the owned post row; NOT_FOUND when foreign or unknown, POST_LOCKED while it is live. */
-async function lockEditablePost(
+/** Locks the owned post row and returns its status; NOT_FOUND when foreign or unknown. */
+async function lockOwnedPost(
   tx: Prisma.TransactionClient,
   creatorProfileId: string,
   postId: string,
-): Promise<void> {
+): Promise<PostStatus> {
   const locked = await tx.$queryRaw<{ status: PostStatus }[]>`
     SELECT status::text AS status FROM posts
     WHERE id = ${postId}::uuid AND creator_profile_id = ${creatorProfileId}::uuid
     FOR UPDATE`;
   if (locked.length === 0) throw new DomainError('NOT_FOUND');
-  if (!isPostEditable(locked[0]!.status)) throw new DomainError('POST_LOCKED');
+  return locked[0]!.status;
+}
+
+/** lockOwnedPost, plus POST_LOCKED while the post is live. */
+async function lockEditablePost(
+  tx: Prisma.TransactionClient,
+  creatorProfileId: string,
+  postId: string,
+): Promise<void> {
+  if (!isPostEditable(await lockOwnedPost(tx, creatorProfileId, postId))) {
+    throw new DomainError('POST_LOCKED');
+  }
+}
+
+/** The complete() error for an upload that ended up REJECTED. */
+function rejectionError(reason: MediaRejectionReason | undefined): DomainError {
+  switch (reason) {
+    case 'TOO_LONG':
+      return new DomainError('VIDEO_TOO_LONG', { maxSeconds: POST_VIDEO_MAX_DURATION_SECONDS });
+    case 'TOO_LARGE':
+      return new DomainError('FILE_TOO_LARGE', { maxBytes: POST_VIDEO_MAX_BYTES });
+    case 'UPLOAD_EXPIRED':
+      return new DomainError('MEDIA_UPLOAD_MISSING');
+    default:
+      return new DomainError('VIDEO_PROCESSING_FAILED');
+  }
 }
 
 function toStudioMedia(row: MediaAsset): StudioMedia {
@@ -315,6 +438,7 @@ function toStudioMedia(row: MediaAsset): StudioMedia {
     contentType: row.contentType,
     byteSize: row.byteSize,
     durationSeconds: row.durationSeconds,
+    rejectionReason: row.rejectionReason,
     createdAt: row.createdAt.toISOString(),
   };
 }

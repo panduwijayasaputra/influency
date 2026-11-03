@@ -143,7 +143,7 @@ export function PostForm({ post }: { post?: StudioPost }) {
         ))}
         {visibilityLocked && (
           <p className="text-sm text-muted-foreground">
-            Sembunyikan post dulu untuk mengubah jenis post.
+            Jenis post tidak bisa diubah setelah post terbit.
           </p>
         )}
         {errors.visibility && (

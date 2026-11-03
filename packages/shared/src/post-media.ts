@@ -10,7 +10,7 @@ export const POST_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'] a
 export type PostVideoType = (typeof POST_VIDEO_TYPES)[number];
 /** Placeholder (TBD business decision): max bytes per post video (200 MiB, Cloudflare Stream basic-upload ceiling). */
 export const POST_VIDEO_MAX_BYTES = 200 * 1024 * 1024;
-/** Placeholder (TBD business decision): max video length, enforced by the provider. */
+/** Placeholder (TBD business decision): max video length, enforced by the provider at upload and re-checked when ready. */
 export const POST_VIDEO_MAX_DURATION_SECONDS = 600;
 /** Placeholder (TBD business decision): max media items (images + videos) per post. */
 export const POST_MEDIA_MAX_PER_POST = 10;
@@ -18,6 +18,16 @@ export const MEDIA_KINDS = ['IMAGE', 'VIDEO'] as const;
 export const MEDIA_STATUSES = ['PENDING_UPLOAD', 'PROCESSING', 'READY', 'REJECTED'] as const;
 export type MediaKind = (typeof MEDIA_KINDS)[number];
 export type MediaStatus = (typeof MEDIA_STATUSES)[number];
+/** Why a media item is REJECTED (US-049). */
+export const MEDIA_REJECTION_REASONS = [
+  'UPLOAD_EXPIRED',
+  'PROCESSING_TIMEOUT',
+  'PROCESSING_FAILED',
+  'TOO_LARGE',
+  'TOO_LONG',
+  'UNSUPPORTED_TYPE',
+] as const;
+export type MediaRejectionReason = (typeof MEDIA_REJECTION_REASONS)[number];
 
 /** Media kind of a declared content type (validated by createMediaUploadSchema). */
 export const mediaKindOf = (contentType: string): MediaKind =>
@@ -53,6 +63,8 @@ export const studioMediaSchema = z.object({
   byteSize: z.number(),
   /** VIDEO only, once known. */
   durationSeconds: z.number().nullable(),
+  /** REJECTED only; null for items rejected before US-049. */
+  rejectionReason: z.enum(MEDIA_REJECTION_REASONS).nullable(),
   createdAt: z.string(),
 });
 export type StudioMedia = z.infer<typeof studioMediaSchema>;

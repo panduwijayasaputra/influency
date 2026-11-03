@@ -126,3 +126,98 @@ describe('CloudflareStreamVideoProvider', () => {
     ]);
   });
 });
+
+describe('CloudflareStreamVideoProvider.getThumbnail', () => {
+  const HOST = 'https://customer-abc123.cloudflarestream.com';
+  const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
+  const ready = (thumbnail: string | undefined = `${HOST}/${UID}/thumbnails/thumbnail.jpg`) =>
+    video('ready', { readyToStream: true, ...(thumbnail && { thumbnail }) });
+  const token = () => Response.json({ success: true, result: { token: 'signed.tok.en' } });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it('mints a short-lived token and fetches the default frame on the customer host', async () => {
+    vi.useFakeTimers({ now: new Date('2026-11-04T00:00:00.000Z') });
+    const spy = stubFetch(ready(), token(), new Response(JPEG));
+    const bytes = await new CloudflareStreamVideoProvider(CONFIG).getThumbnail(UID);
+    expect(bytes).toEqual(JPEG);
+    expect(spy.mock.calls[0]![0]).toBe(`${BASE}/${UID}`);
+    const [tokenUrl, tokenInit] = spy.mock.calls[1]!;
+    expect(tokenUrl).toBe(`${BASE}/${UID}/token`);
+    expect(tokenInit?.method).toBe('POST');
+    expect(JSON.parse(tokenInit?.body as string)).toEqual({
+      exp: Date.parse('2026-11-04T00:05:00.000Z') / 1000,
+    });
+    const [thumbUrl, thumbInit] = spy.mock.calls[2]!;
+    expect(thumbUrl).toBe(`${HOST}/signed.tok.en/thumbnails/thumbnail.jpg?fit=clip`);
+    // The account token never goes to the delivery host.
+    expect(thumbInit?.headers).toBeUndefined();
+  });
+
+  it('is null for a missing or unfinished video, without minting a token', async () => {
+    const provider = new CloudflareStreamVideoProvider(CONFIG);
+    let spy = stubFetch(new Response(null, { status: 404 }));
+    expect(await provider.getThumbnail(UID)).toBeNull();
+    spy = stubFetch(video('inprogress'));
+    expect(await provider.getThumbnail(UID)).toBeNull();
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a failed thumbnail fetch by status only', async () => {
+    stubFetch(ready(), token(), new Response('denied signed.tok.en', { status: 403 }));
+    const err = (await new CloudflareStreamVideoProvider(CONFIG)
+      .getThumbnail(UID)
+      .catch((e: unknown) => e)) as Error;
+    expect(err.message).toBe('Stream getThumbnail failed: 403');
+    expect(err.message).not.toContain('signed.tok.en');
+  });
+
+  it('rejects an oversized thumbnail', async () => {
+    stubFetch(ready(), token(), new Response(new Uint8Array(10 * 1024 * 1024 + 1)));
+    await expect(new CloudflareStreamVideoProvider(CONFIG).getThumbnail(UID)).rejects.toThrow(
+      'too large',
+    );
+  });
+
+  it('mints a non-downloadable playback token and returns the iframe player URL', async () => {
+    vi.useFakeTimers({ now: new Date('2026-11-04T00:00:00.000Z') });
+    const spy = stubFetch(ready(), token());
+    const playback = await new CloudflareStreamVideoProvider(CONFIG).createPlaybackUrl(UID, 1800);
+    expect(playback).toEqual({
+      url: `${HOST}/signed.tok.en/iframe`,
+      player: 'iframe',
+      expiresAt: new Date('2026-11-04T00:30:00.000Z'),
+    });
+    const [tokenUrl, tokenInit] = spy.mock.calls[1]!;
+    expect(tokenUrl).toBe(`${BASE}/${UID}/token`);
+    expect(JSON.parse(tokenInit?.body as string)).toEqual({
+      exp: Date.parse('2026-11-04T00:30:00.000Z') / 1000,
+      downloadable: false,
+    });
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('has no playback for a missing or unfinished video; token errors carry the status only', async () => {
+    const provider = new CloudflareStreamVideoProvider(CONFIG);
+    stubFetch(new Response(null, { status: 404 }));
+    expect(await provider.createPlaybackUrl(UID, 1800)).toBeNull();
+    stubFetch(video('inprogress'));
+    expect(await provider.createPlaybackUrl(UID, 1800)).toBeNull();
+    stubFetch(ready(), new Response('nope test-token', { status: 500 }));
+    const err = (await provider.createPlaybackUrl(UID, 1800).catch((e: unknown) => e)) as Error;
+    expect(err.message).toBe('Stream token failed: 500');
+  });
+
+  it.each([
+    ['a foreign host', 'https://evil.example.com/x/thumbnails/thumbnail.jpg'],
+    ['plain http', 'http://customer-abc123.cloudflarestream.com/x/thumbnails/thumbnail.jpg'],
+    ['no thumbnail field', undefined],
+  ])('refuses %s without minting a token', async (_name, thumbnail) => {
+    const spy = stubFetch(thumbnail ? ready(thumbnail) : video('ready', { readyToStream: true }));
+    await expect(new CloudflareStreamVideoProvider(CONFIG).getThumbnail(UID)).rejects.toThrow();
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+});

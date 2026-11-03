@@ -23,11 +23,22 @@ export interface VideoUploadInput {
   expiresInSeconds: number;
 }
 
+/** Short-lived signed playback: `iframe` = provider player page, `video` = a file for `<video>`. */
+export interface VideoPlayback {
+  url: string;
+  player: 'iframe' | 'video';
+  expiresAt: Date;
+}
+
 /** Private video hosting (Cloudflare Stream or the dev stub). Playback always needs a signed token. Never log upload URLs. */
 export interface VideoProvider {
   createUpload(input: VideoUploadInput): Promise<VideoUpload>;
   /** null when the provider has no such video. */
   getStatus(uid: string): Promise<VideoStatus | null>;
+  /** Default (first) thumbnail frame, fetched server-side — never a public URL. null while the video is missing or not ready. */
+  getThumbnail(uid: string): Promise<Uint8Array | null>;
+  /** Signed, no-download playback; null while the video is missing or not ready. Never log the URL. */
+  createPlaybackUrl(uid: string, expiresInSeconds: number): Promise<VideoPlayback | null>;
   /** Idempotent: deleting a missing video succeeds. */
   delete(uid: string): Promise<void>;
 }

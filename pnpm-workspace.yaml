@@ -10,3 +10,5 @@ allowBuilds:
   prisma: false
   # postinstall downloads the schema engine; the Prisma CLI fetches it on first use
   '@prisma/engines': false
+  # ships prebuilt @img/sharp-* binaries; the install script only builds libvips from source
+  sharp: false

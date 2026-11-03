@@ -145,11 +145,35 @@
       "priority": "high"
     },
     {
+      "id": "US-046",
+      "feature": "creator-content",
+      "file": "features/creator-content/US-046-permanent-unlock-offer.md",
+      "title": "Permanent Unlock Offer (5–1,000 Koin)",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-047",
+      "feature": "creator-content",
+      "file": "features/creator-content/US-047-archive-and-restore-a-post.md",
+      "title": "Archive & Restore a Post",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
       "id": "US-020",
       "feature": "content-access",
       "file": "features/content-access/US-020-server-side-access-check.md",
       "title": "Server-Side Access Check",
-      "status": "backlog",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-048",
+      "feature": "creator-content",
+      "file": "features/creator-content/US-048-safe-cover-and-blurred-preview.md",
+      "title": "Safe Cover & Blurred Preview for Premium Posts",
+      "status": "ready_for_uat",
       "priority": "high"
     },
     {
@@ -157,8 +181,48 @@
       "feature": "content-access",
       "file": "features/content-access/US-021-short-lived-media-access-for-entitled-viewers.md",
       "title": "Short-Lived Media Access for Entitled Viewers",
-      "status": "backlog",
+      "status": "ready_for_uat",
       "priority": "high"
+    },
+    {
+      "id": "US-014",
+      "feature": "public-creator-page",
+      "file": "features/public-creator-page/US-014-post-detail-and-paywall-preview.md",
+      "title": "Post Detail & Paywall Preview",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-049",
+      "feature": "creator-content",
+      "file": "features/creator-content/US-049-upload-limits-and-stale-upload-cleanup.md",
+      "title": "Upload Limits & Stale Upload Cleanup",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-051",
+      "feature": "engagement",
+      "file": "features/engagement/US-051-like-a-post.md",
+      "title": "Like a Post",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-052",
+      "feature": "engagement",
+      "file": "features/engagement/US-052-comment-on-a-post.md",
+      "title": "Comment on a Post",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-042",
+      "feature": "admin-operations",
+      "file": "features/admin-operations/US-042-report-content-and-moderation-queue.md",
+      "title": "Report Content & Moderation Queue",
+      "status": "ready_for_uat",
+      "priority": "medium"
     },
     {
       "id": "US-022",
@@ -209,18 +273,18 @@
       "priority": "high"
     },
     {
-      "id": "US-014",
-      "feature": "public-creator-page",
-      "file": "features/public-creator-page/US-014-post-detail-and-paywall-preview.md",
-      "title": "Post Detail & Paywall Preview",
-      "status": "backlog",
-      "priority": "high"
-    },
-    {
       "id": "US-028",
       "feature": "content-purchases",
       "file": "features/content-purchases/US-028-manual-renewal-and-expiry.md",
       "title": "Manual Renewal & Expiry",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-050",
+      "feature": "content-access",
+      "file": "features/content-access/US-050-access-via-purchases-subscriptions-and-archive.md",
+      "title": "Access via Purchases, Subscriptions & Archive Grants",
       "status": "backlog",
       "priority": "high"
     },
@@ -325,14 +389,6 @@
       "feature": "admin-operations",
       "file": "features/admin-operations/US-041-refund-a-top-up-with-compensating-entries.md",
       "title": "Refund a Top-Up with Compensating Entries",
-      "status": "backlog",
-      "priority": "medium"
-    },
-    {
-      "id": "US-042",
-      "feature": "admin-operations",
-      "file": "features/admin-operations/US-042-report-content-and-moderation-queue.md",
-      "title": "Report Content & Moderation Queue",
       "status": "backlog",
       "priority": "medium"
     },

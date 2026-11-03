@@ -11,6 +11,9 @@ export default function AdminPage() {
       <Link href="/admin/creators" className="text-base font-medium underline underline-offset-4">
         Pengajuan Kreator
       </Link>
+      <Link href="/admin/moderation" className="text-base font-medium underline underline-offset-4">
+        Moderasi Konten
+      </Link>
     </main>
   );
 }

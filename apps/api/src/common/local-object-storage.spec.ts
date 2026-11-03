@@ -83,6 +83,28 @@ describe('LocalObjectStorage', () => {
     expect(storage.verifyUploadToken(KEY, 'image/png', exp, sig)).toBe(false);
   });
 
+  it('issues download tokens that only verify as downloads for the same key', async () => {
+    const download = await storage.createDownloadUrl(KEY, 300);
+    expect(download.url).toMatch(new RegExp(`^/api/v1/dev-storage/${KEY}\\?exp=\\d+&sig=[\\w-]+$`));
+    expect(download.expiresAt.getTime()).toBeGreaterThan(Date.now() + 299_000);
+    const { exp, sig } = tokenOf(download.url);
+    expect(storage.verifyDownloadToken(KEY, exp, sig)).toBe(true);
+    expect(storage.verifyDownloadToken(OTHER_KEY, exp, sig)).toBe(false);
+    expect(storage.verifyDownloadToken(KEY, String(Number(exp) + 1), sig)).toBe(false);
+    // Not interchangeable with upload tokens, in either direction.
+    expect(storage.verifyUploadToken(KEY, 'image/png', exp, sig)).toBe(false);
+    const upload = tokenOf((await storage.createUploadUrl(KEY, 'image/png', 300)).url);
+    expect(storage.verifyDownloadToken(KEY, upload.exp, upload.sig)).toBe(false);
+    await expect(storage.createDownloadUrl('../x', 300)).rejects.toThrow('invalid storage key');
+  });
+
+  it('rejects a download token after it expires', async () => {
+    vi.useFakeTimers({ now: new Date('2026-11-03T00:00:00Z') });
+    const { exp, sig } = tokenOf((await storage.createDownloadUrl(KEY, 60)).url);
+    vi.setSystemTime(new Date('2026-11-03T00:01:01Z'));
+    expect(storage.verifyDownloadToken(KEY, exp, sig)).toBe(false);
+  });
+
   it('does not accept tokens from another instance (per-process secret)', async () => {
     const { exp, sig } = tokenOf((await storage.createUploadUrl(KEY, 'image/png', 300)).url);
     expect(new LocalObjectStorage(dir).verifyUploadToken(KEY, 'image/png', exp, sig)).toBe(false);

@@ -4,6 +4,7 @@ import { Test } from '@nestjs/testing';
 import {
   errorResponseSchema,
   mediaUploadResponseSchema,
+  publicPostListSchema,
   studioPostSchema,
 } from '@influency/shared';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -51,7 +52,7 @@ async function buildApp(
   return app;
 }
 
-describe('publish / hide posts', () => {
+describe('publish / archive / restore posts', () => {
   const prisma = createTestPrisma();
   const userIds = Object.values(USERS);
   const memory = createMemoryStorage();
@@ -99,6 +100,7 @@ describe('publish / hide posts', () => {
     await moderatedApp.close();
     const owned = { post: { creatorProfile: { userId: { in: userIds } } } };
     await prisma.mediaAsset.deleteMany({ where: owned });
+    await prisma.postArchiveEpisode.deleteMany({ where: owned });
     await prisma.postOffer.deleteMany({ where: owned });
     await prisma.post.deleteMany({ where: owned.post });
     await prisma.creatorProfile.deleteMany({ where: { userId: { in: userIds } } });
@@ -110,7 +112,7 @@ describe('publish / hide posts', () => {
   const cookies = (name?: UserName): Record<string, string> =>
     name ? { influency_session: token(name) } : {};
   const action = (
-    which: 'publish' | 'hide',
+    which: 'publish' | 'archive' | 'restore',
     name: UserName | undefined,
     id: string,
     { origin = WEB_ORIGIN, target = app } = {},
@@ -121,7 +123,7 @@ describe('publish / hide posts', () => {
       headers: { origin },
       cookies: cookies(name),
     });
-  const send = (method: 'PATCH' | 'POST' | 'DELETE', url: string, payload?: object) =>
+  const send = (method: 'PATCH' | 'POST' | 'PUT' | 'DELETE', url: string, payload?: object) =>
     app.inject({
       method,
       url,
@@ -153,7 +155,7 @@ describe('publish / hide posts', () => {
   };
   const addOffer = (postId: string) =>
     prisma.postOffer.create({
-      data: { postId, version: 1, priceCoins: 5n, durationSeconds: 604_800 },
+      data: { postId, version: 1, priceCoins: 5n },
     });
 
   it('publishes a FREE draft with a READY image', async () => {
@@ -195,7 +197,10 @@ describe('publish / hide posts', () => {
     expect(studioPostSchema.parse(ok.json()).status).toBe('PUBLISHED');
   });
 
-  it('hides and re-publishes, keeping the first publish time', async () => {
+  const episodes = (postId: string) =>
+    prisma.postArchiveEpisode.findMany({ where: { postId }, orderBy: { archivedAt: 'asc' } });
+
+  it('archives and restores, keeping the first publish time and recording episodes', async () => {
     const id = await createPost('FREE');
     const first = studioPostSchema.parse((await action('publish', 'creatorA', id)).json());
 
@@ -203,72 +208,130 @@ describe('publish / hide posts', () => {
     expect(again.statusCode).toBe(409);
     expect(errorOf(again).code).toBe('POST_STATUS_CONFLICT');
 
-    const hidden = await action('hide', 'creatorA', id);
-    expect(hidden.statusCode).toBe(200);
-    expect(studioPostSchema.parse(hidden.json()).status).toBe('HIDDEN');
+    const archived = await action('archive', 'creatorA', id);
+    expect(archived.statusCode).toBe(200);
+    expect(studioPostSchema.parse(archived.json()).status).toBe('ARCHIVED');
+    expect(await episodes(id)).toMatchObject([{ restoredAt: null }]);
 
-    const hideAgain = await action('hide', 'creatorA', id);
-    expect(hideAgain.statusCode).toBe(409);
-    expect(errorOf(hideAgain).code).toBe('POST_STATUS_CONFLICT');
-
-    const republished = studioPostSchema.parse((await action('publish', 'creatorA', id)).json());
-    expect(republished.status).toBe('PUBLISHED');
-    expect(republished.publishedAt).toBe(first.publishedAt);
-  });
-
-  it('rejects hiding a draft', async () => {
-    const id = await createPost('FREE');
-    const res = await action('hide', 'creatorA', id);
-    expect(res.statusCode).toBe(409);
-    expect(errorOf(res).code).toBe('POST_STATUS_CONFLICT');
-  });
-
-  it('rejects publishing or hiding a REMOVED post', async () => {
-    const id = await createPost('FREE');
-    await prisma.post.update({ where: { id }, data: { status: 'REMOVED' } });
-    for (const which of ['publish', 'hide'] as const) {
+    for (const which of ['archive', 'publish'] as const) {
       const res = await action(which, 'creatorA', id);
       expect(res.statusCode).toBe(409);
       expect(errorOf(res).code).toBe('POST_STATUS_CONFLICT');
     }
+    expect(await episodes(id)).toHaveLength(1);
+
+    const restored = studioPostSchema.parse((await action('restore', 'creatorA', id)).json());
+    expect(restored.status).toBe('PUBLISHED');
+    expect(restored.publishedAt).toBe(first.publishedAt);
+    const [closed] = await episodes(id);
+    expect(closed!.restoredAt!.getTime()).toBeGreaterThanOrEqual(closed!.archivedAt.getTime());
+
+    const restoreAgain = await action('restore', 'creatorA', id);
+    expect(restoreAgain.statusCode).toBe(409);
+    expect(errorOf(restoreAgain).code).toBe('POST_STATUS_CONFLICT');
+
+    // Re-archiving opens a fresh episode and leaves the closed one untouched.
+    await action('archive', 'creatorA', id);
+    const [kept, open] = await episodes(id);
+    expect(kept).toEqual(closed);
+    expect(open).toMatchObject({ restoredAt: null });
   });
 
-  it('sends posts to PENDING_REVIEW when moderation is required', async () => {
+  it('drops an archived post from the public feed and brings it back on restore', async () => {
+    const id = await createPost('FREE');
+    await action('publish', 'creatorA', id);
+    const feedIds = async () =>
+      publicPostListSchema
+        .parse((await app.inject({ url: '/api/v1/creators/publish-spec-a/posts' })).json())
+        .posts.map((p) => p.id);
+    expect(await feedIds()).toContain(id);
+    await action('archive', 'creatorA', id);
+    expect(await feedIds()).not.toContain(id);
+    expect(await prisma.post.count({ where: { id } })).toBe(1);
+    await action('restore', 'creatorA', id);
+    expect(await feedIds()).toContain(id);
+  });
+  it('only archives PUBLISHED posts and only restores ARCHIVED ones', async () => {
+    const draft = await createPost('FREE');
+    const removed = await createPost('FREE');
+    await prisma.post.update({ where: { id: removed }, data: { status: 'REMOVED' } });
+    const published = await createPost('FREE');
+    await action('publish', 'creatorA', published);
+    for (const [which, id] of [
+      ['archive', draft],
+      ['restore', draft],
+      ['publish', removed],
+      ['archive', removed],
+      ['restore', removed],
+      ['restore', published],
+    ] as const) {
+      const res = await action(which, 'creatorA', id);
+      expect(res.statusCode).toBe(409);
+      expect(errorOf(res).code).toBe('POST_STATUS_CONFLICT');
+    }
+    expect(
+      await prisma.postArchiveEpisode.count({
+        where: { postId: { in: [draft, removed, published] } },
+      }),
+    ).toBe(0);
+  });
+
+  it('sends posts to PENDING_REVIEW when moderation is required, which cannot be archived', async () => {
     const id = await createPost('FREE');
     const res = await action('publish', 'creatorA', id, { target: moderatedApp });
     expect(res.statusCode).toBe(200);
     expect(studioPostSchema.parse(res.json())).toMatchObject({ status: 'PENDING_REVIEW' });
 
-    const hidden = await action('hide', 'creatorA', id, { target: moderatedApp });
-    expect(studioPostSchema.parse(hidden.json()).status).toBe('HIDDEN');
+    const archived = await action('archive', 'creatorA', id, { target: moderatedApp });
+    expect(archived.statusCode).toBe(409);
+    expect(errorOf(archived).code).toBe('POST_STATUS_CONFLICT');
   });
 
-  it('only allows caption edits while the post is live', async () => {
+  it('opens exactly one episode when two archives race', async () => {
     const id = await createPost('FREE');
+    await action('publish', 'creatorA', id);
+    const results = await Promise.all([
+      action('archive', 'creatorA', id),
+      action('archive', 'creatorA', id),
+    ]);
+    expect(results.map((r) => r.statusCode).sort()).toEqual([200, 409]);
+    expect(await episodes(id)).toHaveLength(1);
+  });
+
+  it('allows at most one open episode per post in the DB', async () => {
+    const id = await createPost('FREE');
+    await action('publish', 'creatorA', id);
+    await action('archive', 'creatorA', id);
+    await expect(prisma.postArchiveEpisode.create({ data: { postId: id } })).rejects.toThrow();
+  });
+
+  it('only allows caption and price edits while the post is live or archived', async () => {
+    const id = await createPost('PREMIUM');
+    await addOffer(id);
     const media = await prisma.mediaAsset.findFirstOrThrow({ where: { postId: id } });
     await action('publish', 'creatorA', id);
 
-    expect((await send('PATCH', `${URL}/${id}`, { caption: 'Baru' })).statusCode).toBe(200);
-    const same = await send('PATCH', `${URL}/${id}`, { caption: 'Lagi', visibility: 'FREE' });
-    expect(same.statusCode).toBe(200);
-    expect(studioPostSchema.parse(same.json()).caption).toBe('Lagi');
+    for (const state of ['live', 'archived'] as const) {
+      if (state === 'archived') await action('archive', 'creatorA', id);
+      expect((await send('PATCH', `${URL}/${id}`, { caption: 'Baru' })).statusCode).toBe(200);
+      const same = await send('PATCH', `${URL}/${id}`, { caption: 'Lagi', visibility: 'PREMIUM' });
+      expect(same.statusCode).toBe(200);
+      expect(studioPostSchema.parse(same.json()).caption).toBe('Lagi');
+      expect((await send('PUT', `${URL}/${id}/offer`, { priceCoins: 20 })).statusCode).toBe(200);
 
-    const locked = [
-      await send('PATCH', `${URL}/${id}`, { visibility: 'PREMIUM' }),
-      await send('POST', `${URL}/${id}/media`, { contentType: 'image/png', byteSize: 10 }),
-      await send('DELETE', `${URL}/${id}/media/${media.id}`),
-    ];
-    for (const res of locked) {
-      expect(res.statusCode).toBe(409);
-      expect(errorOf(res).code).toBe('POST_LOCKED');
+      const locked = [
+        await send('PATCH', `${URL}/${id}`, { visibility: 'FREE' }),
+        await send('POST', `${URL}/${id}/media`, { contentType: 'image/png', byteSize: 10 }),
+        await send('DELETE', `${URL}/${id}/media/${media.id}`),
+      ];
+      for (const res of locked) {
+        expect(res.statusCode).toBe(409);
+        expect(errorOf(res).code).toBe('POST_LOCKED');
+      }
+      const row = await prisma.post.findUniqueOrThrow({ where: { id } });
+      expect(row.visibility).toBe('PREMIUM');
+      expect(await prisma.mediaAsset.count({ where: { id: media.id } })).toBe(1);
     }
-    const row = await prisma.post.findUniqueOrThrow({ where: { id } });
-    expect(row.visibility).toBe('FREE');
-    expect(await prisma.mediaAsset.count({ where: { id: media.id } })).toBe(1);
-
-    await action('hide', 'creatorA', id);
-    expect((await send('PATCH', `${URL}/${id}`, { visibility: 'PREMIUM' })).statusCode).toBe(200);
-    expect((await send('DELETE', `${URL}/${id}/media/${media.id}`)).statusCode).toBe(204);
   });
 
   it('rejects completing a pending upload after publish, but a READY complete stays idempotent', async () => {
@@ -312,9 +375,9 @@ describe('publish / hide posts', () => {
     }
   });
 
-  it('scopes publish and hide to the owner', async () => {
+  it('scopes publish, archive and restore to the owner', async () => {
     const id = await createPost('FREE');
-    for (const which of ['publish', 'hide'] as const) {
+    for (const which of ['publish', 'archive', 'restore'] as const) {
       expect((await action(which, 'creatorB', id)).statusCode).toBe(404);
       expect((await action(which, 'creatorA', UNKNOWN_ID)).statusCode).toBe(404);
       expect((await action(which, 'creatorA', 'not-a-uuid')).statusCode).toBe(400);

@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   createMediaUploadSchema,
   mediaKindOf,
+  MEDIA_REJECTION_REASONS,
   mediaUploadResponseSchema,
   POST_IMAGE_MAX_BYTES,
   POST_VIDEO_MAX_BYTES,
+  studioMediaSchema,
 } from './index.js';
 
 const messageOf = (input: unknown) => {
@@ -87,6 +89,7 @@ describe('mediaUploadResponseSchema', () => {
     contentType: 'video/mp4',
     byteSize: 1,
     durationSeconds: null,
+    rejectionReason: null,
     createdAt: '2026-11-03T00:00:00.000Z',
   };
   const expiresAt = '2026-11-03T00:30:00.000Z';
@@ -104,5 +107,27 @@ describe('mediaUploadResponseSchema', () => {
         upload: { url: 'u', method: 'POST', headers: {}, formField: 'file', expiresAt },
       }).upload.formField,
     ).toBe('file');
+  });
+});
+
+describe('studioMediaSchema rejectionReason', () => {
+  const base = {
+    id: 'm1',
+    kind: 'IMAGE',
+    status: 'REJECTED',
+    contentType: 'image/png',
+    byteSize: 1,
+    durationSeconds: null,
+    createdAt: '2026-11-03T00:00:00.000Z',
+  };
+
+  it.each([null, ...MEDIA_REJECTION_REASONS])('accepts %s', (rejectionReason) => {
+    expect(studioMediaSchema.parse({ ...base, rejectionReason }).rejectionReason).toBe(
+      rejectionReason,
+    );
+  });
+
+  it('rejects an unknown reason', () => {
+    expect(studioMediaSchema.safeParse({ ...base, rejectionReason: 'NOPE' }).success).toBe(false);
   });
 });

@@ -18,6 +18,7 @@ const post = (status: StudioPost['status']): StudioPost => ({
   visibility: 'PREMIUM',
   status,
   offer: null,
+  cover: null,
   publishedAt: null,
   createdAt: '2026-11-03T00:00:00.000Z',
   updatedAt: '2026-11-03T00:00:00.000Z',
@@ -40,13 +41,13 @@ describe('PostStatusActions', () => {
     );
   });
 
-  it('shows the API message when publishing is refused', async () => {
+  it('shows the API message when an action is refused', async () => {
     stubFetch(
       Response.json(
         {
           error: {
-            code: 'OFFER_REQUIRED',
-            message: 'Atur harga sebelum mempublikasikan post Premium.',
+            code: 'POST_STATUS_CONFLICT',
+            message: 'Status post tidak memungkinkan tindakan ini.',
             requestId: 'req_1',
             details: null,
           },
@@ -54,31 +55,43 @@ describe('PostStatusActions', () => {
         { status: 409 },
       ),
     );
-    render(<PostStatusActions post={post('HIDDEN')} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Publikasikan' }));
+    render(<PostStatusActions post={post('ARCHIVED')} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Pulihkan' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Atur harga sebelum mempublikasikan post Premium.',
+      'Status post tidak memungkinkan tindakan ini.',
     );
     expect(router.refresh).not.toHaveBeenCalled();
   });
 
-  it('hides a published post', async () => {
+  it('archives a published post', async () => {
     const fetchMock = stubFetch(new Response('{}', { status: 200 }));
     render(<PostStatusActions post={post('PUBLISHED')} />);
     expect(screen.getByText('Post tampil di halaman publik Anda.')).toBeVisible();
-    fireEvent.click(screen.getByRole('button', { name: 'Sembunyikan' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Arsipkan' }));
     await waitFor(() => expect(router.refresh).toHaveBeenCalled());
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/hide$/), expect.anything());
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/archive$/), expect.anything());
   });
 
-  it('explains a post waiting for review', () => {
+  it('restores an archived post', async () => {
+    const fetchMock = stubFetch(new Response('{}', { status: 200 }));
+    render(<PostStatusActions post={post('ARCHIVED')} />);
+    expect(screen.getByText(/Post diarsipkan: tidak tampil di halaman publik/)).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Pulihkan' }));
+    await waitFor(() => expect(router.refresh).toHaveBeenCalled());
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/restore$/), expect.anything());
+  });
+
+  it('explains a post under admin review (or hold) without an action', () => {
     render(<PostStatusActions post={post('PENDING_REVIEW')} />);
-    expect(screen.getByText('Menunggu tinjauan admin sebelum tampil.')).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Sembunyikan' })).toBeVisible();
+    expect(screen.getByText('Sedang ditinjau admin; tidak terlihat publik.')).toBeVisible();
+    expect(screen.queryByRole('button')).toBeNull();
   });
 
-  it('offers nothing for a removed post', () => {
+  it('explains a removed post and offers nothing', () => {
     render(<PostStatusActions post={post('REMOVED')} />);
+    expect(
+      screen.getByText('Dihapus oleh admin karena melanggar aturan. Tidak terlihat publik.'),
+    ).toBeVisible();
     expect(screen.queryByRole('button')).toBeNull();
   });
 });

@@ -4,12 +4,9 @@ import { useRouter } from 'next/navigation';
 import { type FormEvent, useState } from 'react';
 import {
   errorResponseSchema,
-  POST_OFFER_MAX_DURATION_DAYS,
   POST_OFFER_MAX_PRICE_COINS,
-  POST_OFFER_MIN_DURATION_DAYS,
   POST_OFFER_MIN_PRICE_COINS,
   type PostOffer,
-  SECONDS_PER_DAY,
   setPostOfferSchema,
 } from '@influency/shared';
 import { Button } from '@/components/ui/button';
@@ -17,15 +14,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { byField } from '../post-form';
 
-type Field = 'priceCoins' | 'durationDays';
+type Field = 'priceCoins';
 
-/** Price and access period of a premium post. Each change becomes a new offer version on the server. */
+/** Price of a premium post; buyers get permanent access. Each change becomes a new offer version on the server. */
 export function PostOfferForm({ postId, offer }: { postId: string; offer: PostOffer | null }) {
   const router = useRouter();
   const [price, setPrice] = useState(offer ? String(offer.priceCoins) : '');
-  const [days, setDays] = useState(
-    offer ? String(Math.floor(offer.durationSeconds / SECONDS_PER_DAY)) : '',
-  );
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [formError, setFormError] = useState<string>();
   const [saved, setSaved] = useState(false);
@@ -35,10 +29,7 @@ export function PostOfferForm({ postId, offer }: { postId: string; offer: PostOf
     event.preventDefault();
     setFormError(undefined);
     setSaved(false);
-    const parsed = setPostOfferSchema.safeParse({
-      priceCoins: Number(price),
-      durationDays: Number(days),
-    });
+    const parsed = setPostOfferSchema.safeParse({ priceCoins: Number(price) });
     if (!parsed.success) {
       setErrors(
         byField<Field>(parsed.error.issues.map((i) => ({ ...i, path: String(i.path[0]) }))),
@@ -113,7 +104,7 @@ export function PostOfferForm({ postId, offer }: { postId: string; offer: PostOf
       </h2>
       <p className="text-sm text-muted-foreground">
         {offer
-          ? `Versi ${offer.version}: ${offer.priceCoins} Koin · ${Math.floor(offer.durationSeconds / SECONDS_PER_DAY)} hari`
+          ? `Versi ${offer.version}: ${offer.priceCoins} Koin · akses permanen`
           : 'Belum ada harga. Post Premium perlu harga sebelum dipublikasikan.'}
       </p>
       <form onSubmit={(e) => void submit(e)} noValidate className="flex flex-col gap-5">
@@ -125,16 +116,10 @@ export function PostOfferForm({ postId, offer }: { postId: string; offer: PostOf
           POST_OFFER_MIN_PRICE_COINS,
           POST_OFFER_MAX_PRICE_COINS,
         )}
-        {field(
-          'durationDays',
-          'Durasi akses (hari)',
-          days,
-          setDays,
-          POST_OFFER_MIN_DURATION_DAYS,
-          POST_OFFER_MAX_DURATION_DAYS,
-        )}
         <p className="text-sm text-muted-foreground">
-          Perubahan harga dan durasi hanya berlaku untuk pembelian berikutnya.
+          Pembeli mendapat akses permanen. Harga {POST_OFFER_MIN_PRICE_COINS}–
+          {POST_OFFER_MAX_PRICE_COINS} Koin. Perubahan harga hanya berlaku untuk pembelian
+          berikutnya.
         </p>
         {formError && (
           <p role="alert" className="text-sm text-destructive">

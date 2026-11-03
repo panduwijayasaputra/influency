@@ -26,6 +26,8 @@ export default defineConfig({
       R2_ACCESS_KEY_ID: 'test-access-key',
       R2_SECRET_ACCESS_KEY: 'test-secret',
       R2_BUCKET: 'test-bucket',
+      // Specs call PostMediaService.sweep directly; no background timer.
+      MEDIA_SWEEP_INTERVAL_SECONDS: '0',
     },
   },
 });

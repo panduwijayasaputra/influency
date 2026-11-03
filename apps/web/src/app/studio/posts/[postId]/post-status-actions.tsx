@@ -2,24 +2,41 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { errorResponseSchema, isPostEditable, type StudioPost } from '@influency/shared';
+import { errorResponseSchema, type StudioPost } from '@influency/shared';
 import { Button } from '@/components/ui/button';
 
-const LIVE_NOTICE: Partial<Record<StudioPost['status'], string>> = {
-  PUBLISHED: 'Post tampil di halaman publik Anda.',
-  PENDING_REVIEW: 'Menunggu tinjauan admin sebelum tampil.',
+type Action = 'publish' | 'archive' | 'restore';
+
+const BY_STATUS: Partial<
+  Record<StudioPost['status'], { action?: Action; label?: string; notice?: string }>
+> = {
+  DRAFT: { action: 'publish', label: 'Publikasikan' },
+  // Also an admin hold (US-042): the creator cannot change it.
+  PENDING_REVIEW: { notice: 'Sedang ditinjau admin; tidak terlihat publik.' },
+  PUBLISHED: {
+    action: 'archive',
+    label: 'Arsipkan',
+    notice: 'Post tampil di halaman publik Anda.',
+  },
+  ARCHIVED: {
+    action: 'restore',
+    label: 'Pulihkan',
+    notice:
+      'Post diarsipkan: tidak tampil di halaman publik dan tidak bisa dibeli. Media tetap tersimpan.',
+  },
+  REMOVED: { notice: 'Dihapus oleh admin karena melanggar aturan. Tidak terlihat publik.' },
 };
 
-/** Publish a draft/hidden post or hide a live one. The API decides whether that is allowed. */
+/** Publish a draft, archive a published post or restore an archived one. The API decides whether that is allowed. */
 export function PostStatusActions({ post }: { post: StudioPost }) {
   const router = useRouter();
   const [error, setError] = useState<string>();
   const [pending, setPending] = useState(false);
-  const notice = LIVE_NOTICE[post.status];
-  const action = isPostEditable(post.status) ? 'publish' : notice ? 'hide' : null;
-  if (!action) return null;
+  const entry = BY_STATUS[post.status];
+  if (!entry) return null;
+  const { action, label, notice } = entry;
 
-  async function run(which: 'publish' | 'hide') {
+  async function run(which: Action) {
     setError(undefined);
     setPending(true);
     try {
@@ -41,15 +58,17 @@ export function PostStatusActions({ post }: { post: StudioPost }) {
   return (
     <div className="flex flex-col gap-2">
       {notice && <p className="text-sm text-muted-foreground">{notice}</p>}
-      <Button
-        type="button"
-        variant={action === 'hide' ? 'outline' : 'default'}
-        disabled={pending}
-        onClick={() => void run(action)}
-        className="self-start"
-      >
-        {action === 'publish' ? 'Publikasikan' : 'Sembunyikan'}
-      </Button>
+      {action && (
+        <Button
+          type="button"
+          variant={action === 'archive' ? 'outline' : 'default'}
+          disabled={pending}
+          onClick={() => void run(action)}
+          className="self-start"
+        >
+          {label}
+        </Button>
+      )}
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error}

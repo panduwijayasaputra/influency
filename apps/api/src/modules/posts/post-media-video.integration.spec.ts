@@ -243,7 +243,10 @@ describe('studio post video', () => {
     fake.set(later.uid, 'processing');
     await complete('creatorA', POSTS.a, later.id);
     fake.set(later.uid, 'error');
-    expect((await listed(POSTS.a)).map((m) => m.id)).not.toContain(later.id);
+    expect((await listed(POSTS.a)).find((m) => m.id === later.id)).toMatchObject({
+      status: 'REJECTED',
+      rejectionReason: 'PROCESSING_FAILED',
+    });
     expect((await rowOf(later.id)).status).toBe('REJECTED');
     expect(fake.deleted).toContain(later.uid);
   });

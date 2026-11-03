@@ -1,16 +1,25 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
-import type { ObjectHead, ObjectStorage, StoredObject, UploadUrl } from './object-storage.js';
+import type {
+  DownloadUrl,
+  ObjectHead,
+  ObjectStorage,
+  StoredObject,
+  UploadUrl,
+} from './object-storage.js';
 
 /** Every key is `<prefix>/<uuid>` (server-generated); anything else never reaches the filesystem. */
 const KEY_PATTERN = /^[a-z-]+\/[0-9a-f-]{36}$/;
 
+/** Signed in place of the content type for downloads. A header value can't hold a newline, so a download token never passes as an upload token. */
+const DOWNLOAD = '\ndownload';
+
 const isMissing = (error: unknown): boolean => (error as NodeJS.ErrnoException).code === 'ENOENT';
 
 /**
- * Filesystem storage for development (STORAGE_DRIVER=local). Upload URLs point at the
- * dev-only `PUT /api/v1/dev-storage/<key>` route and carry an HMAC token instead of a SigV4 signature.
+ * Filesystem storage for development (STORAGE_DRIVER=local). Upload and download URLs point at the
+ * dev-only `PUT|GET /api/v1/dev-storage/<key>` route and carry an HMAC token instead of a SigV4 signature.
  */
 export class LocalObjectStorage implements ObjectStorage {
   private readonly root: string;
@@ -75,6 +84,16 @@ export class LocalObjectStorage implements ObjectStorage {
     });
   }
 
+  createDownloadUrl(key: string, expiresInSeconds: number): Promise<DownloadUrl> {
+    return Promise.resolve().then(() => {
+      this.path(key);
+      const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
+      const exp = Math.floor(expiresAt.getTime() / 1000);
+      const sig = this.sign(key, DOWNLOAD, exp);
+      return { url: `/api/v1/dev-storage/${key}?exp=${exp}&sig=${sig}`, expiresAt };
+    });
+  }
+
   /** True when `sig` was issued by createUploadUrl for this key + content type and has not expired. */
   verifyUploadToken(key: string, contentType: string, exp: string, sig: string): boolean {
     if (!KEY_PATTERN.test(key) || !/^\d+$/.test(exp)) return false;
@@ -83,6 +102,11 @@ export class LocalObjectStorage implements ObjectStorage {
     const expected = Buffer.from(this.sign(key, contentType, expires));
     const given = Buffer.from(sig);
     return given.length === expected.length && timingSafeEqual(given, expected);
+  }
+
+  /** True when `sig` was issued by createDownloadUrl for this key and has not expired. */
+  verifyDownloadToken(key: string, exp: string, sig: string): boolean {
+    return this.verifyUploadToken(key, DOWNLOAD, exp, sig);
   }
 
   private sign(key: string, contentType: string, exp: number): string {

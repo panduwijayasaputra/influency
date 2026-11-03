@@ -79,9 +79,15 @@ export class PostsController {
     return this.posts.publish(req.creatorProfileId!, id);
   }
 
-  @Post(':id/hide')
+  @Post(':id/archive')
   @HttpCode(200)
-  hide(@Req() req: FastifyRequest, @Param('id', postIdPipe) id: string): Promise<StudioPost> {
-    return this.posts.hide(req.creatorProfileId!, id);
+  archive(@Req() req: FastifyRequest, @Param('id', postIdPipe) id: string): Promise<StudioPost> {
+    return this.posts.archive(req.creatorProfileId!, id);
+  }
+
+  @Post(':id/restore')
+  @HttpCode(200)
+  restore(@Req() req: FastifyRequest, @Param('id', postIdPipe) id: string): Promise<StudioPost> {
+    return this.posts.restore(req.creatorProfileId!, id);
   }
 }

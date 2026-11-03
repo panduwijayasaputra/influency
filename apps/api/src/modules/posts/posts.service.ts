@@ -1,11 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
+  API_PREFIX,
   type CreatePostInput,
   isPostEditable,
   POST_EDITABLE_STATUSES,
   type PostStatus,
   type PostVisibility,
-  SECONDS_PER_DAY,
   type SetPostOfferInput,
   type StudioPost,
   type UpdatePostInput,
@@ -14,6 +14,10 @@ import { DomainError } from '../../common/domain-error.js';
 import { ENV, type Env } from '../../common/env.js';
 import { PrismaService } from '../../common/prisma.service.js';
 import type { Post, PostOffer, Prisma } from '../../generated/prisma/client.js';
+
+/** Generated cover previews (US-048): `post-previews/<uuid>`; the uuid is the only part ever put in a URL. */
+export const PREVIEW_KEY_PREFIX = 'post-previews/';
+export const previewId = (key: string): string => key.slice(PREVIEW_KEY_PREFIX.length);
 
 /** Joins only the current (highest) offer version. */
 export const currentOffer = { offers: { orderBy: { version: 'desc' }, take: 1 } } as const;
@@ -28,10 +32,16 @@ function toStudioPost(row: Post & { offers: PostOffer[] }): StudioPost {
     offer: offer
       ? {
           version: offer.version,
-          // Number() is exact: the API caps prices at POST_OFFER_MAX_PRICE_COINS, far below 2^53.
+          // Number() is exact: a DB CHECK caps prices at 1,000 Koin, far below 2^53.
           priceCoins: Number(offer.priceCoins),
-          durationSeconds: offer.durationSeconds,
           createdAt: offer.createdAt.toISOString(),
+        }
+      : null,
+    cover: row.previewKey
+      ? {
+          mediaId: row.coverMediaId,
+          // ?v= only busts the browser cache when the cover changes.
+          previewUrl: `/${API_PREFIX}/creators/me/posts/${row.id}/cover/preview?v=${previewId(row.previewKey)}`,
         }
       : null,
     publishedAt: row.publishedAt?.toISOString() ?? null,
@@ -95,12 +105,12 @@ export class PostsService {
   }
 
   /**
-   * DRAFT/HIDDEN → PUBLISHED (or PENDING_REVIEW when moderation is on), under the post-row lock so media deletes and
+   * DRAFT → PUBLISHED (or PENDING_REVIEW when moderation is on), under the post-row lock so media deletes and
    * visibility changes can't slip past the checks.
    */
   async publish(creatorProfileId: string, id: string): Promise<StudioPost> {
     await this.prisma.$transaction(async (tx) => {
-      const post = await this.lockPost(tx, creatorProfileId, id);
+      const post = await lockPost(tx, creatorProfileId, id);
       if (!isPostEditable(post.status)) throw new DomainError('POST_STATUS_CONFLICT');
       const [ready, processing] = await Promise.all([
         tx.mediaAsset.count({ where: { postId: id, status: 'READY' } }),
@@ -118,7 +128,6 @@ export class PostsService {
         where: { id },
         data: {
           status: this.env.POST_MODERATION_REQUIRED ? 'PENDING_REVIEW' : 'PUBLISHED',
-          // Keeps the first publish time, so a re-published hidden post keeps its feed position.
           publishedAt: post.publishedAt ?? new Date(),
         },
       });
@@ -126,53 +135,72 @@ export class PostsService {
     return this.get(creatorProfileId, id);
   }
 
-  /** PUBLISHED/PENDING_REVIEW → HIDDEN in one conditional write. */
-  async hide(creatorProfileId: string, id: string): Promise<StudioPost> {
-    const { count } = await this.prisma.post.updateMany({
-      where: { id, creatorProfileId, status: { in: ['PUBLISHED', 'PENDING_REVIEW'] } },
-      data: { status: 'HIDDEN' },
+  /** PUBLISHED → ARCHIVED and opens an archive episode, under the post-row lock. Never touches media. */
+  async archive(creatorProfileId: string, id: string): Promise<StudioPost> {
+    await this.prisma.$transaction(async (tx) => {
+      const post = await lockPost(tx, creatorProfileId, id);
+      if (post.status !== 'PUBLISHED') throw new DomainError('POST_STATUS_CONFLICT');
+      await tx.post.update({ where: { id }, data: { status: 'ARCHIVED' } });
+      await tx.postArchiveEpisode.create({ data: { postId: id } });
     });
-    if (count === 0) {
-      await this.get(creatorProfileId, id); // NOT_FOUND when foreign or unknown
-      throw new DomainError('POST_STATUS_CONFLICT');
-    }
     return this.get(creatorProfileId, id);
   }
 
-  /** Appends a new offer version under the post-row lock; identical terms keep the current version. */
+  /** ARCHIVED → PUBLISHED and closes the open episode. No publish re-checks: the post was published and stayed locked. */
+  async restore(creatorProfileId: string, id: string): Promise<StudioPost> {
+    await this.prisma.$transaction(async (tx) => {
+      const post = await lockPost(tx, creatorProfileId, id);
+      if (post.status !== 'ARCHIVED') throw new DomainError('POST_STATUS_CONFLICT');
+      await tx.post.update({ where: { id }, data: { status: 'PUBLISHED' } });
+      // DB clock, like archived_at's default, so the restored_at >= archived_at CHECK can't trip on app clock skew.
+      await tx.$executeRaw`
+        UPDATE post_archive_episodes SET restored_at = now()
+        WHERE post_id = ${id}::uuid AND restored_at IS NULL`;
+    });
+    return this.get(creatorProfileId, id);
+  }
+
+  /** Appends a new offer version under the post-row lock; the same price keeps the current version. */
   async setOffer(
     creatorProfileId: string,
     id: string,
     input: SetPostOfferInput,
   ): Promise<StudioPost> {
     const priceCoins = BigInt(input.priceCoins);
-    const durationSeconds = input.durationDays * SECONDS_PER_DAY;
     await this.prisma.$transaction(async (tx) => {
       // Serializes concurrent edits so each one reads the latest committed version.
-      const post = await this.lockPost(tx, creatorProfileId, id);
+      const post = await lockPost(tx, creatorProfileId, id);
       if (post.visibility !== 'PREMIUM') throw new DomainError('OFFER_REQUIRES_PREMIUM');
       const latest = await tx.postOffer.findFirst({
         where: { postId: id },
         orderBy: { version: 'desc' },
       });
-      if (latest?.priceCoins === priceCoins && latest.durationSeconds === durationSeconds) return;
+      if (latest?.priceCoins === priceCoins) return;
       await tx.postOffer.create({
-        data: { postId: id, version: (latest?.version ?? 0) + 1, priceCoins, durationSeconds },
+        data: { postId: id, version: (latest?.version ?? 0) + 1, priceCoins },
       });
     });
     return this.get(creatorProfileId, id);
   }
+}
 
-  /** Locks the owned post row (SELECT … FOR UPDATE); NOT_FOUND when foreign or unknown. */
-  private async lockPost(tx: Prisma.TransactionClient, creatorProfileId: string, id: string) {
-    const rows = await tx.$queryRaw<
-      { status: PostStatus; visibility: PostVisibility; publishedAt: Date | null }[]
-    >`
-      SELECT status::text AS status, visibility::text AS visibility, published_at AS "publishedAt"
-      FROM posts
-      WHERE id = ${id}::uuid AND creator_profile_id = ${creatorProfileId}::uuid
-      FOR UPDATE`;
-    if (rows.length === 0) throw new DomainError('NOT_FOUND');
-    return rows[0]!;
-  }
+/** Locks the owned post row (SELECT … FOR UPDATE); NOT_FOUND when foreign or unknown. */
+export async function lockPost(tx: Prisma.TransactionClient, creatorProfileId: string, id: string) {
+  const rows = await tx.$queryRaw<
+    { status: PostStatus; visibility: PostVisibility; publishedAt: Date | null }[]
+  >`
+    SELECT status::text AS status, visibility::text AS visibility, published_at AS "publishedAt"
+    FROM posts
+    WHERE id = ${id}::uuid AND creator_profile_id = ${creatorProfileId}::uuid
+    FOR UPDATE`;
+  if (rows.length === 0) throw new DomainError('NOT_FOUND');
+  return rows[0]!;
+}
+
+/** Admin variant (US-042): locks any post row by id (SELECT … FOR UPDATE); NOT_FOUND when unknown. */
+export async function lockAnyPost(tx: Prisma.TransactionClient, id: string) {
+  const rows = await tx.$queryRaw<{ status: PostStatus }[]>`
+    SELECT status::text AS status FROM posts WHERE id = ${id}::uuid FOR UPDATE`;
+  if (rows.length === 0) throw new DomainError('NOT_FOUND');
+  return rows[0]!;
 }

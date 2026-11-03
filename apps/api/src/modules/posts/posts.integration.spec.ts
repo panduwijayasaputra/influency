@@ -113,6 +113,7 @@ describe('studio posts', () => {
     expect(Object.keys(body).sort()).toEqual(
       [
         'caption',
+        'cover',
         'createdAt',
         'id',
         'offer',
@@ -127,6 +128,7 @@ describe('studio posts', () => {
       visibility: 'FREE',
       status: 'DRAFT',
       offer: null,
+      cover: null,
     });
 
     const premium = await createPost('creatorA', { visibility: 'PREMIUM' });

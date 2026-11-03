@@ -55,6 +55,34 @@ describe('StubVideoProvider', () => {
     expect(get).not.toHaveBeenCalled();
   });
 
+  it('returns a generated JPEG thumbnail only once the video is ready', async () => {
+    vi.useFakeTimers();
+    const { storage, objects } = createMemoryStorage();
+    const provider = new StubVideoProvider(storage, 5000);
+    const { uid, key } = await uploaded(provider, objects);
+    expect(await provider.getThumbnail(uid)).toBeNull();
+    objects.set(key, { body: SAMPLE, contentType: 'video/mp4' });
+    expect(await provider.getThumbnail(uid)).toBeNull();
+    vi.advanceTimersByTime(5000);
+    const frame = await provider.getThumbnail(uid);
+    expect([...frame!.subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff]);
+  });
+
+  it('plays a ready video through a short-lived storage download URL', async () => {
+    vi.useFakeTimers();
+    const { storage, objects } = createMemoryStorage();
+    const provider = new StubVideoProvider(storage, 5000);
+    const { uid } = await uploaded(provider, objects, SAMPLE);
+    expect(await provider.createPlaybackUrl(uid, 1800)).toBeNull();
+    vi.advanceTimersByTime(5000);
+    const playback = await provider.createPlaybackUrl(uid, 1800);
+    expect(playback).toEqual({
+      url: `memory://download/post-video/${uid}`,
+      player: 'video',
+      expiresAt: new Date(Date.now() + 1800_000),
+    });
+  });
+
   it('reports error for bytes that are not a video', async () => {
     const { storage, objects } = createMemoryStorage();
     const provider = new StubVideoProvider(storage, 0);

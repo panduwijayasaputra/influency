@@ -11,3 +11,4 @@ The server decides who may view premium content and hands out short-lived media 
 
 - US-020: Server-Side Access Check (high)
 - US-021: Short-Lived Media Access for Entitled Viewers (high)
+- US-050: Access via Purchases, Subscriptions & Archive Grants (high) — monetization phase

@@ -11,7 +11,6 @@ import { sha256hex } from '../../common/crypto.js';
 const WEB_ORIGIN = 'http://localhost:3000';
 const URL = '/api/v1/creators/me/posts';
 const UNKNOWN_ID = '0190a000-0000-7000-8000-00000000dead';
-const WEEK = 7 * 86_400;
 
 // Fixed ids outside DEMO_USER_IDS so this spec owns (and cleans up) its rows.
 const USERS = {
@@ -109,10 +108,15 @@ describe('post offers', () => {
     const post = await createPost('creatorA', 'PREMIUM');
     expect(post.offer).toBeNull();
 
-    const res = await put('creatorA', post.id, { priceCoins: 5, durationDays: 7 });
+    const res = await put('creatorA', post.id, { priceCoins: 5 });
     expect(res.statusCode).toBe(200);
     const body = studioPostSchema.parse(res.json());
-    expect(body.offer).toMatchObject({ version: 1, priceCoins: 5, durationSeconds: WEEK });
+    // Permanent access: the offer carries no duration.
+    expect(res.json<{ offer: unknown }>().offer).toEqual({
+      version: 1,
+      priceCoins: 5,
+      createdAt: body.offer?.createdAt,
+    });
 
     expect(studioPostSchema.parse((await get('creatorA', post.id)).json()).offer).toEqual(
       body.offer,
@@ -122,10 +126,20 @@ describe('post offers', () => {
     expect(listed?.offer).toEqual(body.offer);
   });
 
-  it('keeps the current version for identical terms', async () => {
+  it('accepts the maximum price', async () => {
     const post = await createPost('creatorA', 'PREMIUM');
-    await put('creatorA', post.id, { priceCoins: 5, durationDays: 7 });
-    const again = await put('creatorA', post.id, { priceCoins: 5, durationDays: 7 });
+    const res = await put('creatorA', post.id, { priceCoins: 1_000 });
+    expect(res.statusCode).toBe(200);
+    expect(studioPostSchema.parse(res.json()).offer).toMatchObject({
+      version: 1,
+      priceCoins: 1_000,
+    });
+  });
+
+  it('keeps the current version for the same price', async () => {
+    const post = await createPost('creatorA', 'PREMIUM');
+    await put('creatorA', post.id, { priceCoins: 5 });
+    const again = await put('creatorA', post.id, { priceCoins: 5 });
     expect(again.statusCode).toBe(200);
     expect(studioPostSchema.parse(again.json()).offer?.version).toBe(1);
     expect(await offerRows(post.id)).toHaveLength(1);
@@ -133,64 +147,57 @@ describe('post offers', () => {
 
   it('appends a new version on change and leaves earlier terms untouched', async () => {
     const post = await createPost('creatorA', 'PREMIUM');
-    await put('creatorA', post.id, { priceCoins: 5, durationDays: 7 });
+    await put('creatorA', post.id, { priceCoins: 5 });
     const [v1] = await offerRows(post.id);
 
-    const price = await put('creatorA', post.id, { priceCoins: 8, durationDays: 7 });
+    const price = await put('creatorA', post.id, { priceCoins: 8 });
     expect(studioPostSchema.parse(price.json()).offer).toMatchObject({ version: 2, priceCoins: 8 });
-    const duration = await put('creatorA', post.id, { priceCoins: 8, durationDays: 30 });
-    expect(studioPostSchema.parse(duration.json()).offer).toMatchObject({
-      version: 3,
-      priceCoins: 8,
-      durationSeconds: 30 * 86_400,
-    });
 
     const rows = await offerRows(post.id);
-    expect(rows.map((r) => [r.version, r.priceCoins, r.durationSeconds])).toEqual([
-      [1, 5n, WEEK],
-      [2, 8n, WEEK],
-      [3, 8n, 30 * 86_400],
+    expect(rows.map((r) => [r.version, r.priceCoins])).toEqual([
+      [1, 5n],
+      [2, 8n],
     ]);
     expect(rows[0]).toEqual(v1);
   });
 
   it('allows a new version on a published post', async () => {
     const post = await createPost('creatorA', 'PREMIUM');
-    await put('creatorA', post.id, { priceCoins: 5, durationDays: 7 });
+    await put('creatorA', post.id, { priceCoins: 5 });
     await prisma.post.update({
       where: { id: post.id },
       data: { status: 'PUBLISHED', publishedAt: new Date() },
     });
-    const res = await put('creatorA', post.id, { priceCoins: 10, durationDays: 7 });
+    const res = await put('creatorA', post.id, { priceCoins: 10 });
     expect(studioPostSchema.parse(res.json()).offer).toMatchObject({ version: 2, priceCoins: 10 });
   });
 
   it('gives concurrent changes distinct versions', async () => {
     const post = await createPost('creatorA', 'PREMIUM');
     const results = await Promise.all(
-      [3, 4, 6].map((priceCoins) => put('creatorA', post.id, { priceCoins, durationDays: 7 })),
+      [5, 6, 7].map((priceCoins) => put('creatorA', post.id, { priceCoins })),
     );
     expect(results.map((r) => r.statusCode)).toEqual([200, 200, 200]);
     const rows = await offerRows(post.id);
     expect(rows.map((r) => r.version)).toEqual([1, 2, 3]);
-    expect(rows.map((r) => Number(r.priceCoins)).sort()).toEqual([3, 4, 6]);
+    expect(rows.map((r) => Number(r.priceCoins)).sort()).toEqual([5, 6, 7]);
   });
 
   it('rejects offers on FREE posts', async () => {
     const post = await createPost('creatorA', 'FREE');
-    const res = await put('creatorA', post.id, { priceCoins: 5, durationDays: 7 });
+    const res = await put('creatorA', post.id, { priceCoins: 5 });
     expect(res.statusCode).toBe(409);
     expect(errorOf(res).code).toBe('OFFER_REQUIRES_PREMIUM');
     expect(await offerRows(post.id)).toHaveLength(0);
   });
 
   it.each([
-    [{ priceCoins: 0, durationDays: 7 }, 'priceCoins'],
-    [{ priceCoins: 10_001, durationDays: 7 }, 'priceCoins'],
-    [{ priceCoins: 1.5, durationDays: 7 }, 'priceCoins'],
-    [{ priceCoins: 5, durationDays: 0 }, 'durationDays'],
-    [{ priceCoins: 5, durationDays: 366 }, 'durationDays'],
-    [{ priceCoins: 5 }, 'durationDays'],
+    [{ priceCoins: 4 }, 'priceCoins'],
+    [{ priceCoins: 1_001 }, 'priceCoins'],
+    [{ priceCoins: 1.5 }, 'priceCoins'],
+    [{}, 'priceCoins'],
+    // Offers are permanent: an access duration is an unknown key, not silently ignored.
+    [{ priceCoins: 5, durationDays: 7 }, ''],
   ])('rejects invalid input %j', async (payload, path) => {
     const post = await createPost('creatorA', 'PREMIUM');
     const res = await put('creatorA', post.id, payload);
@@ -202,7 +209,7 @@ describe('post offers', () => {
 
   it('isolates creators and requires an approved creator session', async () => {
     const post = await createPost('creatorA', 'PREMIUM');
-    const valid = { priceCoins: 5, durationDays: 7 };
+    const valid = { priceCoins: 5 };
 
     const foreign = await put('creatorB', post.id, valid);
     const unknown = await put('creatorB', UNKNOWN_ID, valid);
@@ -215,16 +222,17 @@ describe('post offers', () => {
     expect(await offerRows(post.id)).toHaveLength(0);
   });
 
-  it('enforces positive price, duration and version in the database', async () => {
+  it('enforces the 5–1,000 Koin price and a positive version in the database', async () => {
     const post = await createPost('creatorA', 'PREMIUM');
-    const insert = (version: number, price: number, duration: number) =>
+    const insert = (version: number, price: number) =>
       prisma.$executeRaw`
-        INSERT INTO post_offers (post_id, version, price_coins, duration_seconds)
-        VALUES (${post.id}::uuid, ${version}, ${price}, ${duration})`;
-    await expect(insert(1, 0, WEEK)).rejects.toThrow(/post_offers_price_coins_positive/);
-    await expect(insert(1, 5, 0)).rejects.toThrow(/post_offers_duration_positive/);
-    await expect(insert(0, 5, WEEK)).rejects.toThrow(/post_offers_version_positive/);
-    await insert(1, 5, WEEK);
-    await expect(insert(1, 6, WEEK)).rejects.toThrow();
+        INSERT INTO post_offers (post_id, version, price_coins)
+        VALUES (${post.id}::uuid, ${version}, ${price})`;
+    await expect(insert(1, 4)).rejects.toThrow(/post_offers_price_coins_range/);
+    await expect(insert(1, 1_001)).rejects.toThrow(/post_offers_price_coins_range/);
+    await expect(insert(0, 5)).rejects.toThrow(/post_offers_version_positive/);
+    await insert(1, 5);
+    await insert(2, 1_000);
+    await expect(insert(2, 6)).rejects.toThrow();
   });
 });

@@ -15,6 +15,7 @@ const item = (n: number): StudioMedia => ({
   contentType: 'image/png',
   byteSize: 10,
   durationSeconds: null,
+  rejectionReason: null,
   createdAt: '2026-11-03T00:00:00.000Z',
 });
 const slotResponse = () =>
@@ -94,7 +95,7 @@ describe('PostMedia', () => {
     expect(screen.getByAltText('Gambar 1')).toBeVisible();
     expect(screen.queryByLabelText('Tambah gambar atau video')).toBeNull();
     expect(screen.queryByRole('button', { name: /Hapus/ })).toBeNull();
-    expect(screen.getByText('Sembunyikan post dulu untuk mengubah media.')).toBeVisible();
+    expect(screen.getByText('Media tidak bisa diubah setelah post terbit.')).toBeVisible();
   });
 
   it.each([
@@ -251,5 +252,146 @@ describe('PostMedia', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  describe('failed uploads', () => {
+    const failed = (n: number, rejectionReason: StudioMedia['rejectionReason']): StudioMedia => ({
+      ...item(n),
+      status: 'REJECTED',
+      rejectionReason,
+    });
+
+    it('shows each failed item with its reason, or a generic one', () => {
+      render(
+        <PostMedia
+          postId={POST_ID}
+          media={[
+            failed(1, 'UPLOAD_EXPIRED'),
+            { ...video('REJECTED'), rejectionReason: 'TOO_LONG' },
+            failed(3, null),
+          ]}
+        />,
+      );
+      expect(screen.getByText('Gambar 1 · Gagal')).toBeVisible();
+      expect(screen.getByText('Unggahan tidak selesai tepat waktu.')).toBeVisible();
+      expect(screen.getByText('Video 2 · Gagal')).toBeVisible();
+      expect(screen.getByText('Durasi video melebihi batas.')).toBeVisible();
+      expect(screen.getByText('Unggahan gagal.')).toBeVisible();
+      expect(screen.queryByRole('img')).toBeNull();
+    });
+
+    it('does not count failed items toward the limit', () => {
+      const ready = Array.from({ length: POST_MEDIA_MAX_PER_POST - 1 }, (_, i) => ({
+        ...item(0),
+        id: `ready-${i}`,
+      }));
+      const { unmount } = render(
+        <PostMedia
+          postId={POST_ID}
+          media={[...ready, failed(1, 'PROCESSING_FAILED'), failed(2, null)]}
+        />,
+      );
+      expect(screen.getByLabelText('Tambah gambar atau video')).toBeEnabled();
+      expect(screen.getByText(/9\/10/)).toBeVisible();
+      unmount();
+      render(<PostMedia postId={POST_ID} media={[...ready, item(9), failed(1, null)]} />);
+      expect(screen.getByLabelText('Tambah gambar atau video')).toBeDisabled();
+    });
+
+    it('lets a failed item be removed on a live post, without offering a retry', async () => {
+      const fetchMock = stubFetch(new Response(null, { status: 204 }));
+      render(<PostMedia postId={POST_ID} media={[item(1), failed(2, 'UPLOAD_EXPIRED')]} locked />);
+      expect(screen.queryByRole('button', { name: 'Hapus gambar 1' })).toBeNull();
+      expect(screen.queryByRole('button', { name: /Coba lagi/ })).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Hapus gambar 2' }));
+      await waitFor(() => expect(router.refresh).toHaveBeenCalled());
+      expect(fetchMock).toHaveBeenCalledWith(`${BASE}/${item(2).id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+    });
+
+    it('retry: opens the picker, then removes the failed item once the new slot exists', async () => {
+      const fetchMock = stubFetch(
+        slotResponse(),
+        new Response(null, { status: 204 }),
+        new Response(null, { status: 200 }),
+        Response.json(item(9)),
+      );
+      render(<PostMedia postId={POST_ID} media={[failed(1, 'UPLOAD_EXPIRED')]} />);
+      const input = screen.getByLabelText<HTMLInputElement>('Tambah gambar atau video');
+      const click = vi.spyOn(input, 'click');
+      fireEvent.click(screen.getByRole('button', { name: 'Coba lagi gambar 1' }));
+      expect(click).toHaveBeenCalled();
+      choose(png());
+      await waitFor(() => expect(router.refresh).toHaveBeenCalled());
+      expect(
+        fetchMock.mock.calls.map(([url, init]) => [url, (init as RequestInit).method]),
+      ).toEqual([
+        [BASE, 'POST'],
+        [`${BASE}/${item(1).id}`, 'DELETE'],
+        ['https://acct.r2.cloudflarestorage.com/media/post-media/x?X-Amz-Signature=s', 'PUT'],
+        [`${BASE}/${item(9).id}/complete`, 'POST'],
+      ]);
+    });
+
+    it('retry: keeps the failed item when the new slot is refused', async () => {
+      const fetchMock = stubFetch(apiError(409, 'MEDIA_LIMIT_REACHED', 'Batas tercapai.'));
+      render(<PostMedia postId={POST_ID} media={[failed(1, 'UPLOAD_EXPIRED')]} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Coba lagi gambar 1' }));
+      choose(png());
+      expect(await screen.findByText('Batas tercapai.')).toBeVisible();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('a direct upload after an abandoned retry deletes nothing', async () => {
+      const fetchMock = stubFetch(
+        slotResponse(),
+        new Response(null, { status: 200 }),
+        Response.json(item(9)),
+      );
+      render(<PostMedia postId={POST_ID} media={[failed(1, 'UPLOAD_EXPIRED')]} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Coba lagi gambar 1' }));
+      // Picker cancelled; later the creator clicks the input itself.
+      fireEvent.click(screen.getByLabelText('Tambah gambar atau video'));
+      choose(png());
+      await waitFor(() => expect(router.refresh).toHaveBeenCalled());
+      expect(
+        fetchMock.mock.calls.some(([, init]) => (init as RequestInit).method === 'DELETE'),
+      ).toBe(false);
+    });
+  });
+
+  describe('cover choice (premium posts)', () => {
+    const COVER_URL = `/api/v1/creators/me/posts/${POST_ID}/cover`;
+
+    it('PUTs the chosen media id, then refreshes', async () => {
+      const fetchMock = stubFetch(Response.json({}));
+      render(<PostMedia postId={POST_ID} media={[item(1)]} coverMediaId={null} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Jadikan gambar 1 sampul' }));
+      await waitFor(() => expect(router.refresh).toHaveBeenCalled());
+      expect(fetchMock).toHaveBeenCalledWith(COVER_URL, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ mediaId: item(1).id }),
+      });
+    });
+
+    it('marks the current cover and stays available while locked', () => {
+      render(
+        <PostMedia postId={POST_ID} media={[item(1), item(2)]} coverMediaId={item(1).id} locked />,
+      );
+      expect(screen.getByText('Sampul')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Jadikan gambar 2 sampul' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Jadikan gambar 1/ })).not.toBeInTheDocument();
+    });
+
+    it('is not offered for FREE posts or processing videos', () => {
+      const { rerender } = render(<PostMedia postId={POST_ID} media={[item(1)]} />);
+      expect(screen.queryByRole('button', { name: /Jadikan/ })).not.toBeInTheDocument();
+      rerender(<PostMedia postId={POST_ID} media={[video('PROCESSING')]} coverMediaId={null} />);
+      expect(screen.queryByRole('button', { name: /Jadikan/ })).not.toBeInTheDocument();
+    });
   });
 });

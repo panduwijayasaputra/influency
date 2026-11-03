@@ -37,14 +37,46 @@ export const envSchema = z
     VIDEO_DRIVER: z.enum(['stub', 'stream']).default('stub'),
     // Lifetime of a video upload slot; large uploads outlast the image TTL.
     VIDEO_UPLOAD_TTL_SECONDS: z.coerce.number().int().min(120).max(21600).default(1800),
+    // TBD placeholder: a video still processing this long after its upload slot expired is marked failed (US-049).
+    VIDEO_PROCESSING_TIMEOUT_SECONDS: z.coerce.number().int().min(600).max(86400).default(7200),
+    // How often stale uploads are swept (in-process timer); 0 = off.
+    MEDIA_SWEEP_INTERVAL_SECONDS: z.coerce.number().int().min(0).max(3600).default(300),
+    // TBD placeholder (10–30 min): lifetime of minted media URLs / playback tokens; ≥ the 600 s max video duration.
+    MEDIA_ACCESS_TTL_SECONDS: z.coerce.number().int().min(600).max(1800).default(1800),
     // Cloudflare Stream, required when VIDEO_DRIVER=stream; API token with Stream Write.
     CLOUDFLARE_STREAM_ACCOUNT_ID: z.string().min(1).optional(),
     CLOUDFLARE_STREAM_TOKEN: z.string().min(1).optional(),
+    // Secret returned when registering the Stream webhook (docs/video-processing.md); unset = webhook off, polling only.
+    CLOUDFLARE_STREAM_WEBHOOK_SECRET: z.string().min(1).optional(),
     // TBD placeholder: when true, publishing sends posts to PENDING_REVIEW instead of PUBLISHED.
     POST_MODERATION_REQUIRED: z
       .enum(['true', 'false'])
       .default('false')
       .transform((v) => v === 'true'),
+    // TBD placeholder (Video Infrastructure v1 §15.3): when true, a dedicated uploaded cover is public unblurred
+    // (downscaled only). Post images and video frames always stay blurred. Applies when a preview is generated.
+    PREMIUM_COVER_CLEAR_ALLOWED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
+    // TBD placeholder (Monetization Spec v1 §2, engagement rules OPEN): when true, logged-in users may like a premium
+    // post they have not unlocked. Default: only viewers with access.
+    PREMIUM_LIKES_WITHOUT_ACCESS: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
+    // TBD placeholders (Monetization Spec v1 §2, engagement rules OPEN): when true, logged-in users may read / write
+    // comments on a premium post they have not unlocked. Default: only viewers with access.
+    PREMIUM_COMMENTS_READ_WITHOUT_ACCESS: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
+    PREMIUM_COMMENTS_WRITE_WITHOUT_ACCESS: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
+    // TBD placeholder: comments one user may create per rolling minute (spam brake).
+    COMMENT_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(1000).default(10),
     MIDTRANS_IS_PRODUCTION: z
       .enum(['true', 'false'])
       .default('false')

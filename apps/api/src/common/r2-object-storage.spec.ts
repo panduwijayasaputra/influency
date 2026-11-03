@@ -86,6 +86,24 @@ describe('R2ObjectStorage', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it('presigns a GET with expiry without a network call', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    const download = await new R2ObjectStorage(CONFIG).createDownloadUrl(KEY, 600);
+    const url = new URL(download.url);
+    expect(url.pathname).toBe(`/media/${KEY}`);
+    expect(url.searchParams.get('X-Amz-Expires')).toBe('600');
+    expect(url.searchParams.get('X-Amz-Signature')).toMatch(/^[0-9a-f]{64}$/);
+    expect(download.url).not.toContain('r2-s3cret');
+    expect(download.expiresAt.getTime()).toBeGreaterThan(Date.now() + 599_000);
+    // GET and PUT signatures differ for the same key and expiry.
+    const upload = await new R2ObjectStorage(CONFIG).createUploadUrl(KEY, 'image/png', 600);
+    expect(new URL(upload.url).searchParams.get('X-Amz-Signature')).not.toBe(
+      url.searchParams.get('X-Amz-Signature'),
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it('maps HEAD responses to size and type, 404 to null, and errors to the status only', async () => {
     const fetchSpy = vi
       .fn()
