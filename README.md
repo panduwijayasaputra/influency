@@ -24,14 +24,15 @@ corepack enable pnpm --install-directory "%APPDATA%\npm"
 The API needs a local **PostgreSQL 18** (native install, no Docker for now).
 
 1. Install it: `winget install --id PostgreSQL.PostgreSQL.18` (or the installer from postgresql.org). Remember the `postgres` superuser password you choose.
-2. Create the app role and database with `psql -U postgres` (from `C:\Program Files\PostgreSQL\18\bin`):
+2. Create the app role and databases with `psql -U postgres` (from `C:\Program Files\PostgreSQL\18\bin`). `CREATEDB` lets `prisma migrate dev` create its temporary shadow database:
 
    ```sql
-   CREATE ROLE influency WITH LOGIN PASSWORD 'choose-a-local-password';
+   CREATE ROLE influency WITH LOGIN CREATEDB PASSWORD 'choose-a-local-password';
    CREATE DATABASE influency OWNER influency;
+   CREATE DATABASE influency_test OWNER influency;
    ```
 
-3. Copy the environment template and set `DATABASE_URL` to the password from step 2:
+3. Copy the environment template and set the password from step 2 in `DATABASE_URL` and `TEST_DATABASE_URL`:
 
    ```sh
    cp .env.example .env
@@ -41,6 +42,8 @@ The API needs a local **PostgreSQL 18** (native install, no Docker for now).
 
 The API loads the root `.env` at startup (real environment variables win) and refuses to start, listing every missing or invalid variable, if the required ones are wrong. `MIDTRANS_IS_PRODUCTION=true` is always rejected (Sandbox only). Redis is not needed until Phase 5 (background jobs); a Docker setup may return later.
 
+`pnpm test` needs PostgreSQL running: API integration tests (`*.integration.spec.ts`) use the `TEST_DATABASE_URL` database, which is **wiped and re-migrated on every run**. Its name must end in `_test` and differ from `DATABASE_URL`, or the tests refuse to start.
+
 ## Getting started
 
 ```sh
@@ -49,13 +52,50 @@ pnpm dev
 ```
 
 - Web: http://localhost:3000
-- API: http://localhost:4000/api/v1 (no routes yet — any path returns a JSON 404)
+- API: http://localhost:4000/api/v1. The web app also proxies `/api/v1/*` to `API_ORIGIN` (default `http://localhost:4000`), so the browser only talks to the web origin.
 
-The API port can be changed with `API_PORT` in `.env`. The database schema arrives in US-004.
+The API port can be changed with `API_PORT` in `.env`.
 
 `GET http://localhost:4000/api/v1/health` returns 200 `{"status":"ok",...}` when PostgreSQL answers and 503 when it doesn't (Redis is reported as `disabled` until Phase 5). Every response carries an `X-Request-Id` header that matches the `requestId` in the API's JSON logs.
 
 The Prisma client is generated into `apps/api/src/generated/` on install. After changing `apps/api/prisma/schema.prisma`, regenerate it with `pnpm --filter @influency/api generate`.
+
+### Telegram login (manual check)
+
+Login uses Telegram Login OIDC. Tests use a fake Telegram provider, so this setup is only needed to log in with a real account:
+
+1. In @BotFather, open your bot → **Login Widget**. Note the Client ID (the numeric Bot ID) and the Client Secret.
+2. Telegram needs a public HTTPS URL, so start a tunnel to the web app (port 3000), e.g. `https://abc.example-tunnel.dev`.
+3. Under **Allowed URLs**, add the tunnel origin and `https://abc.example-tunnel.dev/api/v1/auth/telegram/callback`.
+4. In `.env`, set `WEB_ORIGIN` to the tunnel origin, `TELEGRAM_OIDC_REDIRECT_URI` to that callback URL, and `TELEGRAM_OIDC_CLIENT_ID` / `TELEGRAM_OIDC_CLIENT_SECRET`. Then run `pnpm dev`.
+5. Open `<tunnel>/login` and choose **Masuk dengan Telegram**. Success lands on `/` with an HttpOnly `influency_session` cookie; a failed or cancelled login lands on `/login?error=…`.
+
+Proxy check without Telegram: `curl -i http://localhost:3000/api/v1/auth/telegram/start` returns `302` to `oauth.telegram.org/auth` and sets an `influency_oidc` cookie.
+
+### Image storage (local files or Cloudflare R2)
+
+Creator avatars/banners and post images are kept in **private** storage chosen by `STORAGE_DRIVER` (tests use an in-memory fake):
+
+- `local` (default, development only): files under `LOCAL_STORAGE_DIR` (relative to `apps/api`, gitignored). Post-image upload URLs point at the dev-only `PUT /api/v1/dev-storage/…` route with a short-lived HMAC token. The API refuses to start with `local` when `NODE_ENV=production`.
+- `r2`: a private Cloudflare R2 bucket. Post images go straight from the browser to R2 through a presigned PUT URL (valid `UPLOAD_URL_TTL_SECONDS`).
+
+To use R2:
+
+1. In Cloudflare R2, create a bucket (keep public access **off**) and an R2 API token with **Object Read & Write** scoped to that bucket.
+2. Add a CORS rule to the bucket so the browser can upload: allowed origin = your `WEB_ORIGIN`, allowed method `PUT`, allowed header `content-type`.
+3. In `.env`, set `STORAGE_DRIVER=r2` and `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, then run `pnpm dev`.
+
+Profile image check: 3. Log in as Claudia (`/login` → dev login), open `/studio/profile`, upload a banner (≤ 5 MB) and an avatar (≤ 2 MB), and edit the bio. Open the image URL in a logged-out window: it loads via `/api/v1/creators/claudiandreya/images/…`.
+
+### Database
+
+| Command           | What it does                                                                                     |
+| ----------------- | ------------------------------------------------------------------------------------------------ |
+| `pnpm db:migrate` | `prisma migrate dev`: creates a migration from schema changes and applies it to the local DB     |
+| `pnpm db:reset`   | **Drops the local `DATABASE_URL` database**, re-applies every migration, then runs the demo seed |
+| `pnpm db:seed`    | Runs the demo seed (`apps/api/prisma/seed/`); idempotent, so it is safe to run again             |
+
+Migrations live in `apps/api/prisma/migrations/` and are committed; never edit one that has been applied. The seed refuses to run with `NODE_ENV=production`.
 
 ## Scripts
 
@@ -82,6 +122,10 @@ pnpm --filter @influency/api exec vitest run -t "boots on Fastify"  # one test b
 ```
 
 Apps import `@influency/shared` from its build output, so run `pnpm --filter @influency/shared build` (or `pnpm dev`) after changing shared code before running app tests directly.
+
+## CI
+
+GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs `pnpm check` on every push to `main` and every pull request, against a PostgreSQL 18 service container. It uses placeholder configuration only (no repository secrets). Running `pnpm check` locally reproduces it.
 
 ## Repository layout
 

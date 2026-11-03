@@ -3,6 +3,7 @@
 **Status:** backlog
 **Priority:** high
 **Feature:** public-creator-page
+**Depends on:** US-015/US-019 (posts), US-018 (post offers), US-020 (access check), US-026 (creator plans), US-025/US-027 (unlocks + subscriptions for the "unlocked" indicator). Plan after US-027.
 
 ## Description
 

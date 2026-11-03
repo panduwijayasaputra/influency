@@ -46,6 +46,8 @@ Influency is a pnpm TypeScript monorepo, deployed as a **modular monolith**: one
 | Zod | 4.6.7 | |
 | Fastify | 5.12.7 | direct api dep (US-003) — same version `@nestjs/platform-fastify` uses; needed for `LogController` + request/reply types |
 | Prisma | 7.10.1 | `prisma`, `@prisma/client`, `@prisma/adapter-pg` (US-003); `prisma-client` generator, URL in `prisma.config.ts` |
+| jose | 6.2.13 | api (US-006): Telegram ID token verification via JWKS (`jwtVerify`, `createRemoteJWKSet`); also signs test tokens |
+| @fastify/cookie | 11.1.3 | api (US-006): OIDC binding + session cookies (Fastify 5) |
 | tsup | 9.0.0 | builds `@influency/shared` (ESM + d.ts) |
 
 All packages are ESM. Every dependency is pinned exactly; new versions must be at least two weeks old.

@@ -1,4 +1,4 @@
 {
   "extends": "@influency/config/tsconfig/nest.json",
-  "include": ["src", "vitest.config.ts", "eslint.config.mjs", "prisma.config.ts"]
+  "include": ["src", "test", "prisma", "vitest.config.ts", "eslint.config.mjs", "prisma.config.ts"]
 }

@@ -1,4 +1,8 @@
-// Models, conventions and migrations arrive in US-004.
+// Conventions (enforced by src/common/schema-conventions.integration.spec.ts):
+// - Models PascalCase / fields camelCase, mapped to snake_case with @@map / @map (enums too).
+// - Primary key: id String @id @default(dbgenerated("uuidv7()")) @db.Uuid (PostgreSQL 18 native, time-ordered).
+// - Timestamps: DateTime @db.Timestamptz(3); createdAt @default(now()), updatedAt @updatedAt.
+// - Koin and IDR are integers (BigInt/Int), commission is integer basis points. Never Float/Decimal.
 
 generator client {
   provider            = "prisma-client"
@@ -9,4 +13,224 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+
+  @@map("user_status")
+}
+
+model User {
+  id          String     @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  displayName String     @map("display_name")
+  status      UserStatus @default(ACTIVE)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  authIdentities            AuthIdentity[]
+  sessions                  Session[]
+  roles                     UserRole[]
+  creatorProfile            CreatorProfile?
+  creatorApplicationReviews CreatorApplicationReview[] @relation("CreatorApplicationReviewer")
+
+  @@map("users")
+}
+
+enum AuthProvider {
+  TELEGRAM
+
+  @@map("auth_provider")
+}
+
+/// Stable external identity (handoff §5.1). Matched by (provider, providerSub), never by username.
+model AuthIdentity {
+  id          String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId      String       @map("user_id") @db.Uuid
+  provider    AuthProvider
+  providerSub String       @map("provider_sub")
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([provider, providerSub])
+  @@index([userId])
+  @@map("auth_identities")
+}
+
+/// Server-side session. Only the SHA-256 hex of the cookie token is stored.
+model Session {
+  id        String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+/// One OIDC login attempt (state + nonce + PKCE verifier), single use, bound to the browser
+/// by the SHA-256 hex of the influency_oidc cookie.
+model OidcLoginAttempt {
+  id                 String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  state              String    @unique
+  nonce              String
+  codeVerifier       String    @map("code_verifier")
+  browserBindingHash String    @map("browser_binding_hash")
+  expiresAt          DateTime  @map("expires_at") @db.Timestamptz(3)
+  consumedAt         DateTime? @map("consumed_at") @db.Timestamptz(3)
+  returnTo           String    @default("/") @map("return_to") // safeReturnTo() output; never raw input
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@map("oidc_login_attempts")
+}
+
+/// Roles granted explicitly in the DB/seed (handoff §5.3). USER is implicit; CREATOR is derived from
+/// an APPROVED creator profile and never stored here.
+enum GrantedRole {
+  ADMIN
+
+  @@map("granted_role")
+}
+
+model UserRole {
+  id        String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId    String      @map("user_id") @db.Uuid
+  role      GrantedRole
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, role])
+  @@map("user_roles")
+}
+
+enum CreatorProfileStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+
+  @@map("creator_profile_status")
+}
+
+/// Creator identity + application (US-010): one row per user. `slug` is stored normalized; CHECKs
+/// (migration SQL) enforce lowercase + allowed characters, so UNIQUE(slug) is case-insensitive.
+/// US-012 adds avatar/banner keys: private R2 object keys ("profile-images/<uuid>"), null = none.
+model CreatorProfile {
+  id                  String                     @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId              String                     @unique @map("user_id") @db.Uuid
+  slug                String                     @unique
+  status              CreatorProfileStatus       @default(PENDING_REVIEW)
+  displayName         String                     @map("display_name")
+  bio                 String?
+  category            String?
+  avatarKey           String?                    @map("avatar_key")
+  bannerKey           String?                    @map("banner_key")
+  agreementVersion    String                     @map("agreement_version")
+  agreementAcceptedAt DateTime                   @map("agreement_accepted_at") @db.Timestamptz(3)
+  createdAt           DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user                User                       @relation(fields: [userId], references: [id], onDelete: Restrict)
+  reviews             CreatorApplicationReview[]
+  posts               Post[]
+
+  @@map("creator_profiles")
+}
+
+enum CreatorReviewDecision {
+  APPROVED
+  REJECTED
+
+  @@map("creator_review_decision")
+}
+
+/// Append-only decision log for creator applications (US-011). Never updated or deleted by the app.
+/// CHECK (migration): reason is set exactly when decision = REJECTED.
+model CreatorApplicationReview {
+  id               String                @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  creatorProfileId String                @map("creator_profile_id") @db.Uuid
+  reviewerId       String                @map("reviewer_id") @db.Uuid
+  decision         CreatorReviewDecision
+  reason           String?
+  createdAt        DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  creatorProfile   CreatorProfile        @relation(fields: [creatorProfileId], references: [id], onDelete: Restrict)
+  reviewer         User                  @relation("CreatorApplicationReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
+
+  @@index([creatorProfileId, createdAt])
+  @@map("creator_application_reviews")
+}
+
+enum PostVisibility {
+  FREE
+  PREMIUM
+
+  @@map("post_visibility")
+}
+
+/// Handoff §6.1 lifecycle. US-015 only creates DRAFT; transitions arrive with US-019.
+enum PostStatus {
+  DRAFT
+  PROCESSING
+  PENDING_REVIEW
+  PUBLISHED
+  HIDDEN
+  REMOVED
+
+  @@map("post_status")
+}
+
+/// A creator's post (US-015). Owned by the creator profile; never deleted by the app.
+/// CHECK (migration): char_length(caption) <= 2000 (POST_CAPTION_MAX_LENGTH).
+model Post {
+  id               String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  creatorProfileId String         @map("creator_profile_id") @db.Uuid
+  visibility       PostVisibility
+  status           PostStatus     @default(DRAFT)
+  caption          String         @default("")
+  publishedAt      DateTime?      @map("published_at") @db.Timestamptz(3)
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  creatorProfile   CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Restrict)
+  media            MediaAsset[]
+
+  @@index([creatorProfileId, createdAt])
+  @@map("posts")
+}
+
+/// US-016 images; US-017 adds VIDEO.
+enum MediaKind {
+  IMAGE
+
+  @@map("media_kind")
+}
+
+enum MediaStatus {
+  PENDING_UPLOAD
+  READY
+  REJECTED
+
+  @@map("media_status")
+}
+
+/// Media attached to a post (US-016). Bytes live in private storage under `object_key`; the API decides access.
+model MediaAsset {
+  id              String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  postId          String      @map("post_id") @db.Uuid
+  kind            MediaKind
+  status          MediaStatus @default(PENDING_UPLOAD)
+  /// Server-generated `post-media/<uuid>`; never from the client.
+  objectKey       String      @unique @map("object_key")
+  /// Declared at upload request; replaced by the magic-byte type on READY.
+  contentType     String      @map("content_type")
+  /// Declared at upload request; replaced by the stored size on READY.
+  byteSize        Int         @map("byte_size")
+  uploadExpiresAt DateTime    @map("upload_expires_at") @db.Timestamptz(3)
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+  post            Post        @relation(fields: [postId], references: [id], onDelete: Restrict)
+
+  @@index([postId, createdAt])
+  @@map("media_assets")
 }

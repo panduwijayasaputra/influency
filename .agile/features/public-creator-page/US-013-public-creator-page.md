@@ -1,6 +1,6 @@
 # US-013: Public Creator Page
 
-**Status:** backlog
+**Status:** ready_for_uat
 **Priority:** high
 **Feature:** public-creator-page
 
@@ -15,3 +15,11 @@ As a visitor from an Instagram bio link, I want to open a creator page directly 
 - [ ] Unknown, unapproved or suspended creator slugs show a not-found page
 - [ ] The page HTML and public API responses contain no premium original media URLs or media tokens
 - [ ] The layout is usable at mobile width (about 375px) and loads in Instagram/TikTok in-app browsers
+
+## Tasks
+
+### TASK-039: Public creator profile endpoint
+**Status:** done
+
+### TASK-040: Public creator page `/{creatorSlug}`
+**Status:** done

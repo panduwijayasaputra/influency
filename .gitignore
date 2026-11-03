@@ -10,6 +10,9 @@ coverage/
 next-env.d.ts
 apps/api/src/generated/
 
+# local object storage (STORAGE_DRIVER=local)
+.local-storage/
+
 # env (only the example is committed)
 .env
 .env.*

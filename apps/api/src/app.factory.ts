@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
 import type { Writable } from 'node:stream';
+import fastifyCookie from '@fastify/cookie';
 import { type FastifyRequest, LogController } from 'fastify';
 import type { NestApplicationOptions } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
-import { API_PREFIX } from '@influency/shared';
+import { API_PREFIX, POST_IMAGE_MAX_BYTES, PROFILE_IMAGE_MAX_BYTES } from '@influency/shared';
 import { AppModule } from './app.module.js';
 import { AllExceptionsFilter } from './common/all-exceptions.filter.js';
 
@@ -39,17 +40,26 @@ export function createFastifyAdapter(options: {
   });
 }
 
-/** Applies the global prefix, the error filter and the X-Request-Id response header. */
+/** Applies the global prefix, the error filter, cookie parsing and the X-Request-Id response header. */
 export function configureApp(app: NestFastifyApplication): NestFastifyApplication {
   app.setGlobalPrefix(API_PREFIX);
   app.useGlobalFilters(new AllExceptionsFilter());
-  app
-    .getHttpAdapter()
-    .getInstance()
-    .addHook('onRequest', (req, reply, done) => {
-      void reply.header(REQUEST_ID_HEADER, req.id);
-      done();
-    });
+  const fastify = app.getHttpAdapter().getInstance();
+  // Queued by Fastify and loaded before ready(), so configureApp stays synchronous.
+  void fastify.register(fastifyCookie);
+  // Raw image uploads (PUT /creators/me/avatar|banner, local-driver PUT /dev-storage/*); limits and types are checked in the services.
+  fastify.addContentTypeParser(
+    /^image\//,
+    {
+      parseAs: 'buffer',
+      bodyLimit: Math.max(PROFILE_IMAGE_MAX_BYTES.banner, POST_IMAGE_MAX_BYTES),
+    },
+    (_req, body, done) => done(null, body),
+  );
+  fastify.addHook('onRequest', (req, reply, done) => {
+    void reply.header(REQUEST_ID_HEADER, req.id);
+    done();
+  });
   return app;
 }
 

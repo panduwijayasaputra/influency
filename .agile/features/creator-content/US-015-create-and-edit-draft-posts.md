@@ -1,6 +1,6 @@
 # US-015: Create and Edit Draft Posts
 
-**Status:** backlog
+**Status:** ready_for_uat
 **Priority:** high
 **Feature:** creator-content
 
@@ -14,3 +14,14 @@ As an approved creator, I want to create and edit posts as drafts, so that I can
 - [ ] Posts start as `DRAFT` and are not visible publicly
 - [ ] The Studio lists the creator's own posts with their status
 - [ ] A creator cannot view or edit another creator's posts (another creator's post ID returns not found)
+
+## Tasks
+
+### TASK-041: `posts` schema, migration and shared post contract
+**Status:** done
+
+### TASK-042: Studio posts API (`/creators/me/posts`)
+**Status:** done
+
+### TASK-043: Studio posts pages (`/studio/posts`, `/new`, `/[postId]`)
+**Status:** done

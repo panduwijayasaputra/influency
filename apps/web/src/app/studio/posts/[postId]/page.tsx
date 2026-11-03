@@ -1,0 +1,43 @@
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { Suspense } from 'react';
+import { getMyPost, getMyPostMedia } from '@/lib/api/studio-posts';
+import { POST_STATUS_LABELS } from '../labels';
+import { PostForm } from '../post-form';
+import { PostImages } from './post-images';
+
+export const metadata: Metadata = { title: 'Edit Post' };
+
+async function PostEditor({ params }: { params: Promise<{ postId: string }> }) {
+  const { postId } = await params;
+  const [post, media] = await Promise.all([getMyPost(postId), getMyPostMedia(postId)]);
+  if (!post || !media) {
+    return (
+      <div className="flex flex-col gap-2">
+        <p className="text-muted-foreground">Post tidak ditemukan.</p>
+        <Link href="/studio/posts" className="font-medium underline underline-offset-4">
+          Kembali ke Konten
+        </Link>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-6">
+      <p className="text-sm text-muted-foreground">Status: {POST_STATUS_LABELS[post.status]}</p>
+      <PostForm post={post} />
+      <PostImages postId={post.id} media={media.media} />
+    </div>
+  );
+}
+
+export default function EditPostPage({ params }: PageProps<'/studio/posts/[postId]'>) {
+  return (
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-6 py-12">
+      <h1 className="text-3xl font-bold tracking-tight">Edit Post</h1>
+      {/* Params and the session cookie are request data, so they stream inside Suspense (cacheComponents). */}
+      <Suspense fallback={<p className="text-muted-foreground">Memuat…</p>}>
+        <PostEditor params={params} />
+      </Suspense>
+    </main>
+  );
+}

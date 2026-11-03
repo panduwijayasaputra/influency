@@ -29,7 +29,7 @@
       "feature": "project-foundation",
       "file": "features/project-foundation/US-004-database-baseline-and-demo-seed.md",
       "title": "Database Baseline & Demo Seed",
-      "status": "backlog",
+      "status": "ready_for_uat",
       "priority": "high"
     },
     {
@@ -37,7 +37,7 @@
       "feature": "project-foundation",
       "file": "features/project-foundation/US-005-continuous-integration-pipeline.md",
       "title": "Continuous Integration Pipeline",
-      "status": "backlog",
+      "status": "ready_for_uat",
       "priority": "medium"
     },
     {
@@ -45,7 +45,7 @@
       "feature": "telegram-auth",
       "file": "features/telegram-auth/US-006-log-in-with-telegram.md",
       "title": "Log In with Telegram",
-      "status": "backlog",
+      "status": "ready_for_uat",
       "priority": "high"
     },
     {
@@ -53,7 +53,7 @@
       "feature": "telegram-auth",
       "file": "features/telegram-auth/US-007-secure-session-and-logout.md",
       "title": "Secure Session & Logout",
-      "status": "backlog",
+      "status": "ready_for_uat",
       "priority": "high"
     },
     {
@@ -61,7 +61,7 @@
       "feature": "telegram-auth",
       "file": "features/telegram-auth/US-008-return-to-original-page-after-login.md",
       "title": "Return to Original Page After Login",
-      "status": "backlog",
+      "status": "ready_for_uat",
       "priority": "high"
     },
     {
@@ -69,7 +69,7 @@
       "feature": "telegram-auth",
       "file": "features/telegram-auth/US-009-current-user-and-role-based-access.md",
       "title": "Current User & Role-Based Access",
-      "status": "backlog",
+      "status": "ready_for_uat",
       "priority": "high"
     },
     {
@@ -77,7 +77,7 @@
       "feature": "creator-onboarding",
       "file": "features/creator-onboarding/US-010-apply-to-become-a-creator.md",
       "title": "Apply to Become a Creator",
-      "status": "backlog",
+      "status": "ready_for_uat",
       "priority": "high"
     },
     {
@@ -85,7 +85,7 @@
       "feature": "creator-onboarding",
       "file": "features/creator-onboarding/US-011-admin-reviews-creator-applications.md",
       "title": "Admin Reviews Creator Applications",
-      "status": "backlog",
+      "status": "ready_for_uat",
       "priority": "high"
     },
     {
@@ -93,7 +93,7 @@
       "feature": "creator-onboarding",
       "file": "features/creator-onboarding/US-012-creator-edits-profile.md",
       "title": "Creator Edits Profile",
-      "status": "backlog",
+      "status": "ready_for_uat",
       "priority": "medium"
     },
     {
@@ -101,15 +101,7 @@
       "feature": "public-creator-page",
       "file": "features/public-creator-page/US-013-public-creator-page.md",
       "title": "Public Creator Page",
-      "status": "backlog",
-      "priority": "high"
-    },
-    {
-      "id": "US-014",
-      "feature": "public-creator-page",
-      "file": "features/public-creator-page/US-014-post-detail-and-paywall-preview.md",
-      "title": "Post Detail & Paywall Preview",
-      "status": "backlog",
+      "status": "ready_for_uat",
       "priority": "high"
     },
     {
@@ -117,7 +109,7 @@
       "feature": "creator-content",
       "file": "features/creator-content/US-015-create-and-edit-draft-posts.md",
       "title": "Create and Edit Draft Posts",
-      "status": "backlog",
+      "status": "ready_for_uat",
       "priority": "high"
     },
     {
@@ -125,7 +117,7 @@
       "feature": "creator-content",
       "file": "features/creator-content/US-016-upload-images-to-private-storage.md",
       "title": "Upload Images to Private Storage",
-      "status": "backlog",
+      "status": "ready_for_uat",
       "priority": "high"
     },
     {
@@ -213,6 +205,14 @@
       "feature": "content-purchases",
       "file": "features/content-purchases/US-027-subscribe-to-a-creator.md",
       "title": "Subscribe to a Creator",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-014",
+      "feature": "public-creator-page",
+      "file": "features/public-creator-page/US-014-post-detail-and-paywall-preview.md",
+      "title": "Post Detail & Paywall Preview",
       "status": "backlog",
       "priority": "high"
     },

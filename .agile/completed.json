@@ -20,6 +20,90 @@
       "title": "API Skeleton: Health, Request ID & Error Format",
       "status": "ready_for_uat",
       "completedAt": "2026-11-03"
+    },
+    {
+      "id": "US-004",
+      "feature": "project-foundation",
+      "title": "Database Baseline & Demo Seed",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-03"
+    },
+    {
+      "id": "US-005",
+      "feature": "project-foundation",
+      "title": "Continuous Integration Pipeline",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-03"
+    },
+    {
+      "id": "US-006",
+      "feature": "telegram-auth",
+      "title": "Log In with Telegram",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-03"
+    },
+    {
+      "id": "US-007",
+      "feature": "telegram-auth",
+      "title": "Secure Session & Logout",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-03"
+    },
+    {
+      "id": "US-008",
+      "feature": "telegram-auth",
+      "title": "Return to Original Page After Login",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-03"
+    },
+    {
+      "id": "US-009",
+      "feature": "telegram-auth",
+      "title": "Current User & Role-Based Access",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-03"
+    },
+    {
+      "id": "US-010",
+      "feature": "creator-onboarding",
+      "title": "Apply to Become a Creator",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-03"
+    },
+    {
+      "id": "US-011",
+      "feature": "creator-onboarding",
+      "title": "Admin Reviews Creator Applications",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-03"
+    },
+    {
+      "id": "US-012",
+      "feature": "creator-onboarding",
+      "title": "Creator Edits Profile",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-03"
+    },
+    {
+      "id": "US-013",
+      "feature": "public-creator-page",
+      "title": "Public Creator Page",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-03"
+    },
+    {
+      "id": "US-015",
+      "feature": "creator-content",
+      "title": "Create and Edit Draft Posts",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-03"
+    },
+    {
+      "id": "US-016",
+      "feature": "creator-content",
+      "title": "Upload Images to Private Storage",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-03"
     }
   ]
 }

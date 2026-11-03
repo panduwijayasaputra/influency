@@ -39,6 +39,7 @@ admin/
 
 - "Login with Telegram" goes to `GET /auth/telegram/start?returnTo=<current relative path>`; after the callback the user lands back on the same creator page/post.
 - Never read or store tokens in JS; the session is an HttpOnly cookie.
+- Mutations go from the browser to same-origin `/api/v1` (the browser sends `Origin`). A Next server-side call that mutates with the forwarded session cookie must also send `Origin: WEB_ORIGIN`, or the API returns 403 (CSRF guard).
 - Detect Instagram/TikTok in-app browsers and offer an "Open in browser" fallback when login fails.
 
 ## Purchase and paywall UX (handoff §3.4)
