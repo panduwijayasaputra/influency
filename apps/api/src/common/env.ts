@@ -8,6 +8,8 @@ export const R2_VARS = [
   'R2_BUCKET',
 ] as const;
 
+export const STREAM_VARS = ['CLOUDFLARE_STREAM_ACCOUNT_ID', 'CLOUDFLARE_STREAM_TOKEN'] as const;
+
 export const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -31,6 +33,18 @@ export const envSchema = z
     R2_ACCESS_KEY_ID: z.string().min(1).optional(),
     R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
     R2_BUCKET: z.string().min(1).optional(),
+    // Video: `stub` (private object storage + simulated processing; development/test only) or `stream` (Cloudflare Stream).
+    VIDEO_DRIVER: z.enum(['stub', 'stream']).default('stub'),
+    // Lifetime of a video upload slot; large uploads outlast the image TTL.
+    VIDEO_UPLOAD_TTL_SECONDS: z.coerce.number().int().min(120).max(21600).default(1800),
+    // Cloudflare Stream, required when VIDEO_DRIVER=stream; API token with Stream Write.
+    CLOUDFLARE_STREAM_ACCOUNT_ID: z.string().min(1).optional(),
+    CLOUDFLARE_STREAM_TOKEN: z.string().min(1).optional(),
+    // TBD placeholder: when true, publishing sends posts to PENDING_REVIEW instead of PUBLISHED.
+    POST_MODERATION_REQUIRED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
     MIDTRANS_IS_PRODUCTION: z
       .enum(['true', 'false'])
       .default('false')
@@ -52,6 +66,22 @@ export const envSchema = z
         code: 'custom',
         path: ['STORAGE_DRIVER'],
         message: 'local storage is for development only',
+      });
+    }
+    if (env.VIDEO_DRIVER === 'stream') {
+      for (const name of STREAM_VARS) {
+        if (!env[name])
+          ctx.addIssue({
+            code: 'custom',
+            path: [name],
+            message: 'required when VIDEO_DRIVER=stream',
+          });
+      }
+    } else if (env.NODE_ENV === 'production') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['VIDEO_DRIVER'],
+        message: 'stub video is for development only',
       });
     }
   });

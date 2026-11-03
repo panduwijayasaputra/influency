@@ -4,9 +4,9 @@ import { createTestPrisma } from '../../test/prisma.js';
 
 describe('creator_application_reviews constraints', () => {
   const prisma = createTestPrisma();
-  const applicantId = '0190a000-0000-7000-8000-0000000d0001';
-  const reviewerId = '0190a000-0000-7000-8000-0000000d0002';
-  const profileId = '0190a000-0000-7000-8000-0000000d0101';
+  const applicantId = '0190a000-0000-7000-8000-000000220001';
+  const reviewerId = '0190a000-0000-7000-8000-000000220002';
+  const profileId = '0190a000-0000-7000-8000-000000220101';
   const review = { creatorProfileId: profileId, reviewerId };
 
   beforeAll(async () => {

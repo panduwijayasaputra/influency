@@ -87,6 +87,13 @@ To use R2:
 
 Profile image check: 3. Log in as Claudia (`/login` → dev login), open `/studio/profile`, upload a banner (≤ 5 MB) and an avatar (≤ 2 MB), and edit the bio. Open the image URL in a logged-out window: it loads via `/api/v1/creators/claudiandreya/images/…`.
 
+### Post video (stub or Cloudflare Stream)
+
+Post videos use the driver chosen by `VIDEO_DRIVER` (tests use an in-memory fake). Every upload is private; viewers will get short-lived signed playback (US-021), never a public URL.
+
+- `stub` (default, development only): the browser PUTs the file into the image storage above under `post-video/…`; the API checks the container bytes (MP4/MOV/WebM), shows it as processing for ~5 s, then ready. Uploads go through the Next `/api/v1` rewrite and are buffered in memory, so use small files (the fixture `apps/api/test/fixtures/sample.mp4` works). The API refuses to start with `stub` when `NODE_ENV=production`.
+- `stream`: Cloudflare Stream direct creator uploads (basic POST, ≤ 200 MB), always created with `requireSignedURLs: true`. Set `VIDEO_DRIVER=stream`, `CLOUDFLARE_STREAM_ACCOUNT_ID` and `CLOUDFLARE_STREAM_TOKEN` (API token with **Stream Write**). Processing status is polled from the API while the studio page is open; there is no webhook yet. If a Content-Security-Policy is added later, `connect-src` must allow the Stream upload host (`upload.videodelivery.net`).
+
 ### Database
 
 | Command           | What it does                                                                                     |

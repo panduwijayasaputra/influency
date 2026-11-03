@@ -6,7 +6,12 @@ import { type FastifyRequest, LogController } from 'fastify';
 import type { NestApplicationOptions } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
-import { API_PREFIX, POST_IMAGE_MAX_BYTES, PROFILE_IMAGE_MAX_BYTES } from '@influency/shared';
+import {
+  API_PREFIX,
+  POST_IMAGE_MAX_BYTES,
+  POST_VIDEO_MAX_BYTES,
+  PROFILE_IMAGE_MAX_BYTES,
+} from '@influency/shared';
 import { AppModule } from './app.module.js';
 import { AllExceptionsFilter } from './common/all-exceptions.filter.js';
 
@@ -54,6 +59,12 @@ export function configureApp(app: NestFastifyApplication): NestFastifyApplicatio
       parseAs: 'buffer',
       bodyLimit: Math.max(PROFILE_IMAGE_MAX_BYTES.banner, POST_IMAGE_MAX_BYTES),
     },
+    (_req, body, done) => done(null, body),
+  );
+  // Raw video uploads to the stub video driver (local-driver PUT /dev-storage/post-video/*); checked by the driver.
+  fastify.addContentTypeParser(
+    /^video\//,
+    { parseAs: 'buffer', bodyLimit: POST_VIDEO_MAX_BYTES },
     (_req, body, done) => done(null, body),
   );
   fastify.addHook('onRequest', (req, reply, done) => {

@@ -17,6 +17,22 @@ export const ERRORS = {
   FILE_TOO_LARGE: { status: 413, message: 'Ukuran file terlalu besar.' },
   MEDIA_LIMIT_REACHED: { status: 409, message: 'Batas jumlah media per post sudah tercapai.' },
   MEDIA_UPLOAD_MISSING: { status: 409, message: 'File belum terunggah. Coba unggah ulang.' },
+  VIDEO_PROCESSING_FAILED: {
+    status: 422,
+    message: 'Video tidak dapat diproses. Gunakan MP4, MOV, atau WebM, maks. 200 MB dan 10 menit.',
+  },
+  OFFER_REQUIRES_PREMIUM: { status: 409, message: 'Harga hanya bisa diatur untuk post Premium.' },
+  POST_STATUS_CONFLICT: { status: 409, message: 'Status post tidak memungkinkan tindakan ini.' },
+  POST_LOCKED: {
+    status: 409,
+    message: 'Sembunyikan post dulu untuk mengubah jenis post atau media.',
+  },
+  MEDIA_REQUIRED: {
+    status: 409,
+    message: 'Tambahkan minimal satu foto atau video sebelum mempublikasikan.',
+  },
+  MEDIA_PROCESSING: { status: 409, message: 'Tunggu hingga semua video selesai diproses.' },
+  OFFER_REQUIRED: { status: 409, message: 'Atur harga sebelum mempublikasikan post Premium.' },
   POST_NOT_AVAILABLE: { status: 404, message: 'Postingan tidak tersedia.' },
   TOPUP_NOT_FOUND: { status: 404, message: 'Top-up tidak ditemukan.' },
   INSUFFICIENT_COINS: { status: 402, message: 'Saldo Koin tidak cukup.' },

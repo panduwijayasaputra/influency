@@ -1,6 +1,6 @@
 # US-018: Set Premium Post Price & Duration
 
-**Status:** backlog
+**Status:** ready_for_uat
 **Priority:** high
 **Feature:** creator-content
 
@@ -14,3 +14,11 @@ As an approved creator, I want to set a Koin price and access period for a premi
 - [ ] Price must be greater than zero and duration must be positive
 - [ ] Changing the price or duration creates a new offer version that applies to future purchases only
 - [ ] Existing buyers keep the terms they purchased under
+
+## Tasks
+
+### TASK-052: Post offers — schema, shared contract and PUT offer endpoint
+**Status:** done
+
+### TASK-053: Studio "Harga & Akses" section on the post edit page
+**Status:** done

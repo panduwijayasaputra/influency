@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
@@ -60,6 +60,14 @@ describe('dev storage upload route (STORAGE_DRIVER=local)', () => {
     const res = await put(url);
     expect(res.statusCode).toBe(204);
     expect(await storage.get(KEY)).toEqual({ body: new Uint8Array(PNG), contentType: 'image/png' });
+  });
+
+  it('stores a stub-driver video upload', async () => {
+    const videoKey = 'post-video/0190a000-0000-7000-8000-0000001e0f01';
+    const mp4 = readFileSync(new URL('../../../test/fixtures/sample.mp4', import.meta.url));
+    const { url } = await storage.createUploadUrl(videoKey, 'video/mp4', 300);
+    expect((await put(url, 'video/mp4', mp4)).statusCode).toBe(204);
+    expect((await storage.head(videoKey))?.size).toBe(mp4.length);
   });
 
   it('rejects another content type, a tampered or missing signature, and another key', async () => {

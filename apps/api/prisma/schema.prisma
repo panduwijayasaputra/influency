@@ -194,34 +194,58 @@ model Post {
   updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
   creatorProfile   CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Restrict)
   media            MediaAsset[]
+  offers           PostOffer[]
 
   @@index([creatorProfileId, createdAt])
   @@map("posts")
 }
 
-/// US-016 images; US-017 adds VIDEO.
+/// US-018 per-post unlock pricing. Append-only: a change inserts version + 1; the current offer is the highest
+/// version. Purchases reference a row and snapshot its terms, so existing buyers keep what they paid for.
+model PostOffer {
+  id              String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  postId          String   @map("post_id") @db.Uuid
+  version         Int
+  priceCoins      BigInt   @map("price_coins")
+  durationSeconds Int      @map("duration_seconds")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  post            Post     @relation(fields: [postId], references: [id], onDelete: Restrict)
+
+  @@unique([postId, version])
+  @@map("post_offers")
+}
+
+/// US-016 images; US-017 video (Cloudflare Stream or the stub driver).
 enum MediaKind {
   IMAGE
+  VIDEO
 
   @@map("media_kind")
 }
 
 enum MediaStatus {
   PENDING_UPLOAD
+  /// Video uploaded, provider still transcoding (US-017).
+  PROCESSING
   READY
   REJECTED
 
   @@map("media_status")
 }
 
-/// Media attached to a post (US-016). Bytes live in private storage under `object_key`; the API decides access.
+/// Media attached to a post (US-016 images, US-017 video). Bytes live in private storage / the video provider; the API decides access.
+/// CHECK (migration): media_assets_storage_ref — IMAGE has object_key only, VIDEO has video_uid only.
 model MediaAsset {
   id              String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
   postId          String      @map("post_id") @db.Uuid
   kind            MediaKind
   status          MediaStatus @default(PENDING_UPLOAD)
-  /// Server-generated `post-media/<uuid>`; never from the client.
-  objectKey       String      @unique @map("object_key")
+  /// IMAGE only: server-generated `post-media/<uuid>`; never from the client.
+  objectKey       String?     @unique @map("object_key")
+  /// VIDEO only: provider video id (Stream uid / stub uuid). Never returned to clients.
+  videoUid        String?     @unique @map("video_uid")
+  /// VIDEO only, once READY and the provider knows it.
+  durationSeconds Int?        @map("duration_seconds")
   /// Declared at upload request; replaced by the magic-byte type on READY.
   contentType     String      @map("content_type")
   /// Declared at upload request; replaced by the stored size on READY.

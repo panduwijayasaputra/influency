@@ -66,7 +66,9 @@ describe('LocalObjectStorage', () => {
     expect(storage.verifyUploadToken(OTHER_KEY, 'image/png', exp, sig)).toBe(false);
     expect(storage.verifyUploadToken(KEY, 'image/jpeg', exp, sig)).toBe(false);
     expect(storage.verifyUploadToken(KEY, 'image/png', String(Number(exp) + 1), sig)).toBe(false);
-    expect(storage.verifyUploadToken(KEY, 'image/png', exp, sig.slice(0, -1) + 'A')).toBe(false);
+    // Tamper the first char: the last base64url char carries padding bits that decoding may ignore.
+    const tampered = (sig.startsWith('A') ? 'B' : 'A') + sig.slice(1);
+    expect(storage.verifyUploadToken(KEY, 'image/png', exp, tampered)).toBe(false);
     expect(storage.verifyUploadToken(KEY, 'image/png', exp, 'short')).toBe(false);
     expect(storage.verifyUploadToken(KEY, 'image/png', 'abc', sig)).toBe(false);
     expect(storage.verifyUploadToken('../x', 'image/png', exp, sig)).toBe(false);

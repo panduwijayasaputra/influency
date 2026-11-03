@@ -21,7 +21,7 @@ import type { Prisma } from '../../generated/prisma/client.js';
 const KEY_PREFIX = 'profile-images/';
 const KEY_COLUMN = { avatar: 'avatarKey', banner: 'bannerKey' } as const;
 /** Publicly visible creators: approved, and the account is not suspended. */
-const PUBLIC_CREATOR = {
+export const PUBLIC_CREATOR = {
   status: 'APPROVED',
   user: { status: 'ACTIVE' },
 } satisfies Prisma.CreatorProfileWhereInput;

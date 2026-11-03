@@ -111,9 +111,23 @@ describe('studio posts', () => {
     expect(res.statusCode).toBe(201);
     const body = res.json<Record<string, unknown>>();
     expect(Object.keys(body).sort()).toEqual(
-      ['caption', 'createdAt', 'id', 'status', 'updatedAt', 'visibility'].sort(),
+      [
+        'caption',
+        'createdAt',
+        'id',
+        'offer',
+        'publishedAt',
+        'status',
+        'updatedAt',
+        'visibility',
+      ].sort(),
     );
-    expect(body).toMatchObject({ caption: 'Halo', visibility: 'FREE', status: 'DRAFT' });
+    expect(body).toMatchObject({
+      caption: 'Halo',
+      visibility: 'FREE',
+      status: 'DRAFT',
+      offer: null,
+    });
 
     const premium = await createPost('creatorA', { visibility: 'PREMIUM' });
     expect(premium).toMatchObject({ caption: '', visibility: 'PREMIUM', status: 'DRAFT' });

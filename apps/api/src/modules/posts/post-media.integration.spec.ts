@@ -155,7 +155,7 @@ describe('studio post media', () => {
     });
   const errorOf = (res: { json: () => unknown }) => errorResponseSchema.parse(res.json()).error;
   const keyOf = async (mediaId: string) =>
-    (await prisma.mediaAsset.findUniqueOrThrow({ where: { id: mediaId } })).objectKey;
+    (await prisma.mediaAsset.findUniqueOrThrow({ where: { id: mediaId } })).objectKey!;
 
   /** Slot + simulated browser PUT (bytes may exceed the declared size, like a lying client); returns the media id and storage key. */
   const uploaded = async (postId: string, bytes: Buffer, contentType = 'image/png') => {
@@ -177,7 +177,7 @@ describe('studio post media', () => {
     expect(res.headers['cache-control']).toBe('no-store');
     const body = mediaUploadResponseSchema.parse(res.json());
     expect(Object.keys(res.json<{ media: object }>().media).sort()).toEqual(
-      ['byteSize', 'contentType', 'createdAt', 'id', 'kind', 'status'].sort(),
+      ['byteSize', 'contentType', 'createdAt', 'durationSeconds', 'id', 'kind', 'status'].sort(),
     );
     expect(body.media).toMatchObject({
       kind: 'IMAGE',

@@ -8,7 +8,7 @@ type R2Config = Pick<Env, (typeof R2_VARS)[number]>;
  * Cloudflare R2 through its S3 API (SigV4 via aws4fetch). The bucket stays private.
  * Errors carry the HTTP status only: request URLs and headers hold signatures.
  */
-// shortcut: get() buffers whole objects (profile images ≤5 MiB; post images are size-checked with head() first); stream for video (US-017).
+// shortcut: get() buffers whole objects (profile images ≤5 MiB; post images are size-checked with head() first); the stub video driver reads videos once in dev; Stream holds real video.
 export class R2ObjectStorage implements ObjectStorage {
   private readonly client: AwsClient;
   private readonly baseUrl: string;

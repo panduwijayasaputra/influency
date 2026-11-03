@@ -18,6 +18,11 @@ const R2 = {
   R2_BUCKET: 'test-bucket',
 };
 const BASE = { DATABASE_URL, ...TELEGRAM, ...R2, STORAGE_DRIVER: 'r2' };
+const STREAM = {
+  VIDEO_DRIVER: 'stream',
+  CLOUDFLARE_STREAM_ACCOUNT_ID: 'test-stream-account',
+  CLOUDFLARE_STREAM_TOKEN: 'test-stream-token',
+};
 
 describe('parseEnv', () => {
   it('applies defaults to a minimal valid environment', () => {
@@ -28,6 +33,9 @@ describe('parseEnv', () => {
       SESSION_TTL_DAYS: 30,
       LOCAL_STORAGE_DIR: '.local-storage',
       UPLOAD_URL_TTL_SECONDS: 300,
+      VIDEO_DRIVER: 'stub',
+      VIDEO_UPLOAD_TTL_SECONDS: 1800,
+      POST_MODERATION_REQUIRED: false,
       MIDTRANS_IS_PRODUCTION: false,
     });
   });
@@ -42,7 +50,33 @@ describe('parseEnv', () => {
     expect(() => parseEnv({ DATABASE_URL, ...TELEGRAM, NODE_ENV: 'production' })).toThrow(
       '- STORAGE_DRIVER: local storage is for development only',
     );
-    expect(parseEnv({ ...BASE, NODE_ENV: 'production' }).STORAGE_DRIVER).toBe('r2');
+    expect(parseEnv({ ...BASE, ...STREAM, NODE_ENV: 'production' }).STORAGE_DRIVER).toBe('r2');
+  });
+
+  it('defaults to the stub video driver without any Stream variables', () => {
+    const env = parseEnv(BASE);
+    expect(env.VIDEO_DRIVER).toBe('stub');
+    expect(env.CLOUDFLARE_STREAM_TOKEN).toBeUndefined();
+  });
+
+  it('requires the Stream variables for VIDEO_DRIVER=stream, never echoing values', () => {
+    const run = () =>
+      parseEnv({ ...BASE, ...STREAM, CLOUDFLARE_STREAM_TOKEN: undefined, VIDEO_DRIVER: 'stream' });
+    expect(run).toThrow('- CLOUDFLARE_STREAM_TOKEN: required when VIDEO_DRIVER=stream');
+    expect(run).not.toThrow(/test-stream-account/);
+    expect(parseEnv({ ...BASE, ...STREAM }).VIDEO_DRIVER).toBe('stream');
+  });
+
+  it('rejects the stub video driver in production', () => {
+    expect(() => parseEnv({ ...BASE, NODE_ENV: 'production' })).toThrow(
+      '- VIDEO_DRIVER: stub video is for development only',
+    );
+  });
+
+  it.each(['119', '21601', 'abc'])('rejects VIDEO_UPLOAD_TTL_SECONDS=%s', (ttl) => {
+    expect(() => parseEnv({ ...BASE, VIDEO_UPLOAD_TTL_SECONDS: ttl })).toThrow(
+      /- VIDEO_UPLOAD_TTL_SECONDS:/,
+    );
   });
 
   it.each(['59', '3601', '1.5', 'abc'])('rejects UPLOAD_URL_TTL_SECONDS=%s', (ttl) => {
@@ -101,6 +135,16 @@ describe('parseEnv', () => {
   it('accepts MIDTRANS_IS_PRODUCTION=false', () => {
     expect(parseEnv({ ...BASE, MIDTRANS_IS_PRODUCTION: 'false' }).MIDTRANS_IS_PRODUCTION).toBe(
       false,
+    );
+  });
+
+  it('parses POST_MODERATION_REQUIRED (default false)', () => {
+    expect(parseEnv(BASE).POST_MODERATION_REQUIRED).toBe(false);
+    expect(parseEnv({ ...BASE, POST_MODERATION_REQUIRED: 'true' }).POST_MODERATION_REQUIRED).toBe(
+      true,
+    );
+    expect(() => parseEnv({ ...BASE, POST_MODERATION_REQUIRED: 'yes' })).toThrow(
+      /- POST_MODERATION_REQUIRED:/,
     );
   });
 

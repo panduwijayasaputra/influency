@@ -1,10 +1,13 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
+import { isPostEditable } from '@influency/shared';
 import { getMyPost, getMyPostMedia } from '@/lib/api/studio-posts';
 import { POST_STATUS_LABELS } from '../labels';
 import { PostForm } from '../post-form';
-import { PostImages } from './post-images';
+import { PostMedia } from './post-media';
+import { PostOfferForm } from './post-offer-form';
+import { PostStatusActions } from './post-status-actions';
 
 export const metadata: Metadata = { title: 'Edit Post' };
 
@@ -24,8 +27,10 @@ async function PostEditor({ params }: { params: Promise<{ postId: string }> }) {
   return (
     <div className="flex flex-col gap-6">
       <p className="text-sm text-muted-foreground">Status: {POST_STATUS_LABELS[post.status]}</p>
+      <PostStatusActions post={post} />
       <PostForm post={post} />
-      <PostImages postId={post.id} media={media.media} />
+      {post.visibility === 'PREMIUM' && <PostOfferForm postId={post.id} offer={post.offer} />}
+      <PostMedia postId={post.id} media={media.media} locked={!isPostEditable(post.status)} />
     </div>
   );
 }

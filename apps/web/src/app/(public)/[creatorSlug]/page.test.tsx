@@ -7,6 +7,7 @@ import CreatorPage, { generateMetadata, LoginCta } from './page';
 
 vi.mock('@/lib/api/current-user', () => ({ getCurrentUser: vi.fn() }));
 vi.mock('@/lib/api/public-creator', () => ({ getPublicCreator: vi.fn() }));
+vi.mock('@/lib/api/public-posts', () => ({ getPublicPosts: vi.fn(() => new Promise(() => {})) }));
 vi.mock('next/navigation', () => ({
   notFound: () => {
     throw new Error('notFound');
@@ -30,7 +31,7 @@ describe('CreatorPage', () => {
     vi.mocked(getCurrentUser).mockReturnValue(new Promise(() => {}));
   });
 
-  it('shows the profile, images and empty content sections', async () => {
+  it('shows the profile, images, the streaming feed and the empty plans section', async () => {
     const { container } = render(await CreatorPage(props()));
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Claudia Andreya');
     expect(screen.getByText('influency.com/claudiandreya')).toBeInTheDocument();
@@ -40,9 +41,8 @@ describe('CreatorPage', () => {
       CREATOR.bannerUrl,
       CREATOR.avatarUrl,
     ]);
-    expect(screen.getByRole('region', { name: 'Konten' })).toHaveTextContent(
-      'Belum ada konten yang dipublikasikan.',
-    );
+    // The uncached feed streams in behind its fallback (CreatorPosts has its own tests).
+    expect(screen.getByRole('region', { name: 'Konten' })).toHaveTextContent('Memuat konten…');
     expect(screen.getByRole('region', { name: 'Langganan' })).toHaveTextContent(
       'Kreator ini belum membuka langganan.',
     );

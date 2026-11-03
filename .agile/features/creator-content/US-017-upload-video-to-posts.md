@@ -1,6 +1,6 @@
 # US-017: Upload Video to Posts
 
-**Status:** backlog
+**Status:** ready_for_uat
 **Priority:** medium
 **Feature:** creator-content
 
@@ -14,3 +14,17 @@ As an approved creator, I want to attach video to my posts, so that I can sell v
 - [ ] The post shows a processing status until the video is ready
 - [ ] When Stream credentials are not available, a stub adapter with a protected test fixture lets the rest of the flow be developed and tested
 - [ ] Video originals are never publicly accessible without a signed token
+
+## Tasks
+
+### TASK-048: Video schema, migrations and shared media contract
+**Status:** done
+
+### TASK-049: `VideoProvider` seam — Cloudflare Stream driver, stub driver, env and fixture
+**Status:** done
+
+### TASK-050: Video branch in the post media API
+**Status:** done
+
+### TASK-051: Video upload and processing status on the studio post page
+**Status:** done

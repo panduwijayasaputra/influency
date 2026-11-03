@@ -20,6 +20,8 @@ const post: StudioPost = {
   caption: 'Halo',
   visibility: 'FREE',
   status: 'DRAFT',
+  offer: null,
+  publishedAt: null,
   createdAt: '2026-11-03T00:00:00.000Z',
   updatedAt: '2026-11-03T00:00:00.000Z',
 };
@@ -96,5 +98,22 @@ describe('PostForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Simpan' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Data tidak ditemukan.');
     expect(screen.getByRole('button', { name: 'Simpan' })).toBeEnabled();
+  });
+
+  it('locks the visibility of a live post but still saves its caption', async () => {
+    const live: StudioPost = { ...post, status: 'PUBLISHED' };
+    const fetchMock = stubFetch(() => Promise.resolve(Response.json(live)));
+    render(<PostForm post={live} />);
+    expect(screen.getByLabelText('Gratis')).toBeDisabled();
+    expect(screen.getByLabelText('Premium')).toBeDisabled();
+    expect(screen.getByText('Sembunyikan post dulu untuk mengubah jenis post.')).toBeVisible();
+    fireEvent.change(screen.getByLabelText('Caption (opsional)'), { target: { value: 'Baru' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan' }));
+
+    expect(await screen.findByText('Tersimpan.')).toBeVisible();
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/v1/creators/me/posts/${post.id}`,
+      expect.objectContaining({ body: JSON.stringify({ caption: 'Baru', visibility: 'FREE' }) }),
+    );
   });
 });

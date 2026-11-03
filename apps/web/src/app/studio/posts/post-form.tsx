@@ -5,6 +5,7 @@ import { type FormEvent, useState } from 'react';
 import {
   createPostSchema,
   errorResponseSchema,
+  isPostEditable,
   POST_CAPTION_MAX_LENGTH,
   POST_VISIBILITIES,
   type PostVisibility,
@@ -21,9 +22,11 @@ type Field = 'caption' | 'visibility';
 type FieldErrors = Partial<Record<Field, string>>;
 
 /** First message per field; `path` is the field name (API issues use dotted strings). */
-function byField(issues: { path: string; message: string }[]): FieldErrors {
-  const errors: FieldErrors = {};
-  for (const { path, message } of issues) errors[path as Field] ??= message;
+export function byField<F extends string>(
+  issues: { path: string; message: string }[],
+): Partial<Record<F, string>> {
+  const errors: Partial<Record<F, string>> = {};
+  for (const { path, message } of issues) errors[path as F] ??= message;
   return errors;
 }
 
@@ -36,6 +39,8 @@ export function PostForm({ post }: { post?: StudioPost }) {
   const [formError, setFormError] = useState<string>();
   const [saved, setSaved] = useState(false);
   const [pending, setPending] = useState(false);
+  // Live posts keep their visibility; the current value is still sent and accepted unchanged.
+  const visibilityLocked = post !== undefined && !isPostEditable(post.status);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -43,7 +48,9 @@ export function PostForm({ post }: { post?: StudioPost }) {
     setSaved(false);
     const parsed = (post ? updatePostSchema : createPostSchema).safeParse({ caption, visibility });
     if (!parsed.success) {
-      setErrors(byField(parsed.error.issues.map((i) => ({ ...i, path: String(i.path[0]) }))));
+      setErrors(
+        byField<Field>(parsed.error.issues.map((i) => ({ ...i, path: String(i.path[0]) }))),
+      );
       return;
     }
     setErrors({});
@@ -69,7 +76,9 @@ export function PostForm({ post }: { post?: StudioPost }) {
       } else {
         const { error } = errorResponseSchema.parse(await res.json());
         if (error.code === 'VALIDATION_FAILED') {
-          setErrors(byField((error.details?.issues ?? []) as { path: string; message: string }[]));
+          setErrors(
+            byField<Field>((error.details?.issues ?? []) as { path: string; message: string }[]),
+          );
         } else {
           setFormError(error.message);
         }
@@ -99,6 +108,9 @@ export function PostForm({ post }: { post?: StudioPost }) {
         <p id="caption-count" className="text-right text-xs text-muted-foreground">
           {caption.length}/{POST_CAPTION_MAX_LENGTH}
         </p>
+        <p className="text-sm text-muted-foreground">
+          Caption tampil di halaman publik, termasuk untuk post Premium.
+        </p>
         {errors.caption && (
           <p id="caption-error" className="text-sm text-destructive">
             {errors.caption}
@@ -107,6 +119,7 @@ export function PostForm({ post }: { post?: StudioPost }) {
       </div>
 
       <fieldset
+        disabled={visibilityLocked}
         className="flex flex-col gap-2"
         aria-invalid={errors.visibility ? true : undefined}
         aria-describedby={errors.visibility ? 'visibility-error' : undefined}
@@ -128,6 +141,11 @@ export function PostForm({ post }: { post?: StudioPost }) {
             {VISIBILITY_LABELS[value]}
           </label>
         ))}
+        {visibilityLocked && (
+          <p className="text-sm text-muted-foreground">
+            Sembunyikan post dulu untuk mengubah jenis post.
+          </p>
+        )}
         {errors.visibility && (
           <p id="visibility-error" className="text-sm text-destructive">
             {errors.visibility}

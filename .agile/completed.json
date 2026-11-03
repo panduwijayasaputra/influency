@@ -104,6 +104,27 @@
       "title": "Upload Images to Private Storage",
       "status": "ready_for_uat",
       "completedAt": "2026-11-03"
+    },
+    {
+      "id": "US-017",
+      "feature": "creator-content",
+      "title": "Upload Video to Posts",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-03"
+    },
+    {
+      "id": "US-018",
+      "feature": "creator-content",
+      "title": "Set Premium Post Price & Duration",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-03"
+    },
+    {
+      "id": "US-019",
+      "feature": "creator-content",
+      "title": "Publish a Post",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-03"
     }
   ]
 }

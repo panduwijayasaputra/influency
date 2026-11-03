@@ -125,7 +125,7 @@
       "feature": "creator-content",
       "file": "features/creator-content/US-017-upload-video-to-posts.md",
       "title": "Upload Video to Posts",
-      "status": "backlog",
+      "status": "ready_for_uat",
       "priority": "medium"
     },
     {
@@ -133,7 +133,7 @@
       "feature": "creator-content",
       "file": "features/creator-content/US-018-set-premium-post-price-and-duration.md",
       "title": "Set Premium Post Price & Duration",
-      "status": "backlog",
+      "status": "ready_for_uat",
       "priority": "high"
     },
     {
@@ -141,7 +141,7 @@
       "feature": "creator-content",
       "file": "features/creator-content/US-019-publish-a-post.md",
       "title": "Publish a Post",
-      "status": "backlog",
+      "status": "ready_for_uat",
       "priority": "high"
     },
     {

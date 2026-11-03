@@ -1,9 +1,23 @@
-import { Body, Controller, Get, Header, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import {
   type CreatePostInput,
   createPostSchema,
+  type SetPostOfferInput,
+  setPostOfferSchema,
   type StudioPost,
   type StudioPostList,
   type UpdatePostInput,
@@ -48,5 +62,26 @@ export class PostsController {
     @Body(new ZodValidationPipe(updatePostSchema)) body: UpdatePostInput,
   ): Promise<StudioPost> {
     return this.posts.update(req.creatorProfileId!, id, body);
+  }
+
+  @Put(':id/offer')
+  setOffer(
+    @Req() req: FastifyRequest,
+    @Param('id', postIdPipe) id: string,
+    @Body(new ZodValidationPipe(setPostOfferSchema)) body: SetPostOfferInput,
+  ): Promise<StudioPost> {
+    return this.posts.setOffer(req.creatorProfileId!, id, body);
+  }
+
+  @Post(':id/publish')
+  @HttpCode(200)
+  publish(@Req() req: FastifyRequest, @Param('id', postIdPipe) id: string): Promise<StudioPost> {
+    return this.posts.publish(req.creatorProfileId!, id);
+  }
+
+  @Post(':id/hide')
+  @HttpCode(200)
+  hide(@Req() req: FastifyRequest, @Param('id', postIdPipe) id: string): Promise<StudioPost> {
+    return this.posts.hide(req.creatorProfileId!, id);
   }
 }

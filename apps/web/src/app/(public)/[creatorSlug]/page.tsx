@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { getCurrentUser } from '@/lib/api/current-user';
 import { getPublicCreator } from '@/lib/api/public-creator';
 import { loginHref } from '@/lib/login-href';
+import { CreatorPosts } from './creator-posts';
 
 type Props = { params: Promise<{ creatorSlug: string }> };
 
@@ -85,9 +86,10 @@ export default async function CreatorPage({ params }: Props) {
           <h2 id="konten" className="text-lg font-semibold">
             Konten
           </h2>
-          <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-            Belum ada konten yang dipublikasikan.
-          </p>
+          {/* Uncached so hidden posts disappear immediately; the profile above stays cached. */}
+          <Suspense fallback={<p className="text-sm text-muted-foreground">Memuat konten…</p>}>
+            <CreatorPosts slug={creator.slug} />
+          </Suspense>
         </section>
 
         <section aria-labelledby="langganan" className="mt-6 flex flex-col gap-2">

@@ -18,6 +18,8 @@ const POST = {
   caption: 'Halo',
   visibility: 'FREE',
   status: 'DRAFT',
+  offer: null,
+  publishedAt: null,
   createdAt: '2026-11-03T00:00:00.000Z',
   updatedAt: '2026-11-03T00:00:00.000Z',
 };
@@ -87,6 +89,7 @@ describe('studio posts fetchers', () => {
       status: 'READY',
       contentType: 'image/png',
       byteSize: 10,
+      durationSeconds: null,
       createdAt: '2026-11-03T00:00:00.000Z',
     };
     const fetchMock = stubFetch(Response.json({ media: [media] }));
