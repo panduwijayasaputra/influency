@@ -74,7 +74,11 @@ describe('GET /posts/:id/media-access', () => {
         status,
         ...(kind === 'IMAGE'
           ? { objectKey: `post-media/${randomUUID()}`, contentType: 'image/png' }
-          : { videoUid: randomUUID().replaceAll('-', ''), contentType: 'video/mp4' }),
+          : {
+              videoUid: randomUUID().replaceAll('-', ''),
+              contentType: 'video/mp4',
+              durationSeconds: 65,
+            }),
         byteSize: 10,
         uploadExpiresAt: new Date(),
       },
@@ -174,8 +178,10 @@ describe('GET /posts/:id/media-access', () => {
     const body = mediaAccessResponseSchema.parse(res.json());
     expect(body.media.map((m) => m.kind)).toEqual(['IMAGE', 'VIDEO']);
     expect(body.media[0]!.url).toMatch(/^memory:\/\/download\/post-media\//);
-    expect(body.media[1]).toMatchObject({ kind: 'VIDEO', player: 'iframe' });
-    expect(body.media[1]!.url).toMatch(/^fake:\/\/play\//);
+    const clip = body.media[1]!;
+    expect(clip).toMatchObject({ kind: 'VIDEO', player: 'hls', durationSeconds: 65 });
+    expect(clip.url).toMatch(/^fake:\/\/play\//);
+    expect(clip.kind === 'VIDEO' && clip.posterUrl).toMatch(/^fake:\/\/poster\//);
     expect(body.watermark).toBeNull();
     const ttlMs = Date.parse(body.expiresAt) - Date.now();
     expect(ttlMs).toBeGreaterThan(1790_000);
@@ -187,6 +193,7 @@ describe('GET /posts/:id/media-access', () => {
       expect(res.statusCode).toBe(403);
       expect(errorCode(res)).toBe('FORBIDDEN');
       expect(res.body).not.toContain('memory://');
+      expect(res.body).not.toContain('fake://');
       expect(res.json()).not.toHaveProperty('media');
     }
   });

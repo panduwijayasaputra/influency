@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MediaAccessResponse } from '@influency/shared';
 import { PostMediaViewer } from './post-media-viewer';
 
@@ -13,10 +13,19 @@ const access = (n: number, expiresAt: string, watermark: string | null = 'a1b2c3
       {
         id: 's',
         kind: 'VIDEO',
-        url: `https://customer-x.cloudflarestream.com/t${n}/iframe`,
-        player: 'iframe',
+        url: `https://customer-x.cloudflarestream.com/t${n}/manifest/video.m3u8`,
+        posterUrl: `https://customer-x.cloudflarestream.com/t${n}/thumbnails/thumbnail.jpg`,
+        player: 'hls',
+        durationSeconds: 65,
       },
-      { id: 'v', kind: 'VIDEO', url: `/api/v1/dev-storage/post-video/x?v=${n}`, player: 'video' },
+      {
+        id: 'v',
+        kind: 'VIDEO',
+        url: `/api/v1/dev-storage/post-video/x?v=${n}`,
+        posterUrl: null,
+        player: 'video',
+        durationSeconds: null,
+      },
     ],
     expiresAt,
     watermark,
@@ -31,12 +40,22 @@ function stubFetch(...responses: Response[]) {
 }
 
 describe('PostMediaViewer', () => {
+  // PostVideo watches visibility; these tests only render, so an inert observer is enough.
+  beforeEach(() => {
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        observe() {}
+        disconnect() {}
+      },
+    );
+  });
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.useRealTimers();
   });
 
-  it('renders images, the Stream iframe and a no-download video with the watermark', async () => {
+  it('renders images and no-download videos with posters, native controls and the watermark', async () => {
     const fetchMock = stubFetch(
       Response.json(access(1, new Date(Date.now() + 1800_000).toISOString())),
     );
@@ -44,9 +63,16 @@ describe('PostMediaViewer', () => {
     await waitFor(() => expect(container.querySelector('img')).not.toBeNull());
     expect(fetchMock).toHaveBeenCalledWith(URL, { cache: 'no-store' });
     expect(container.querySelector('img')?.getAttribute('src')).toBe('https://r2.example/img?v=1');
-    expect(screen.getByTitle('Video').getAttribute('src')).toContain('/t1/iframe');
-    const video = container.querySelector('video')!;
-    expect(video.getAttribute('controlslist')).toBe('nodownload');
+    expect(container.querySelector('iframe')).toBeNull();
+    const [stream, file] = container.querySelectorAll('video');
+    expect(stream).toHaveAttribute('poster', expect.stringContaining('/t1/thumbnails/'));
+    expect(file).not.toHaveAttribute('poster');
+    for (const video of [stream!, file!]) {
+      expect(video).toHaveAttribute('controls');
+      expect(video.getAttribute('controlslist')).toBe('nodownload');
+      // Not attached until it plays (lazy).
+      expect(video.getAttribute('src')).toBeNull();
+    }
     expect(screen.getAllByTestId('watermark')).toHaveLength(3);
     expect(screen.getAllByTestId('watermark')[0]!.textContent).toBe('influency · a1b2c3d4');
   });

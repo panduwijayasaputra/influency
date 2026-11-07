@@ -1,26 +1,24 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { CreatorProfileResponse, PublicPostDetail } from '@influency/shared';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Toaster } from '@/components/ui/toast';
 import { getCurrentUser } from '@/lib/api/current-user';
 import { getPostComments } from '@/lib/api/post-comments';
 import { getPublicCreator } from '@/lib/api/public-creator';
 import { getPublicPost } from '@/lib/api/public-post';
 import { loginHref } from '@/lib/login-href';
-import PostPage, { CommentsSection, generateMetadata, PostDetail, UnlockCta } from './page';
+import { ScrollToComments } from './scroll-to-comments';
+import PostPage, { CommentsSection, generateMetadata, PostDetail } from './page';
 
 vi.mock('@/lib/api/current-user', () => ({ getCurrentUser: vi.fn() }));
 vi.mock('@/lib/api/public-creator', () => ({ getPublicCreator: vi.fn() }));
 vi.mock('@/lib/api/public-post', () => ({ getPublicPost: vi.fn() }));
 vi.mock('@/lib/api/post-comments', () => ({ getPostComments: vi.fn() }));
-vi.mock('@/components/post-media-viewer', () => ({
-  PostMediaViewer: ({ postId }: { postId: string }) => <div data-testid="viewer">{postId}</div>,
-}));
 vi.mock('next/navigation', () => ({
   notFound: () => {
     throw new Error('notFound');
   },
-  useRouter: () => ({ back: vi.fn() }),
+  useRouter: () => ({ back: vi.fn(), refresh: vi.fn() }),
 }));
 
 const CREATOR: CreatorProfileResponse = {
@@ -45,33 +43,50 @@ const post = (overrides: Partial<PublicPostDetail>): PublicPostDetail => ({
   access: 'full',
   likeCount: 0,
   viewer: null,
+  commentCount: 0,
+  media: [],
   ...overrides,
 });
 const locked = (previewUrl: string | null = null) =>
   post({ visibility: 'PREMIUM', offer: { priceCoins: 8 }, previewUrl, access: 'locked' });
 
+const CARD_CREATOR = { slug: 'ana', displayName: 'Ana', avatarUrl: null };
+
 async function renderDetail(detail: PublicPostDetail) {
   vi.mocked(getPublicPost).mockResolvedValue(detail);
-  return render(await PostDetail({ slug: 'ana', postId: POST_ID }), { wrapper: Toaster });
+  return render(await PostDetail({ creator: CARD_CREATOR, postId: POST_ID }), {
+    wrapper: Toaster,
+  });
 }
 
 describe('PostDetail', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Keeps the Suspense'd unlock button on its (empty) fallback.
-    vi.mocked(getCurrentUser).mockReturnValue(new Promise(() => {}));
     // Keeps the Suspense'd comments on their fallback.
     vi.mocked(getPostComments).mockReturnValue(new Promise(() => {}));
+    // The card's media never leaves "near viewport" pending, so no media-access call happens here.
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        observe() {}
+        disconnect() {}
+      },
+    );
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise(() => {})),
+    );
   });
+  afterEach(() => vi.unstubAllGlobals());
 
-  it('shows a free post in full with the media viewer', async () => {
-    await renderDetail(post({}));
-    expect(screen.getByTestId('viewer')).toHaveTextContent(POST_ID);
-    expect(screen.getByText('Halo')).toBeInTheDocument();
-    expect(screen.getByText('2 foto · 3 Nov 2026')).toBeInTheDocument();
+  it('shows a free post as a full card with the whole caption, then the comments', async () => {
+    await renderDetail(post({ caption: 'Halo dari Bali' }));
+    expect(screen.getByRole('article', { name: 'Post oleh Ana' })).toBeInTheDocument();
+    expect(screen.getByText('Halo dari Bali')).not.toHaveClass('line-clamp-2');
     expect(screen.queryByText(/Koin/)).toBeNull();
-    expect(screen.queryByText('Sudah terbuka')).toBeNull();
     expect(getPublicPost).toHaveBeenCalledWith('ana', POST_ID);
+    expect(screen.getByRole('heading', { name: 'Komentar' })).toBeInTheDocument();
+    expect(screen.getByText('Memuat komentar…')).toBeInTheDocument();
   });
 
   it('shows the like count; logged out it links to login on this post', async () => {
@@ -85,25 +100,34 @@ describe('PostDetail', () => {
   it('offers Laporkan to other viewers only (US-042)', async () => {
     const viewer = { liked: false, canLike: true, canReport: true };
     const { unmount } = await renderDetail(post({ viewer }));
-    expect(screen.getByRole('button', { name: 'Laporkan' })).toBeInTheDocument();
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Lainnya' }), { button: 0 });
+    expect(await screen.findByRole('menuitem', { name: 'Laporkan' })).toBeInTheDocument();
     unmount();
     await renderDetail(post({ viewer: { ...viewer, canReport: false } }));
-    expect(screen.queryByRole('button', { name: 'Laporkan' })).toBeNull();
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Lainnya' }), { button: 0 });
+    await screen.findByRole('menuitem', { name: 'Bagikan' });
+    expect(screen.queryByRole('menuitem', { name: 'Laporkan' })).toBeNull();
   });
 
-  it('marks an unlocked premium post and shows no price', async () => {
-    await renderDetail(post({ visibility: 'PREMIUM', offer: { priceCoins: 8 } }));
-    expect(screen.getByText('Sudah terbuka')).toBeInTheDocument();
-    expect(screen.getByTestId('viewer')).toBeInTheDocument();
-    expect(screen.queryByText(/akses permanen/)).toBeNull();
-  });
-
-  it('shows only the blurred preview and price for a locked post', async () => {
+  it('shows only the blurred preview and the price for a locked post, guest to login', async () => {
     const previewUrl = '/api/v1/creators/ana/posts/p/preview/x';
     const { container } = await renderDetail(locked(previewUrl));
     expect(container.querySelector('img')).toHaveAttribute('src', previewUrl);
-    expect(screen.getByText(/8 Koin/)).toHaveTextContent('8 Koin · akses permanen');
-    expect(screen.queryByTestId('viewer')).toBeNull();
+    expect(screen.getByRole('link', { name: /Buka · 8 Koin/ })).toHaveAttribute(
+      'href',
+      loginHref(`/ana/posts/${POST_ID}`),
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('opens the Koin sheet for a signed-in viewer of a locked post, with no detail link', async () => {
+    await renderDetail({
+      ...locked(),
+      viewer: { liked: false, canLike: false, canReport: true },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Buka · 8 Koin/ }));
+    expect(await screen.findByText('Permanen')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Lihat detail post' })).toBeNull();
   });
 
   it('shows the locked placeholder when a premium post has no preview', async () => {
@@ -111,46 +135,23 @@ describe('PostDetail', () => {
     expect(screen.getByTestId('locked-placeholder')).toBeInTheDocument();
   });
 
-  it("labels the owner's unpublished post and omits the missing date", async () => {
-    await renderDetail(post({ status: 'DRAFT', publishedAt: null }));
+  it("labels the owner's unpublished post and omits the missing date and comments", async () => {
+    const { container } = await renderDetail(post({ status: 'DRAFT', publishedAt: null }));
     expect(screen.getByText('Draf · tidak terlihat publik')).toBeInTheDocument();
-    expect(screen.getByText('2 foto')).toBeInTheDocument();
+    expect(container.querySelector('time')).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Komentar' })).toBeNull();
   });
 
   it('shows the comments section only on published posts', async () => {
-    const { unmount } = await renderDetail(post({}));
-    expect(screen.getByRole('heading', { name: 'Komentar' })).toBeInTheDocument();
-    expect(screen.getByText('Memuat komentar…')).toBeInTheDocument();
-    unmount();
     await renderDetail(post({ status: 'ARCHIVED' }));
     expect(screen.queryByRole('heading', { name: 'Komentar' })).toBeNull();
   });
 
   it('is not found when the API hides the post', async () => {
     vi.mocked(getPublicPost).mockResolvedValue(null);
-    await expect(PostDetail({ slug: 'ana', postId: POST_ID })).rejects.toThrow('notFound');
-  });
-});
-
-describe('UnlockCta', () => {
-  it('sends logged-out visitors to login and back to the post', async () => {
-    vi.mocked(getCurrentUser).mockResolvedValue(null);
-    render(await UnlockCta({ path: `/ana/posts/${POST_ID}` }));
-    expect(screen.getByRole('link', { name: 'Masuk untuk membuka' })).toHaveAttribute(
-      'href',
-      loginHref(`/ana/posts/${POST_ID}`),
+    await expect(PostDetail({ creator: CARD_CREATOR, postId: POST_ID })).rejects.toThrow(
+      'notFound',
     );
-  });
-
-  it('treats an API outage as logged out', async () => {
-    vi.mocked(getCurrentUser).mockRejectedValue(new Error('down'));
-    render(await UnlockCta({ path: '/ana/posts/x' }));
-    expect(screen.getByRole('link', { name: 'Masuk untuk membuka' })).toBeInTheDocument();
-  });
-
-  it('renders nothing for logged-in users until Koin unlock exists', async () => {
-    vi.mocked(getCurrentUser).mockResolvedValue({ id: 'u' } as never);
-    expect(await UnlockCta({ path: '/ana/posts/x' })).toBeNull();
   });
 });
 
@@ -214,5 +215,23 @@ describe('PostPage', () => {
     vi.mocked(getPublicCreator).mockResolvedValue(null);
     await expect(PostPage(props('nobody'))).rejects.toThrow('notFound');
     await expect(generateMetadata(props('nobody'))).rejects.toThrow('notFound');
+  });
+});
+
+describe('ScrollToComments', () => {
+  afterEach(() => {
+    window.location.hash = '';
+  });
+
+  it('scrolls to the comments once, only for #komentar', () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    document.body.innerHTML = '<div id="komentar"></div>';
+    const { unmount } = render(<ScrollToComments />);
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    unmount();
+    window.location.hash = '#komentar';
+    render(<ScrollToComments />);
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
   });
 });

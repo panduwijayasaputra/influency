@@ -127,6 +127,10 @@ describe('cover fields', () => {
     videoCount: 0,
     offer: { priceCoins: 5 },
     likeCount: 0,
+    access: 'locked',
+    viewer: null,
+    commentCount: 0,
+    media: [{ kind: 'VIDEO', durationSeconds: 12 }],
   };
 
   it.each([null, { mediaId: null, previewUrl: '/x' }, { mediaId: 'm', previewUrl: '/x' }])(
@@ -138,6 +142,19 @@ describe('cover fields', () => {
 
   it.each([null, '/api/v1/creators/a/posts/p/preview/x'])('public previewUrl %j', (previewUrl) => {
     expect(publicPostSchema.parse({ ...publicPost, previewUrl }).previewUrl).toBe(previewUrl);
+  });
+
+  it.each(['access', 'media', 'commentCount', 'viewer'])('requires %s on a feed item', (field) => {
+    expect(
+      publicPostSchema.safeParse({ ...publicPost, previewUrl: null, [field]: undefined }).success,
+    ).toBe(false);
+  });
+
+  it('rejects an unknown media kind', () => {
+    const media = [{ kind: 'AUDIO', durationSeconds: null }];
+    expect(publicPostSchema.safeParse({ ...publicPost, previewUrl: null, media }).success).toBe(
+      false,
+    );
   });
 });
 
@@ -155,6 +172,8 @@ describe('publicPostDetailSchema', () => {
     access: 'locked',
     likeCount: 3,
     viewer: null,
+    commentCount: 2,
+    media: [{ kind: 'IMAGE', durationSeconds: null }],
   };
 
   it('accepts a locked premium post and an owner draft without publishedAt', () => {

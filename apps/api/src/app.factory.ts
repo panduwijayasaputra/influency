@@ -24,8 +24,15 @@ const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 export function createFastifyAdapter(options: {
   logger: boolean;
   logStream?: Writable;
+  /** Fastify trustProxy (env TRUST_PROXY); default: trust none. */
+  trustProxy?: false | number | string[];
 }): FastifyAdapter {
   return new FastifyAdapter({
+    // A hop count means "trust the first n hops", exactly what proxy-addr does for a number (Nest's type omits it).
+    trustProxy:
+      typeof options.trustProxy === 'number'
+        ? (_address: string, hop: number) => hop < (options.trustProxy as number)
+        : (options.trustProxy ?? false),
     logger: options.logger && {
       level: 'info',
       ...(options.logStream && { stream: options.logStream }),
@@ -78,10 +85,13 @@ export function configureApp(app: NestFastifyApplication): NestFastifyApplicatio
 }
 
 /** Builds the API application without listening, so tests can boot the same app. */
-export async function createApp(options?: NestApplicationOptions): Promise<NestFastifyApplication> {
+export async function createApp(
+  options?: NestApplicationOptions,
+  trustProxy?: false | number | string[],
+): Promise<NestFastifyApplication> {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    createFastifyAdapter({ logger: options?.logger !== false }),
+    createFastifyAdapter({ logger: options?.logger !== false, trustProxy }),
     // rawBody: signed webhooks are verified against the exact bytes (req.rawBody).
     { ...options, rawBody: true },
   );

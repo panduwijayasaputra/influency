@@ -24,6 +24,9 @@ type Props = {
   /** This post's page, where login returns to. */
   path: string;
   viewer: PublicPostDetail['viewer'];
+  /** Controlled mode (opened from a menu, e.g. PostCard): no trigger is rendered. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 const FAILED = 'Gagal mengirim laporan. Coba lagi.';
@@ -32,8 +35,14 @@ const linkClass =
   'flex min-h-11 w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground';
 
 /** "Laporkan" (US-042) in a bottom sheet. Logged out → login link; own or unpublished post → nothing. The API enforces the rule. */
-export function ReportPostButton({ postId, path, viewer }: Props) {
-  const [open, setOpen] = useState(false);
+export function ReportPostButton({ postId, path, viewer, open: openProp, onOpenChange }: Props) {
+  const [innerOpen, setInnerOpen] = useState(false);
+  const controlled = openProp !== undefined;
+  const open = openProp ?? innerOpen;
+  const setOpen = (v: boolean) => {
+    setInnerOpen(v);
+    onOpenChange?.(v);
+  };
   const [reason, setReason] = useState<PostReportReason | null>(null);
   const [note, setNote] = useState('');
   const [pending, setPending] = useState(false);
@@ -43,6 +52,8 @@ export function ReportPostButton({ postId, path, viewer }: Props) {
   const toast = useToast();
 
   if (!viewer) {
+    // In controlled mode the opener already sent guests to login.
+    if (controlled) return null;
     return (
       <Link href={loginHref(path)} className={linkClass}>
         <Flag aria-hidden className="size-4" />
@@ -103,7 +114,7 @@ export function ReportPostButton({ postId, path, viewer }: Props) {
           statusRef.current?.focus();
         }}
         trigger={
-          sent ? undefined : (
+          sent || controlled ? undefined : (
             <Button variant="ghost" size="sm" className="w-fit">
               <Flag aria-hidden className="size-4" />
               Laporkan

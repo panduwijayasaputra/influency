@@ -1,23 +1,16 @@
+import type { PostCardCreator } from '@/components/post-card/post-card';
 import { getPublicPosts } from '@/lib/api/public-posts';
-import { PostGrid } from './post-grid';
+import { CreatorContent } from './creator-content';
 
 const EMPTY = 'Belum ada konten yang dipublikasikan.';
 
 /**
- * Published posts as a filterable grid. Premium tiles show only the generated cover preview (US-048); post media
- * arrives through the access-checked path (US-021).
+ * Published posts as Postingan (PostCards, US-008) / Grid tabs (US-011), newest first. Premium cards show only the generated cover preview (US-048);
+ * post media arrives through the access-checked path (US-021), lazily in the browser.
  */
-export async function CreatorPosts({
-  slug,
-  creatorName,
-  signedIn,
-}: {
-  slug: string;
-  creatorName: string;
-  signedIn: boolean;
-}) {
+export async function CreatorPosts({ creator }: { creator: PostCardCreator }) {
   // An API outage must not break the public page.
-  const feed = await getPublicPosts(slug).catch(() => undefined);
+  const feed = await getPublicPosts(creator.slug).catch(() => undefined);
   if (feed === undefined) {
     return (
       <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
@@ -33,5 +26,5 @@ export async function CreatorPosts({
       </p>
     );
   }
-  return <PostGrid slug={slug} creatorName={creatorName} posts={posts} signedIn={signedIn} />;
+  return <CreatorContent posts={posts} creator={creator} />;
 }

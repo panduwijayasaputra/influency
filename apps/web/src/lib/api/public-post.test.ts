@@ -26,6 +26,8 @@ const POST = {
   access: 'locked',
   likeCount: 2,
   viewer: { liked: false, canLike: false, canReport: true },
+  commentCount: 0,
+  media: [{ kind: 'IMAGE', durationSeconds: null }],
 };
 
 function stubFetch(response: Response) {

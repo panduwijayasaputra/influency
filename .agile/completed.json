@@ -48,6 +48,48 @@
       "title": "Guest Access Rules in the Shell",
       "status": "ready_for_uat",
       "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-008",
+      "feature": "creator-profile",
+      "title": "PostCard with Media Carousel",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-009",
+      "feature": "creator-profile",
+      "title": "Muted Video Autoplay in PostCard",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-010",
+      "feature": "creator-profile",
+      "title": "Creator Profile Header",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-011",
+      "feature": "creator-profile",
+      "title": "Postingan and Grid Tabs",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-012",
+      "feature": "creator-profile",
+      "title": "Post Detail Page",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-013",
+      "feature": "creator-profile",
+      "title": "Full-screen Media Viewer",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
     }
   ]
 }

@@ -173,6 +173,8 @@ describe('GET /creators/:slug/posts/:postId', () => {
       access: 'full',
       likeCount: 0,
       viewer: null,
+      commentCount: 0,
+      media: [{ kind: 'IMAGE', durationSeconds: null }],
     });
   });
 

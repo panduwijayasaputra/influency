@@ -15,6 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { loginHref } from '@/lib/login-href';
+import { useKeyboardInset } from '@/lib/use-keyboard-inset';
+import { cn } from '@/lib/utils';
 import { POST_DATE } from '../../premium-cover';
 
 type Props = {
@@ -23,6 +25,8 @@ type Props = {
   path: string;
   initial: PostCommentList;
   loggedIn: boolean;
+  /** `page`: the composer is a fixed bar above the bottom nav. `sheet`: inline under the list (inside a sheet). */
+  variant?: 'page' | 'sheet';
 };
 
 const FAILED = 'Gagal menyimpan. Coba lagi.';
@@ -34,7 +38,7 @@ async function errorMessage(res: Response): Promise<string> {
 }
 
 /** Comments (US-052): plain text only. The API enforces who may read, write and delete. */
-export function PostComments({ postId, path, initial, loggedIn }: Props) {
+export function PostComments({ postId, path, initial, loggedIn, variant = 'page' }: Props) {
   const [items, setItems] = useState(initial.items);
   const [nextCursor, setNextCursor] = useState(initial.nextCursor);
   const [body, setBody] = useState('');
@@ -42,6 +46,9 @@ export function PostComments({ postId, path, initial, loggedIn }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [sentNote, setSentNote] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [focused, setFocused] = useState(false);
+  const inset = useKeyboardInset(focused);
+  const fixed = variant === 'page';
   const base = `/${API_PREFIX}/posts/${postId}/comments`;
 
   async function run(action: () => Promise<Response | null>) {
@@ -90,8 +97,15 @@ export function PostComments({ postId, path, initial, loggedIn }: Props) {
       return null;
     });
 
+  const hasComposer = initial.canComment || !loggedIn;
+  const errorEl = error && (
+    <p role="alert" className="text-sm text-destructive">
+      {error}
+    </p>
+  );
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className={cn('flex flex-col gap-4', fixed && hasComposer && 'pb-40')}>
       {items.length === 0 ? (
         <p className="text-sm text-muted-foreground">Belum ada komentar.</p>
       ) : (
@@ -134,49 +148,66 @@ export function PostComments({ postId, path, initial, loggedIn }: Props) {
           Muat lebih banyak
         </Button>
       )}
-      {initial.canComment ? (
-        <form
-          className="flex flex-col gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void submit();
-          }}
+      {hasComposer && (
+        <div
+          style={
+            fixed
+              ? { bottom: inset > 0 ? inset : loggedIn ? 'var(--bottom-nav-height)' : 0 }
+              : undefined
+          }
+          className={cn(
+            'flex flex-col gap-2',
+            fixed && 'fixed inset-x-0 z-30 mx-auto w-full max-w-feed border-t bg-card px-4 py-2',
+          )}
         >
-          <Label htmlFor="comment-body">Tulis komentar</Label>
-          <Textarea
-            id="comment-body"
-            value={body}
-            maxLength={POST_COMMENT_MAX_LENGTH}
-            onChange={(e) => {
-              setBody(e.target.value);
-              setSentNote(false);
-            }}
-          />
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs text-muted-foreground">
-              {body.length}/{POST_COMMENT_MAX_LENGTH}
-            </span>
-            <Button type="submit" disabled={pending || body.trim() === ''}>
-              Kirim
-            </Button>
-          </div>
-          {sentNote && <p className="text-sm text-muted-foreground">Komentar terkirim.</p>}
-        </form>
-      ) : (
-        !loggedIn && (
-          <Link
-            href={loginHref(path)}
-            className="flex min-h-11 w-fit items-center text-sm font-semibold text-foreground underline-offset-4 hover:underline"
-          >
-            Masuk untuk berkomentar
-          </Link>
-        )
+          {initial.canComment ? (
+            <form
+              className="flex flex-col gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void submit();
+              }}
+            >
+              <Label htmlFor="comment-body" className="sr-only">
+                Tulis komentar
+              </Label>
+              <Textarea
+                id="comment-body"
+                rows={1}
+                className="max-h-28 min-h-11"
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                value={body}
+                maxLength={POST_COMMENT_MAX_LENGTH}
+                onChange={(e) => {
+                  setBody(e.target.value);
+                  setSentNote(false);
+                }}
+              />
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {body.length}/{POST_COMMENT_MAX_LENGTH}
+                </span>
+                <Button type="submit" disabled={pending || body.trim() === ''}>
+                  Kirim
+                </Button>
+              </div>
+              {sentNote && <p className="text-sm text-muted-foreground">Komentar terkirim.</p>}
+            </form>
+          ) : (
+            !loggedIn && (
+              <Link
+                href={loginHref(path)}
+                className="flex min-h-11 w-fit items-center text-sm font-semibold text-foreground underline-offset-4 hover:underline"
+              >
+                Masuk untuk berkomentar
+              </Link>
+            )
+          )}
+          {errorEl}
+        </div>
       )}
-      {error && (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
+      {!hasComposer && errorEl}
       <BottomSheet
         title="Hapus komentar ini?"
         description="Komentar akan dihapus dan tidak bisa dikembalikan."

@@ -182,13 +182,14 @@ describe('CloudflareStreamVideoProvider.getThumbnail', () => {
     );
   });
 
-  it('mints a non-downloadable playback token and returns the iframe player URL', async () => {
+  it('mints one non-downloadable token for the HLS manifest and the poster', async () => {
     vi.useFakeTimers({ now: new Date('2026-11-04T00:00:00.000Z') });
     const spy = stubFetch(ready(), token());
     const playback = await new CloudflareStreamVideoProvider(CONFIG).createPlaybackUrl(UID, 1800);
     expect(playback).toEqual({
-      url: `${HOST}/signed.tok.en/iframe`,
-      player: 'iframe',
+      url: `${HOST}/signed.tok.en/manifest/video.m3u8`,
+      posterUrl: `${HOST}/signed.tok.en/thumbnails/thumbnail.jpg?fit=clip`,
+      player: 'hls',
       expiresAt: new Date('2026-11-04T00:30:00.000Z'),
     });
     const [tokenUrl, tokenInit] = spy.mock.calls[1]!;

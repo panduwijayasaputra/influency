@@ -5,7 +5,7 @@ type Op = 'getStatus' | 'getThumbnail' | 'createPlaybackUrl' | 'delete';
 
 /**
  * In-memory `VideoProvider` for tests (override `VIDEO_PROVIDER`). New uploads start `pending_upload`;
- * drive them by editing `videos`; `thumbnails` holds the frame bytes `getThumbnail` returns; ready videos play at `fake://play/<uid>`. Set `failNext.<op>` to make the next call of that op reject.
+ * drive them by editing `videos`; `thumbnails` holds the frame bytes `getThumbnail` returns; ready videos play at `fake://play/<uid>` (poster `fake://poster/<uid>`). Set `failNext.<op>` to make the next call of that op reject.
  */
 export function createFakeVideoProvider() {
   const videos = new Map<string, VideoStatus>();
@@ -38,7 +38,8 @@ export function createFakeVideoProvider() {
         videos.get(uid)?.state === 'ready'
           ? {
               url: `fake://play/${uid}`,
-              player: 'iframe' as const,
+              posterUrl: `fake://poster/${uid}`,
+              player: 'hls' as const,
               expiresAt: new Date(Date.now() + expiresInSeconds * 1000),
             }
           : null,

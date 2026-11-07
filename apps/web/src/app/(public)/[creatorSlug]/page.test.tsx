@@ -3,10 +3,12 @@ import type { CreatorProfileResponse } from '@influency/shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Toaster } from '@/components/ui/toast';
 import { getCurrentUser } from '@/lib/api/current-user';
+import { getMyCreatorProfile } from '@/lib/api/creator-profile';
 import { getPublicCreator } from '@/lib/api/public-creator';
 import CreatorPage, { CreatorView, generateMetadata } from './page';
 
 vi.mock('@/lib/api/current-user', () => ({ getCurrentUser: vi.fn() }));
+vi.mock('@/lib/api/creator-profile', () => ({ getMyCreatorProfile: vi.fn() }));
 vi.mock('@/lib/api/public-creator', () => ({ getPublicCreator: vi.fn() }));
 vi.mock('@/lib/api/public-posts', () => ({ getPublicPosts: vi.fn(() => new Promise(() => {})) }));
 vi.mock('next/navigation', () => ({
@@ -43,10 +45,10 @@ describe('CreatorPage', () => {
       wrapper: Toaster,
     });
 
-  it('shows the profile, images, the streaming feed, and the subscription card', async () => {
+  it('shows the profile, images, the streaming feed, and the actions', async () => {
     const { container } = await renderPage();
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Claudia Andreya');
-    expect(screen.getByText('influency.com/claudiandreya')).toBeInTheDocument();
+    expect(screen.getByText('@claudiandreya')).toBeInTheDocument();
     expect(screen.getByText('Lifestyle')).toBeInTheDocument();
     expect(screen.getByText(/Selamat datang\./)).toBeInTheDocument();
     expect([...container.querySelectorAll('img')].map((img) => img.getAttribute('src'))).toEqual([
@@ -54,11 +56,10 @@ describe('CreatorPage', () => {
       CREATOR.avatarUrl,
     ]);
     // The uncached feed streams in behind its fallback (CreatorPosts has its own tests).
-    expect(screen.getByRole('region', { name: 'Konten' })).toHaveTextContent('Memuat konten…');
-    expect(screen.getByRole('region', { name: 'Langganan Claudia Andreya' })).toHaveTextContent(
-      /Langganan · \d+ Koin \/ \d+ hari/,
-    );
-    expect(screen.getByRole('button', { name: 'Bagikan halaman' })).toBeInTheDocument();
+    expect(screen.getByText('Memuat konten…')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ikuti' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Langganan · \d+ Koin/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Bagikan profil' })).toBeInTheDocument();
     // Page header: the name as plain text (the h1 stays in the profile), no back on a direct visit.
     expect(screen.getByRole('banner')).toHaveTextContent('Claudia Andreya');
     expect(screen.queryByLabelText('Kembali')).toBeNull();
@@ -117,14 +118,12 @@ describe('CreatorView', () => {
       await view();
       expect(screen.queryByRole('banner')).toBeNull();
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Claudia Andreya');
-      expect(screen.getByRole('link', { name: 'Masuk' })).toHaveAttribute('href', LOGIN);
-      expect(screen.getByRole('link', { name: 'Bagikan' })).toHaveAttribute('href', LOGIN);
-      expect(screen.queryByRole('button', { name: 'Bagikan halaman' })).toBeNull();
-      expect(screen.getByRole('link', { name: 'Masuk untuk berlangganan' })).toHaveAttribute(
-        'href',
-        LOGIN,
-      );
-      expect(screen.getByRole('region', { name: 'Konten' })).toBeInTheDocument();
+      for (const name of ['Bagikan', 'Ikuti', 'Langganan']) {
+        expect(screen.getByRole('link', { name })).toHaveAttribute('href', LOGIN);
+      }
+      expect(screen.queryByRole('link', { name: 'Masuk' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Bagikan profil' })).toBeNull();
+      expect(screen.getByText('Memuat konten…')).toBeInTheDocument();
     },
   );
 
@@ -138,7 +137,66 @@ describe('CreatorView', () => {
     await view();
     expect(screen.getByRole('banner')).toHaveTextContent('Claudia Andreya');
     expect(screen.queryByRole('link', { name: 'Masuk' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Bagikan halaman' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Bagikan profil' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Langganan · \d+ Koin/ })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Edit Profil' })).toBeNull();
+  });
+
+  describe('viewer roles', () => {
+    const creatorUser = {
+      id: 'u2',
+      displayName: 'Claudia',
+      username: 'claudia',
+      roles: ['USER', 'CREATOR'] as ('USER' | 'CREATOR' | 'ADMIN')[],
+    };
+
+    it('shows the owner Edit Profil instead of Ikuti and Langganan', async () => {
+      vi.mocked(getCurrentUser).mockResolvedValue(creatorUser);
+      vi.mocked(getMyCreatorProfile).mockResolvedValue(CREATOR);
+      await view();
+      expect(screen.getByRole('link', { name: 'Edit Profil' })).toHaveAttribute(
+        'href',
+        '/studio/profile',
+      );
+      expect(screen.queryByRole('button', { name: 'Ikuti' })).toBeNull();
+      expect(screen.queryByRole('button', { name: /Langganan/ })).toBeNull();
+    });
+
+    it.each([
+      [
+        'another creator',
+        () => vi.mocked(getMyCreatorProfile).mockResolvedValue({ ...CREATOR, slug: 'creatorb' }),
+      ],
+      [
+        'a failing lookup',
+        () => vi.mocked(getMyCreatorProfile).mockRejectedValue(new Error('down')),
+      ],
+    ])('shows Ikuti and Langganan for %s', async (_l, arrange) => {
+      vi.mocked(getCurrentUser).mockResolvedValue(creatorUser);
+      arrange();
+      await view();
+      expect(screen.queryByRole('link', { name: 'Edit Profil' })).toBeNull();
+      expect(screen.getByRole('button', { name: 'Ikuti' })).toBeInTheDocument();
+    });
+
+    it('does not look up the own profile for a plain user', async () => {
+      vi.mocked(getCurrentUser).mockResolvedValue({ ...creatorUser, roles: ['USER'] });
+      vi.mocked(getMyCreatorProfile).mockClear();
+      await view();
+      expect(getMyCreatorProfile).not.toHaveBeenCalled();
+    });
+
+    it('shows the demo subscribed state to a signed-in viewer only', async () => {
+      const creatorb = { ...CREATOR, slug: 'creatorb' };
+      vi.mocked(getCurrentUser).mockResolvedValue({ ...creatorUser, roles: ['USER'] });
+      const { unmount } = render(await CreatorView({ creator: creatorb }), { wrapper: Toaster });
+      expect(screen.getByRole('button', { name: /Berlangganan/ })).toHaveTextContent(
+        '12 hari lagi (demo)',
+      );
+      unmount();
+      vi.mocked(getCurrentUser).mockResolvedValue(null);
+      render(await CreatorView({ creator: creatorb }), { wrapper: Toaster });
+      expect(screen.queryByText(/Berlangganan/)).toBeNull();
+    });
   });
 });

@@ -2,7 +2,8 @@ import { z } from 'zod';
 
 /**
  * One viewable media item of GET /posts/:id/media-access. `url` is short-lived and signed (relative with the local
- * storage driver); VIDEO `player` = `iframe` (provider player page) or `video` (a file for `<video>`).
+ * storage driver). VIDEO plays in `<video>`: `player` = `hls` (an HLS manifest) or `video` (a file); `posterUrl` is
+ * signed like `url`, and `durationSeconds` is null while unknown.
  */
 export const mediaAccessItemSchema = z.discriminatedUnion('kind', [
   z.object({ id: z.string(), kind: z.literal('IMAGE'), url: z.string() }),
@@ -10,7 +11,9 @@ export const mediaAccessItemSchema = z.discriminatedUnion('kind', [
     id: z.string(),
     kind: z.literal('VIDEO'),
     url: z.string(),
-    player: z.enum(['iframe', 'video']),
+    posterUrl: z.string().nullable(),
+    player: z.enum(['hls', 'video']),
+    durationSeconds: z.number().int().positive().nullable(),
   }),
 ]);
 export type MediaAccessItem = z.infer<typeof mediaAccessItemSchema>;

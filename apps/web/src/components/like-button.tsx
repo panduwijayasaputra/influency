@@ -14,10 +14,13 @@ type Props = {
   path: string;
   likeCount: number;
   viewer: PublicPostDetail['viewer'];
+  /** Called with the server's result after a toggle (a second button for the same post stays in sync). */
+  onChange?: (next: { liked: boolean; count: number }) => void;
+  className?: string;
 };
 
 /** Like toggle (US-051). Logged out → login link; cannot like → count only. The API enforces the rule. */
-export function LikeButton({ postId, path, likeCount, viewer }: Props) {
+export function LikeButton({ postId, path, likeCount, viewer, onChange, className }: Props) {
   const [liked, setLiked] = useState(viewer?.liked ?? false);
   const [count, setCount] = useState(likeCount);
   const [pending, setPending] = useState(false);
@@ -35,7 +38,10 @@ export function LikeButton({ postId, path, likeCount, viewer }: Props) {
       <Link
         href={loginHref(path)}
         aria-label={`Masuk untuk menyukai · ${count} suka`}
-        className="flex min-h-11 w-fit min-w-11 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        className={cn(
+          'flex min-h-11 w-fit min-w-11 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground',
+          className,
+        )}
       >
         {content}
       </Link>
@@ -45,7 +51,7 @@ export function LikeButton({ postId, path, likeCount, viewer }: Props) {
     return (
       <p
         aria-label={`${count} suka`}
-        className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground"
+        className={cn('flex w-fit items-center gap-1.5 text-sm text-muted-foreground', className)}
       >
         {content}
       </p>
@@ -63,6 +69,7 @@ export function LikeButton({ postId, path, likeCount, viewer }: Props) {
         const body = postLikeResponseSchema.parse(await res.json());
         setLiked(body.liked);
         setCount(body.likeCount);
+        onChange?.({ liked: body.liked, count: body.likeCount });
         setPending(false);
         return;
       }
@@ -81,6 +88,7 @@ export function LikeButton({ postId, path, likeCount, viewer }: Props) {
         aria-pressed={liked}
         aria-label={`${liked ? 'Batal suka' : 'Suka'} · ${count} suka`}
         disabled={pending}
+        className={className}
         onClick={() => void toggle()}
       >
         {content}

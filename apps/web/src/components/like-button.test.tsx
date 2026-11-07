@@ -82,3 +82,48 @@ describe('LikeButton', () => {
     );
   });
 });
+
+describe('LikeButton hooks (US-013)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+  const viewer = { liked: false, canLike: true, canReport: true };
+
+  it('reports the server result through onChange, and not on failure', async () => {
+    const onChange = vi.fn();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json({ liked: true, likeCount: 5 }))
+      .mockResolvedValueOnce(new Response(null, { status: 500 }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(
+      <LikeButton postId={POST_ID} path={PATH} likeCount={4} viewer={viewer} onChange={onChange} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Suka · 4 suka' }));
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith({ liked: true, count: 5 }));
+    fireEvent.click(screen.getByRole('button', { name: 'Batal suka · 5 suka' }));
+    await screen.findByRole('alert');
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('passes className to all three states', () => {
+    const { rerender } = render(
+      <LikeButton postId={POST_ID} path={PATH} likeCount={1} viewer={null} className="x-test" />,
+    );
+    expect(screen.getByRole('link')).toHaveClass('x-test');
+    rerender(
+      <LikeButton
+        postId={POST_ID}
+        path={PATH}
+        likeCount={1}
+        viewer={{ ...viewer, canLike: false }}
+        className="x-test"
+      />,
+    );
+    expect(screen.getByLabelText('1 suka')).toHaveClass('x-test');
+    rerender(
+      <LikeButton postId={POST_ID} path={PATH} likeCount={1} viewer={viewer} className="x-test" />,
+    );
+    expect(screen.getByRole('button')).toHaveClass('x-test');
+  });
+});

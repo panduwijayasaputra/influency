@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MEDIA_KINDS } from './post-media.js';
 
 /** Placeholder limit (TBD business decision): max caption length in characters. Mirrored by a DB CHECK. */
 export const POST_CAPTION_MAX_LENGTH = 2000;
@@ -99,7 +100,23 @@ export type StudioPostList = z.infer<typeof studioPostListSchema>;
 /** Number of newest published posts the public feed returns. */
 export const PUBLIC_FEED_LIMIT = 30;
 
-/** Public feed item. Safe preview only: never media ids, keys, provider ids or original URLs. */
+/** One READY media item of a public post, in display order: kind and duration only (never ids, keys or URLs). */
+export const publicMediaSchema = z.object({
+  kind: z.enum(MEDIA_KINDS),
+  durationSeconds: z.int().nullable(),
+});
+export type PublicMedia = z.infer<typeof publicMediaSchema>;
+
+/** The signed-in viewer's state on a post; null = anonymous. */
+export const publicPostViewerSchema = z.object({
+  liked: z.boolean(),
+  /** The server-side like rule: published, and access or PREMIUM_LIKES_WITHOUT_ACCESS. */
+  canLike: z.boolean(),
+  /** Published and not the viewer's own post (US-042). */
+  canReport: z.boolean(),
+});
+
+/** Public feed item, viewer-aware (US-008). Safe preview only: never media ids, keys, provider ids or original URLs. */
 export const publicPostSchema = z.object({
   id: z.string(),
   visibility: z.enum(POST_VISIBILITIES),
@@ -113,6 +130,13 @@ export const publicPostSchema = z.object({
   previewUrl: z.string().nullable(),
   /** Likes of the post (US-051); shown on every published post, also to logged-out visitors. */
   likeCount: z.int(),
+  /** full = media via GET /posts/:id/media-access; locked = preview only. */
+  access: z.enum(['full', 'locked']),
+  viewer: publicPostViewerSchema.nullable(),
+  /** Comments that are not deleted. */
+  commentCount: z.int(),
+  /** READY media in display order (the order media-access returns). */
+  media: z.array(publicMediaSchema),
 });
 export type PublicPost = z.infer<typeof publicPostSchema>;
 export const publicPostListSchema = z.object({ posts: z.array(publicPostSchema) });
@@ -123,13 +147,7 @@ export const publicPostDetailSchema = publicPostSchema.extend({
   status: z.enum(POST_STATUSES),
   /** null only for a never-published post, visible to its owner/admin. */
   publishedAt: z.string().nullable(),
-  /** full = show the media viewer; locked = paywall preview. (hidden is a 404.) */
-  access: z.enum(['full', 'locked']),
-  /**
-   * null = anonymous. canLike = the server-side like rule (published, and access or PREMIUM_LIKES_WITHOUT_ACCESS).
-   * canReport = published and not the viewer's own post (US-042).
-   */
-  viewer: z.object({ liked: z.boolean(), canLike: z.boolean(), canReport: z.boolean() }).nullable(),
+  // access (hidden is a 404), viewer, commentCount and media come from publicPostSchema.
 });
 export type PublicPostDetail = z.infer<typeof publicPostDetailSchema>;
 

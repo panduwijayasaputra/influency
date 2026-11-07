@@ -140,4 +140,33 @@ describe('PostComments', () => {
     expect(fetchMock.mock.calls[0]![0]).toBe(`/api/v1/posts/${POST_ID}/comments?cursor=${cursor}`);
     expect(screen.queryByRole('button', { name: 'Muat lebih banyak' })).toBeNull();
   });
+
+  it('pins the composer above the bottom nav, or to the bottom for a guest', () => {
+    const { unmount } = renderComments(page());
+    const bar = () => screen.getByLabelText('Tulis komentar').closest('div.fixed') as HTMLElement;
+    expect(bar().style.bottom).toBe('var(--bottom-nav-height)');
+    expect(screen.getByText('0/500')).toBeInTheDocument();
+    unmount();
+    renderComments(page({ canComment: false }), false);
+    const guestBar = screen
+      .getByRole('link', { name: 'Masuk untuk berkomentar' })
+      .closest('div.fixed');
+    expect((guestBar as HTMLElement).style.bottom).toBe('0px');
+  });
+
+  it('rides above the on-screen keyboard while the textarea is focused', () => {
+    const vv = new EventTarget() as unknown as VisualViewport;
+    Object.assign(vv, { height: 400, offsetTop: 0 });
+    vi.stubGlobal('visualViewport', vv);
+    vi.stubGlobal('innerHeight', 700);
+    renderComments(page());
+    fireEvent.focus(screen.getByLabelText('Tulis komentar'));
+    const bar = screen.getByLabelText('Tulis komentar').closest('div.fixed') as HTMLElement;
+    expect(bar.style.bottom).toBe('300px');
+  });
+
+  it('keeps the composer inline in a sheet', () => {
+    render(<PostComments postId={POST_ID} path={PATH} initial={page()} loggedIn variant="sheet" />);
+    expect(screen.getByLabelText('Tulis komentar').closest('div.fixed')).toBeNull();
+  });
 });

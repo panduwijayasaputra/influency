@@ -23,10 +23,11 @@ export interface VideoUploadInput {
   expiresInSeconds: number;
 }
 
-/** Short-lived signed playback: `iframe` = provider player page, `video` = a file for `<video>`. */
+/** Short-lived signed playback for `<video>`: `hls` = an HLS manifest, `video` = a file. `posterUrl` is signed too. */
 export interface VideoPlayback {
   url: string;
-  player: 'iframe' | 'video';
+  posterUrl: string | null;
+  player: 'hls' | 'video';
   expiresAt: Date;
 }
 

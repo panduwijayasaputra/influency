@@ -45,7 +45,7 @@ export class MediaAccessService {
     const rows = await this.prisma.mediaAsset.findMany({
       where: { postId, status: 'READY' },
       orderBy: { createdAt: 'asc' },
-      select: { id: true, kind: true, objectKey: true, videoUid: true },
+      select: { id: true, kind: true, objectKey: true, videoUid: true, durationSeconds: true },
     });
     const items = await Promise.all(
       rows.map(async (row): Promise<MediaAccessItem | null> => {
@@ -56,7 +56,14 @@ export class MediaAccessService {
         // A READY row whose provider video is gone or not playable is skipped, not fatal.
         const playback = await this.video.createPlaybackUrl(row.videoUid!, ttl);
         return (
-          playback && { id: row.id, kind: 'VIDEO', url: playback.url, player: playback.player }
+          playback && {
+            id: row.id,
+            kind: 'VIDEO',
+            url: playback.url,
+            posterUrl: playback.posterUrl,
+            player: playback.player,
+            durationSeconds: row.durationSeconds,
+          }
         );
       }),
     );

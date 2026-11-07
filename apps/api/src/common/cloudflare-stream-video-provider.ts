@@ -90,13 +90,18 @@ export class CloudflareStreamVideoProvider implements VideoProvider {
     return body;
   }
 
-  /** The Stream player page for a signed, non-downloadable token. */
+  /** The HLS manifest and default thumbnail, both on one signed, non-downloadable token. */
   // shortcut: one details + one /token call per mint; switch to a local signing key (RS256) above ~10k tokens/day.
   async createPlaybackUrl(uid: string, expiresInSeconds: number): Promise<VideoPlayback | null> {
     const exp = expIn(expiresInSeconds);
     const signed = await this.signed(uid, 'createPlaybackUrl', { exp, downloadable: false });
     if (!signed) return null;
-    return { url: `${signed.base}/iframe`, player: 'iframe', expiresAt: new Date(exp * 1000) };
+    return {
+      url: `${signed.base}/manifest/video.m3u8`,
+      posterUrl: `${signed.base}/thumbnails/thumbnail.jpg?fit=clip`,
+      player: 'hls',
+      expiresAt: new Date(exp * 1000),
+    };
   }
 
   async delete(uid: string): Promise<void> {

@@ -17,17 +17,46 @@ import { PrismaService } from '../../common/prisma.service.js';
 import type { MediaKind, Post, PostOffer } from '../../generated/prisma/client.js';
 import { PUBLIC_CREATOR } from '../creators/creator-profile.service.js';
 import { canEngage } from '../engagement/post-likes.service.js';
+import { decidePostAccess } from '../entitlements/post-access.js';
 import { PostAccessService } from '../entitlements/post-access.service.js';
 import { currentOffer, PREVIEW_KEY_PREFIX, previewId } from './posts.service.js';
 
-const readyMediaKinds = { media: { where: { status: 'READY' }, select: { kind: true } } } as const;
-const likeCount = { _count: { select: { likes: true } } } as const;
+// Display order = the order GET /posts/:id/media-access returns (createdAt asc).
+const readyMedia = {
+  media: {
+    where: { status: 'READY' },
+    orderBy: { createdAt: 'asc' },
+    select: { kind: true, durationSeconds: true },
+  },
+} as const;
+const counts = {
+  _count: { select: { likes: true, comments: { where: { deletedAt: null } } } },
+} as const;
 
-/** Every public field except publishedAt (nullable on the detail view). Media is counted, never referenced. */
+type Viewer = PublicPost['viewer'];
+
+/** The viewer's state on a post; null for anonymous viewers. canReport = published and not the viewer's own post. */
+function viewerOf(
+  userId: string | null,
+  liked: boolean,
+  canLike: boolean,
+  status: Post['status'],
+  ownerUserId: string,
+): Viewer {
+  return userId
+    ? { liked, canLike, canReport: status === 'PUBLISHED' && ownerUserId !== userId }
+    : null;
+}
+
+/** Public fields that don't depend on the viewer (no publishedAt: nullable on the detail view). Media is listed by kind only. */
 function publicPostFields(
-  row: Post & { media: { kind: MediaKind }[]; offers: PostOffer[]; _count: { likes: number } },
+  row: Post & {
+    media: { kind: MediaKind; durationSeconds: number | null }[];
+    offers: PostOffer[];
+    _count: { likes: number; comments: number };
+  },
   slug: string,
-): Omit<PublicPost, 'publishedAt'> {
+): Omit<PublicPost, 'publishedAt' | 'access' | 'viewer'> {
   const offer = row.visibility === 'PREMIUM' ? row.offers[0] : undefined;
   return {
     id: row.id,
@@ -46,6 +75,8 @@ function publicPostFields(
         ? `/${API_PREFIX}/creators/${slug}/posts/${row.id}/preview/${previewId(row.previewKey)}`
         : null,
     likeCount: row._count.likes,
+    commentCount: row._count.comments,
+    media: row.media.map(({ kind, durationSeconds }) => ({ kind, durationSeconds })),
   };
 }
 
@@ -62,25 +93,68 @@ export class PublicPostsService {
     @Inject(ENV) private readonly env: Env,
   ) {}
 
-  /** PUBLISHED posts of a visible creator. */
-  async list(slug: string): Promise<PublicPost[]> {
+  /** PUBLISHED posts of a visible creator, with this viewer's access and like state. userId from the session only. */
+  async list(slug: string, userId: string | null): Promise<PublicPost[]> {
     const creator = await this.prisma.creatorProfile.findFirst({
       where: { slug: slug.toLowerCase(), ...PUBLIC_CREATOR },
-      select: { id: true, slug: true },
+      select: { id: true, slug: true, userId: true },
     });
     if (!creator) throw new DomainError('NOT_FOUND');
     // shortcut: newest PUBLIC_FEED_LIMIT only, add cursor pagination when creators exceed it.
     // shortcut: no (creator_profile_id, status, published_at) index; add one if the feed query gets slow.
-    const rows = await this.prisma.post.findMany({
-      where: { creatorProfileId: creator.id, status: 'PUBLISHED' },
-      orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
-      take: PUBLIC_FEED_LIMIT,
-      include: { ...readyMediaKinds, ...currentOffer, ...likeCount },
+    const [rows, adminRole] = await Promise.all([
+      this.prisma.post.findMany({
+        where: { creatorProfileId: creator.id, status: 'PUBLISHED' },
+        orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
+        take: PUBLIC_FEED_LIMIT,
+        include: { ...readyMedia, ...currentOffer, ...counts },
+      }),
+      userId
+        ? this.prisma.userRole.findUnique({
+            where: { userId_role: { userId, role: 'ADMIN' } },
+            select: { id: true },
+          })
+        : null,
+    ]);
+    // Viewer facts are batched: one admin lookup and one likes lookup for the whole page.
+    const likedIds = new Set(
+      userId && rows.length > 0
+        ? (
+            await this.prisma.postLike.findMany({
+              where: { userId, postId: { in: rows.map((r) => r.id) } },
+              select: { postId: true },
+            })
+          ).map((l) => l.postId)
+        : [],
+    );
+    const viewer = userId ? { userId, isAdmin: adminRole !== null } : null;
+    return rows.flatMap((row) => {
+      // The query already guarantees a PUBLISHED post of a public creator.
+      const access = decidePostAccess(
+        {
+          status: row.status,
+          visibility: row.visibility,
+          ownerUserId: creator.userId,
+          creatorPublic: true,
+        },
+        viewer,
+      );
+      if (access === 'hidden') return []; // unreachable for these rows; never leak a hidden post
+      return [
+        {
+          ...publicPostFields(row, creator.slug),
+          publishedAt: row.publishedAt!.toISOString(),
+          access,
+          viewer: viewerOf(
+            userId,
+            likedIds.has(row.id),
+            canEngage(access, row.status, this.env.PREMIUM_LIKES_WITHOUT_ACCESS),
+            row.status,
+            creator.userId,
+          ),
+        },
+      ];
     });
-    return rows.map((row) => ({
-      ...publicPostFields(row, creator.slug),
-      publishedAt: row.publishedAt!.toISOString(),
-    }));
   }
 
   /** One post for /{slug}/posts/{postId}. hidden, wrong slug or malformed id → NOT_FOUND. userId from the session only. */
@@ -92,9 +166,9 @@ export class PublicPostsService {
     const row = await this.prisma.post.findFirst({
       where: { id: postId, creatorProfile: { slug: slug.toLowerCase() } },
       include: {
-        ...readyMediaKinds,
+        ...readyMedia,
         ...currentOffer,
-        ...likeCount,
+        ...counts,
         creatorProfile: { select: { slug: true, userId: true } },
       },
     });
@@ -110,13 +184,13 @@ export class PublicPostsService {
       status: row.status,
       publishedAt: row.publishedAt?.toISOString() ?? null,
       access,
-      viewer: userId
-        ? {
-            liked,
-            canLike: canEngage(access, row.status, this.env.PREMIUM_LIKES_WITHOUT_ACCESS),
-            canReport: row.status === 'PUBLISHED' && row.creatorProfile.userId !== userId,
-          }
-        : null,
+      viewer: viewerOf(
+        userId,
+        liked,
+        canEngage(access, row.status, this.env.PREMIUM_LIKES_WITHOUT_ACCESS),
+        row.status,
+        row.creatorProfile.userId,
+      ),
     };
   }
 

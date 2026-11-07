@@ -55,6 +55,54 @@
       "title": "Guest Access Rules in the Shell",
       "status": "ready_for_uat",
       "priority": "medium"
+    },
+    {
+      "id": "US-008",
+      "feature": "creator-profile",
+      "file": "features/creator-profile/US-008-postcard-media-carousel.md",
+      "title": "PostCard with Media Carousel",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-009",
+      "feature": "creator-profile",
+      "file": "features/creator-profile/US-009-muted-video-autoplay.md",
+      "title": "Muted Video Autoplay in PostCard",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-010",
+      "feature": "creator-profile",
+      "file": "features/creator-profile/US-010-creator-profile-header.md",
+      "title": "Creator Profile Header",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-011",
+      "feature": "creator-profile",
+      "file": "features/creator-profile/US-011-postingan-grid-tabs.md",
+      "title": "Postingan and Grid Tabs",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-012",
+      "feature": "creator-profile",
+      "file": "features/creator-profile/US-012-post-detail-page.md",
+      "title": "Post Detail Page",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-013",
+      "feature": "creator-profile",
+      "file": "features/creator-profile/US-013-full-screen-media-viewer.md",
+      "title": "Full-screen Media Viewer",
+      "status": "ready_for_uat",
+      "priority": "medium"
     }
   ]
 }

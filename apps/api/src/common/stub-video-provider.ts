@@ -12,6 +12,7 @@ import type {
 } from './video-provider.js';
 
 const KEY_PREFIX = 'post-video/';
+const THUMB_PREFIX = 'post-video-thumb/';
 
 /**
  * Development/test stand-in for Cloudflare Stream: the upload goes to private object storage through a presigned PUT;
@@ -63,16 +64,22 @@ export class StubVideoProvider implements VideoProvider {
       .toBuffer();
   }
 
-  /** A short-lived storage download URL played in `<video>` (dev only). */
+  /** Short-lived storage download URLs for the file and its generated poster (stored privately once; dev only). */
   async createPlaybackUrl(uid: string, expiresInSeconds: number): Promise<VideoPlayback | null> {
     if ((await this.getStatus(uid)).state !== 'ready') return null;
+    const thumbKey = `${THUMB_PREFIX}${uid}.jpg`;
+    if (!(await this.storage.head(thumbKey))) {
+      await this.storage.put(thumbKey, (await this.getThumbnail(uid))!, 'image/jpeg');
+    }
     const download = await this.storage.createDownloadUrl(KEY_PREFIX + uid, expiresInSeconds);
-    return { ...download, player: 'video' };
+    const poster = await this.storage.createDownloadUrl(thumbKey, expiresInSeconds);
+    return { ...download, posterUrl: poster.url, player: 'video' };
   }
 
   async delete(uid: string): Promise<void> {
     this.validated.delete(uid);
     await this.storage.delete(KEY_PREFIX + uid);
+    await this.storage.delete(`${THUMB_PREFIX}${uid}.jpg`);
   }
 }
 

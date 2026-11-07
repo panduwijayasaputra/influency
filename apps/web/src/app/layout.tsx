@@ -21,7 +21,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="id" className={`${jakarta.variable} font-sans antialiased`}>
-      <body className="flex min-h-dvh flex-col pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
+      <body
+        suppressHydrationWarning
+        className="flex min-h-dvh flex-col pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]"
+      >
         <Toaster>
           {children}
           {/* usePathname suspends on unknown dynamic params under cacheComponents */}

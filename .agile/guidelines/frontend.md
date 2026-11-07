@@ -62,6 +62,8 @@ admin/
 - Handle `INSUFFICIENT_COINS` (link to wallet with required amount), `OFFER_CHANGED` (show new price, ask to confirm), `ALREADY_ENTITLED` (open the content).
 - Midtrans Snap: load Snap JS with the **client key** only; the Snap token comes from `POST /wallet/topups`. After Snap closes, go to `/wallet/topups/[orderId]` and show the status from the API.
 - Premium media is fetched from `GET /posts/:id/media-access` on demand in a client component; refetch when the short-lived URL expires.
+- Feed cards (`PostCard`) load media lazily through `useMediaAccess(postId, enabled)` once the card nears the viewport, never in SSR. Locked cards (`post.access === 'locked'`) never call media-access and show only `previewUrl`. Reuse `MediaItemView` to render media items.
+- Video always plays through `PostVideo` (via `MediaItemView`): HLS or a file in `<video>`, never an iframe. The source is attached on the first play only (poster before that). Muted autoplay follows spec §6.3: one video at a time (`claimPlayback` in `lib/video-playback.ts`), only the active carousel slide (`active`), at least `AUTOPLAY_VISIBLE_RATIO` visible, and the tab visible. Any overlay that should pause media calls `pauseAllVideos()`. `BottomSheet` and `MediaViewer` already do. `MediaViewer` (`components/media-viewer/`, full-screen, US-013) opens from an accessible image slide, a video's "Layar penuh" button, or an accessible Grid tile; locked media never opens it.
 
 ## Styling and UX
 

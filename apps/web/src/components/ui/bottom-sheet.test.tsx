@@ -1,6 +1,7 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
+import { claimPlayback, usePlaybackActive } from '@/lib/video-playback';
 import { BottomSheet } from './bottom-sheet';
 
 function Uncontrolled(props: { hideTitle?: boolean }) {
@@ -36,6 +37,15 @@ function swipe(dy: number, ms: number) {
 }
 
 describe('BottomSheet', () => {
+  it('pauses the playing video when it opens', () => {
+    const playing = renderHook(() => usePlaybackActive('video-1'));
+    act(() => claimPlayback('video-1'));
+    render(<Uncontrolled />);
+    expect(playing.result.current).toBe(true);
+    open();
+    expect(playing.result.current).toBe(false);
+  });
+
   it('opens from the trigger with focus inside, and Tutup returns focus to the trigger', async () => {
     render(<Uncontrolled />);
     const dialog = open();
@@ -129,5 +139,14 @@ describe('BottomSheet', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(screen.queryByRole('dialog')).toBeNull();
     await waitFor(() => expect(opener).toHaveFocus());
+  });
+
+  it('merges a className onto the panel', () => {
+    render(
+      <BottomSheet title="Judul" className="h-[40dvh]" trigger={<button>Buka</button>}>
+        Isi
+      </BottomSheet>,
+    );
+    expect(open().className).toContain('h-[40dvh]');
   });
 });

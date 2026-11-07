@@ -8,8 +8,10 @@ describe('mediaAccessResponseSchema', () => {
       {
         id: 'b',
         kind: 'VIDEO',
-        url: 'https://customer-x.cloudflarestream.com/t/iframe',
-        player: 'iframe',
+        url: 'https://customer-x.cloudflarestream.com/t/manifest/video.m3u8',
+        posterUrl: 'https://customer-x.cloudflarestream.com/t/thumbnails/thumbnail.jpg',
+        player: 'hls',
+        durationSeconds: 65,
       },
     ],
     expiresAt: '2026-11-04T00:30:00.000Z',
@@ -21,8 +23,11 @@ describe('mediaAccessResponseSchema', () => {
     expect(mediaAccessResponseSchema.parse({ ...body, watermark: null }).watermark).toBeNull();
   });
 
-  it('requires a player for videos', () => {
-    const video = { id: 'b', kind: 'VIDEO', url: 'u' };
-    expect(mediaAccessResponseSchema.safeParse({ ...body, media: [video] }).success).toBe(false);
+  it('requires a player for videos, accepts an unknown poster and duration, and drops iframe', () => {
+    const video = { id: 'b', kind: 'VIDEO', url: 'u', posterUrl: null, durationSeconds: null };
+    const parse = (item: object) => mediaAccessResponseSchema.safeParse({ ...body, media: [item] });
+    expect(parse(video).success).toBe(false);
+    expect(parse({ ...video, player: 'video' }).success).toBe(true);
+    expect(parse({ ...video, player: 'iframe' }).success).toBe(false);
   });
 });

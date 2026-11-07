@@ -2,10 +2,11 @@
 
 import { X } from 'lucide-react';
 import { Dialog } from 'radix-ui';
-import { type PointerEvent, type ReactNode, useRef, useState } from 'react';
+import { type PointerEvent, type ReactNode, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useKeyboardInset } from '@/lib/use-keyboard-inset';
+import { pauseAllVideos } from '@/lib/video-playback';
 
 /** A downward drag on the header past this distance, or faster than this (px/ms), closes the sheet. */
 export const SWIPE_CLOSE_PX = 80;
@@ -26,6 +27,8 @@ type BottomSheetProps = {
   onOpenChange?: (open: boolean) => void;
   /** Call e.preventDefault() to take over focus return. */
   onCloseAutoFocus?: (e: Event) => void;
+  /** Extra classes for the sheet panel (e.g. a fixed height). */
+  className?: string;
   children: ReactNode;
 };
 
@@ -39,6 +42,7 @@ export function BottomSheet({
   open: openProp,
   onOpenChange,
   onCloseAutoFocus,
+  className,
   children,
 }: BottomSheetProps) {
   const [innerOpen, setInnerOpen] = useState(false);
@@ -48,6 +52,10 @@ export function BottomSheet({
     onOpenChange?.(v);
   };
   const inset = useKeyboardInset(open);
+  // Media pauses under a sheet (spec §6.3).
+  useEffect(() => {
+    if (open) pauseAllVideos();
+  }, [open]);
   const returnFocusRef = useRef<Element | null>(null);
   const [drag, setDrag] = useState<{ y: number; t: number } | null>(null);
   const [dragY, setDragY] = useState(0);
@@ -89,6 +97,7 @@ export function BottomSheet({
           className={cn(
             'fixed inset-x-0 bottom-0 z-50 mx-auto flex w-full max-w-feed flex-col rounded-t-3xl bg-card duration-200 focus:outline-none data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom motion-reduce:animate-none',
             drag ? 'transition-none' : 'transition-transform motion-reduce:transition-none',
+            className,
           )}
         >
           <div
@@ -131,7 +140,7 @@ export function BottomSheet({
               </Dialog.Close>
             </div>
           </div>
-          <div className="flex flex-col gap-4 overflow-y-auto overscroll-contain px-5 pt-2 pb-[calc(1.75rem+env(safe-area-inset-bottom))]">
+          <div className="flex min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain px-5 pt-2 pb-[calc(1.75rem+env(safe-area-inset-bottom))]">
             {children}
           </div>
         </Dialog.Content>

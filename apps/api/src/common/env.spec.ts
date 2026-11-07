@@ -29,6 +29,7 @@ describe('parseEnv', () => {
     expect(parseEnv(BASE)).toEqual({
       NODE_ENV: 'development',
       API_PORT: 4000,
+      TRUST_PROXY: false,
       ...BASE,
       SESSION_TTL_DAYS: 30,
       LOCAL_STORAGE_DIR: '.local-storage',
@@ -116,6 +117,22 @@ describe('parseEnv', () => {
   it('rejects an unknown STORAGE_DRIVER', () => {
     expect(() => parseEnv({ ...BASE, STORAGE_DRIVER: 's3' })).toThrow(/- STORAGE_DRIVER:/);
   });
+
+  it.each([
+    ['1', 1],
+    ['127.0.0.1, ::1', ['127.0.0.1', '::1']],
+    ['10.0.0.0/8', ['10.0.0.0/8']],
+    ['', false],
+  ])('parses TRUST_PROXY=%j', (value, expected) => {
+    expect(parseEnv({ ...BASE, TRUST_PROXY: value }).TRUST_PROXY).toEqual(expected);
+  });
+
+  it.each(['true', 'TRUE', 'abc', '999.1.1.1', '0', '6', '10.0.0.0/33', '::1/129'])(
+    'rejects TRUST_PROXY=%s',
+    (value) => {
+      expect(() => parseEnv({ ...BASE, TRUST_PROXY: value })).toThrow(/TRUST_PROXY/);
+    },
+  );
 
   it('coerces a valid SESSION_TTL_DAYS to a number', () => {
     expect(parseEnv({ ...BASE, SESSION_TTL_DAYS: '7' }).SESSION_TTL_DAYS).toBe(7);

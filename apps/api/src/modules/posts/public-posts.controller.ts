@@ -10,9 +10,10 @@ export class PublicPostsController {
   constructor(private readonly posts: PublicPostsService) {}
 
   @Get(':slug/posts')
-  @Header('cache-control', 'no-store') // hidden posts must disappear immediately
-  async list(@Param('slug') slug: string): Promise<PublicPostList> {
-    return { posts: await this.posts.list(slug) };
+  @UseGuards(OptionalSessionGuard)
+  @Header('cache-control', 'no-store') // hidden posts must disappear immediately; the answer depends on the viewer
+  async list(@Param('slug') slug: string, @Req() req: FastifyRequest): Promise<PublicPostList> {
+    return { posts: await this.posts.list(slug, req.authSession?.userId ?? null) };
   }
 
   @Get(':slug/posts/:postId')

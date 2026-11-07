@@ -2,6 +2,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { API_ORIGIN } from './origin';
 import { getPublicPosts } from './public-posts';
 
+const cookieStore = vi.hoisted(() => ({ value: undefined as string | undefined }));
+vi.mock('next/headers', () => ({
+  cookies: () =>
+    Promise.resolve({
+      get: (name: string) =>
+        name === 'influency_session' && cookieStore.value
+          ? { value: cookieStore.value }
+          : undefined,
+    }),
+}));
+
 const POSTS = {
   posts: [
     {
@@ -14,6 +25,10 @@ const POSTS = {
       offer: null,
       previewUrl: null,
       likeCount: 0,
+      access: 'full',
+      viewer: null,
+      commentCount: 0,
+      media: [{ kind: 'IMAGE', durationSeconds: null }],
     },
   ],
 };
@@ -25,12 +40,26 @@ function stubFetch(response: Response) {
 }
 
 describe('getPublicPosts', () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    cookieStore.value = undefined;
+  });
 
-  it('fetches the encoded slug uncached and without cookies', async () => {
+  it('fetches the encoded slug uncached, without a cookie when logged out', async () => {
     const fetchMock = stubFetch(Response.json(POSTS));
     expect(await getPublicPosts('a/b?')).toEqual(POSTS);
     expect(fetchMock).toHaveBeenCalledWith(`${API_ORIGIN}/api/v1/creators/a%2Fb%3F/posts`, {
+      headers: {},
+      cache: 'no-store',
+    });
+  });
+
+  it('forwards only the session cookie when logged in (the feed is viewer-aware)', async () => {
+    cookieStore.value = 'tok';
+    const fetchMock = stubFetch(Response.json(POSTS));
+    await getPublicPosts('ana');
+    expect(fetchMock.mock.calls[0]![1]).toEqual({
+      headers: { cookie: 'influency_session=tok' },
       cache: 'no-store',
     });
   });

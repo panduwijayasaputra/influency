@@ -20,7 +20,7 @@ type Limiter = ReturnType<FastifyInstance['createRateLimit']>;
  * session's user, else the client IP.
  */
 // shortcut: in-memory store per process; switch to the Redis store in Phase 5 (several API instances).
-// shortcut: without Fastify `trustProxy`, req.ip is the web proxy's IP, so anonymous callers share one bucket; set it once the deploy topology is fixed.
+// Without TRUST_PROXY, req.ip is the web proxy's IP, so anonymous callers share one bucket; set TRUST_PROXY where the edge overwrites X-Forwarded-For.
 @Injectable()
 export class RateLimitGuard implements CanActivate {
   private readonly limiters = new Map<unknown, Limiter>();

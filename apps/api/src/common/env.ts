@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { isIP } from 'node:net';
 import { z } from 'zod';
 
 export const R2_VARS = [
@@ -10,10 +11,53 @@ export const R2_VARS = [
 
 export const STREAM_VARS = ['CLOUDFLARE_STREAM_ACCOUNT_ID', 'CLOUDFLARE_STREAM_TOKEN'] as const;
 
+/** One proxy address or CIDR, e.g. 127.0.0.1, ::1, 10.0.0.0/8. */
+function isProxyAddress(entry: string): boolean {
+  const [address = '', bits, ...rest] = entry.split('/');
+  const family = isIP(address);
+  if (family === 0 || rest.length > 0) return false;
+  if (bits === undefined) return true;
+  const n = Number(bits);
+  return /^\d+$/.test(bits) && n <= (family === 4 ? 32 : 128);
+}
+
+/** Fastify `trustProxy`: unset → false, a hop count (1–5), or a list of proxy IPs/CIDRs. `true` is refused. */
+function parseTrustProxy(
+  value: string | undefined,
+  ctx: z.RefinementCtx,
+): false | number | string[] {
+  if (!value) return false;
+  if (/^\d+$/.test(value)) {
+    const hops = Number(value);
+    if (hops >= 1 && hops <= 5) return hops;
+    ctx.addIssue({ code: 'custom', message: 'hop count must be 1-5' });
+    return z.NEVER;
+  }
+  if (value.toLowerCase() === 'true') {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'TRUST_PROXY=true trusts any client; list the proxy addresses or a hop count.',
+    });
+    return z.NEVER;
+  }
+  const entries = value.split(',').map((e) => e.trim());
+  if (!entries.every(isProxyAddress)) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'must be a hop count or comma-separated proxy IPs/CIDRs',
+    });
+    return z.NEVER;
+  }
+  return entries;
+}
+
 export const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
+    // Proxies whose X-Forwarded-For sets req.ip (rate-limit keys): hop count or IPs/CIDRs; unset = trust none.
+    // Set it only where the edge overwrites X-Forwarded-For, or clients can pick their own key (docs/media-protection.md).
+    TRUST_PROXY: z.string().trim().optional().transform(parseTrustProxy),
     DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
     // Public web origin; the browser reaches the API through its /api/v1 rewrite.
     WEB_ORIGIN: z.url({ protocol: /^https?$/ }),

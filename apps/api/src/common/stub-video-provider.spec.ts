@@ -68,19 +68,25 @@ describe('StubVideoProvider', () => {
     expect([...frame!.subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff]);
   });
 
-  it('plays a ready video through a short-lived storage download URL', async () => {
+  it('plays a ready video through short-lived storage URLs, with a poster stored once', async () => {
     vi.useFakeTimers();
     const { storage, objects } = createMemoryStorage();
     const provider = new StubVideoProvider(storage, 5000);
     const { uid } = await uploaded(provider, objects, SAMPLE);
     expect(await provider.createPlaybackUrl(uid, 1800)).toBeNull();
+    expect(objects.has(`post-video-thumb/${uid}.jpg`)).toBe(false);
     vi.advanceTimersByTime(5000);
     const playback = await provider.createPlaybackUrl(uid, 1800);
     expect(playback).toEqual({
       url: `memory://download/post-video/${uid}`,
+      posterUrl: `memory://download/post-video-thumb/${uid}.jpg`,
       player: 'video',
       expiresAt: new Date(Date.now() + 1800_000),
     });
+    expect(objects.has(`post-video-thumb/${uid}.jpg`)).toBe(true);
+    const put = vi.spyOn(storage, 'put');
+    await provider.createPlaybackUrl(uid, 1800);
+    expect(put).not.toHaveBeenCalled();
   });
 
   it('reports error for bytes that are not a video', async () => {
@@ -103,13 +109,15 @@ describe('StubVideoProvider', () => {
     expect(get).not.toHaveBeenCalled();
   });
 
-  it('delete removes the object and forgets the video', async () => {
+  it('delete removes the object and its poster, and forgets the video', async () => {
     const { storage, objects } = createMemoryStorage();
     const provider = new StubVideoProvider(storage, 0);
     const { uid, key } = await uploaded(provider, objects, SAMPLE);
     expect((await provider.getStatus(uid)).state).toBe('ready');
+    await provider.createPlaybackUrl(uid, 1800);
     await provider.delete(uid);
     expect(objects.has(key)).toBe(false);
+    expect(objects.has(`post-video-thumb/${uid}.jpg`)).toBe(false);
     expect((await provider.getStatus(uid)).state).toBe('pending_upload');
   });
 });
