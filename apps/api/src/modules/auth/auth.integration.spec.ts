@@ -177,6 +177,37 @@ describe('Telegram login (start + callback)', () => {
     );
   });
 
+  it('stores the Telegram username and refreshes it on every login', async () => {
+    const sub = newSub();
+    const usernameOf = async () =>
+      (
+        await prisma.authIdentity.findUniqueOrThrow({
+          where: { provider_providerSub: { provider: 'TELEGRAM', providerSub: sub } },
+        })
+      ).username;
+    await login(sub, { preferred_username: 'ana_01' });
+    const userId = await userIdOf(sub);
+    expect(await usernameOf()).toBe('ana_01');
+    await login(sub, { preferred_username: 'ana_new' });
+    expect(await usernameOf()).toBe('ana_new');
+    await login(sub, {});
+    expect(await usernameOf()).toBeNull();
+    expect(await userIdOf(sub)).toBe(userId);
+  });
+
+  it('logs in with a malformed username and stores none', async () => {
+    const sub = newSub();
+    const res = await login(sub, { preferred_username: 'bad name!' });
+    expect(res.headers.location).toBe('/');
+    expect(
+      (
+        await prisma.authIdentity.findUniqueOrThrow({
+          where: { provider_providerSub: { provider: 'TELEGRAM', providerSub: sub } },
+        })
+      ).username,
+    ).toBeNull();
+  });
+
   it('never matches by name or username: same name, different sub → different users', async () => {
     const [a, b] = [newSub(), newSub()];
     await login(a, { name: 'Same', preferred_username: 'same' });

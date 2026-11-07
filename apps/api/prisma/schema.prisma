@@ -56,6 +56,8 @@ model AuthIdentity {
   userId      String       @map("user_id") @db.Uuid
   provider    AuthProvider
   providerSub String       @map("provider_sub")
+  /// Telegram preferred_username: display only, refreshed on each login; never used to match identities.
+  username    String?
   createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   user        User         @relation(fields: [userId], references: [id], onDelete: Restrict)
 

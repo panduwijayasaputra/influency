@@ -15,7 +15,7 @@ export function useLogout() {
     try {
       const res = await fetch('/api/v1/auth/logout', { method: 'POST' });
       if (res.ok) {
-        router.replace('/');
+        router.replace('/login');
         // Re-render server components so no logged-in state survives in the router cache.
         router.refresh();
         return;

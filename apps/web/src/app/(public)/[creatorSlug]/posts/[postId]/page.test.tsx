@@ -20,6 +20,7 @@ vi.mock('next/navigation', () => ({
   notFound: () => {
     throw new Error('notFound');
   },
+  useRouter: () => ({ back: vi.fn() }),
 }));
 
 const CREATOR: CreatorProfileResponse = {
@@ -201,9 +202,10 @@ describe('PostPage', () => {
     vi.mocked(getPublicPost).mockReturnValue(new Promise(() => {}));
   });
 
-  it('links back to the creator and streams the post', async () => {
+  it('streams the post, holding the header until the session check (IfSignedIn)', async () => {
+    vi.mocked(getCurrentUser).mockReturnValue(new Promise(() => {}));
     render(await PostPage(props()));
-    expect(screen.getByRole('link', { name: 'Ana' })).toHaveAttribute('href', '/ana');
+    expect(screen.queryByRole('link', { name: 'Kembali' })).toBeNull();
     expect(screen.getByText('Memuat postingan…')).toBeInTheDocument();
     expect(await generateMetadata(props())).toEqual({ title: 'Ana · Postingan' });
   });

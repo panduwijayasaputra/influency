@@ -148,6 +148,7 @@ export class AuthService {
       select: {
         id: true,
         displayName: true,
+        authIdentities: { where: { provider: 'TELEGRAM' }, select: { username: true }, take: 1 },
         roles: { select: { role: true } },
         creatorProfile: { select: { status: true } },
       },
@@ -155,7 +156,12 @@ export class AuthService {
     const roles: Role[] = ['USER'];
     if (user.creatorProfile?.status === 'APPROVED') roles.push('CREATOR');
     if (user.roles.some((r) => r.role === 'ADMIN')) roles.push('ADMIN');
-    return { id: user.id, displayName: user.displayName, roles };
+    return {
+      id: user.id,
+      displayName: user.displayName,
+      username: user.authIdentities[0]?.username ?? null,
+      roles,
+    };
   }
 
   /** Returns the cookie token; only its hash is stored. */
@@ -172,17 +178,27 @@ export class AuthService {
   }
 
   /** Matches by (TELEGRAM, sub) only, never by name or username. */
-  private async findOrCreateUser({ sub, name }: VerifiedTelegramIdentity): Promise<string> {
+  private async findOrCreateUser({
+    sub,
+    name,
+    username,
+  }: VerifiedTelegramIdentity): Promise<string> {
     const where = { provider_providerSub: { provider: 'TELEGRAM', providerSub: sub } } as const;
     const existing = await this.prisma.authIdentity.findUnique({ where });
-    if (existing) return existing.userId;
+    if (existing) {
+      // Telegram usernames change; keep the display copy current (null clears it).
+      if (existing.username !== username) {
+        await this.prisma.authIdentity.update({ where: { id: existing.id }, data: { username } });
+      }
+      return existing.userId;
+    }
     try {
       return await this.prisma.$transaction(async (tx) => {
         const user = await tx.user.create({
           data: { displayName: name?.trim() || DEFAULT_DISPLAY_NAME },
         });
         await tx.authIdentity.create({
-          data: { userId: user.id, provider: 'TELEGRAM', providerSub: sub },
+          data: { userId: user.id, provider: 'TELEGRAM', providerSub: sub, username },
         });
         return user.id;
       });

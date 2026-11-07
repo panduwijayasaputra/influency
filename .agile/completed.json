@@ -13,6 +13,41 @@
       "title": "Bottom Sheet & Toast",
       "status": "ready_for_uat",
       "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-003",
+      "feature": "app-foundation",
+      "title": "App Shell & 4-Tab Bottom Nav",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-004",
+      "feature": "app-foundation",
+      "title": "Home Top Bar",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-005",
+      "feature": "app-foundation",
+      "title": "Right Account Drawer",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-006",
+      "feature": "app-foundation",
+      "title": "Login Landing",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-007",
+      "feature": "app-foundation",
+      "title": "Guest Access Rules in the Shell",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
     }
   ]
 }

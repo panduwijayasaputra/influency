@@ -21,7 +21,7 @@
       "feature": "app-foundation",
       "file": "features/app-foundation/US-003-app-shell-bottom-nav.md",
       "title": "App Shell & 4-Tab Bottom Nav",
-      "status": "planned",
+      "status": "ready_for_uat",
       "priority": "high"
     },
     {
@@ -29,7 +29,7 @@
       "feature": "app-foundation",
       "file": "features/app-foundation/US-004-home-top-bar.md",
       "title": "Home Top Bar",
-      "status": "backlog",
+      "status": "ready_for_uat",
       "priority": "high"
     },
     {
@@ -37,7 +37,7 @@
       "feature": "app-foundation",
       "file": "features/app-foundation/US-005-right-account-drawer.md",
       "title": "Right Account Drawer",
-      "status": "backlog",
+      "status": "ready_for_uat",
       "priority": "high"
     },
     {
@@ -45,7 +45,7 @@
       "feature": "app-foundation",
       "file": "features/app-foundation/US-006-login-landing.md",
       "title": "Login Landing",
-      "status": "backlog",
+      "status": "ready_for_uat",
       "priority": "high"
     },
     {
@@ -53,7 +53,7 @@
       "feature": "app-foundation",
       "file": "features/app-foundation/US-007-guest-access-rules.md",
       "title": "Guest Access Rules in the Shell",
-      "status": "backlog",
+      "status": "ready_for_uat",
       "priority": "medium"
     }
   ]

@@ -30,7 +30,12 @@ const application = (
 
 describe('BecomeCreator', () => {
   beforeEach(() => {
-    vi.mocked(getCurrentUser).mockResolvedValue({ id: 'u1', displayName: 'Ana', roles: ['USER'] });
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      id: 'u1',
+      displayName: 'Ana',
+      username: 'ana',
+      roles: ['USER'],
+    });
     vi.mocked(getMyCreatorApplication).mockResolvedValue(null);
   });
 

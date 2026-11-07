@@ -21,12 +21,15 @@ const post = (overrides: Partial<PublicPost>): PublicPost => ({
   ...overrides,
 });
 
-async function renderFeed(posts: PublicPost[] | null | Error) {
+async function renderFeed(posts: PublicPost[] | null | Error, signedIn = true) {
   if (posts instanceof Error) vi.mocked(getPublicPosts).mockRejectedValue(posts);
   else vi.mocked(getPublicPosts).mockResolvedValue(posts && { posts });
-  return render(await CreatorPosts({ slug: 'claudiandreya', creatorName: 'Claudia Andreya' }), {
-    wrapper: Toaster,
-  });
+  return render(
+    await CreatorPosts({ slug: 'claudiandreya', creatorName: 'Claudia Andreya', signedIn }),
+    {
+      wrapper: Toaster,
+    },
+  );
 }
 
 const tiles = () => screen.queryAllByRole('article');
@@ -115,6 +118,15 @@ describe('CreatorPosts', () => {
     fireEvent.click(within(sheet).getByRole('button', { name: 'Buka dengan 5 Koin' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.getByRole('listitem')).toHaveTextContent(DEMO_PURCHASE_MESSAGE);
+  });
+
+  it('links a guest straight to the premium post page instead of the sheet', async () => {
+    const premium = post({ caption: 'Rahasia', visibility: 'PREMIUM', offer: { priceCoins: 5 } });
+    await renderFeed([premium], false);
+    const link = within(tiles()[0]!).getByRole('link');
+    expect(link).toHaveAttribute('href', `/claudiandreya/posts/${premium.id}`);
+    fireEvent.click(link);
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('sends the viewer to top up when the price exceeds the balance', async () => {

@@ -103,6 +103,18 @@ describe('TelegramOidcClient', () => {
       await expect(fake.client().verifyIdToken(token, NONCE)).resolves.toEqual({
         sub: 'abc',
         name: 'Claudia',
+        username: null,
+      });
+    });
+
+    it.each([
+      ['valid', 'claudia_01', 'claudia_01'],
+      ['malformed', 'bad name!', null],
+      ['not a string', 42, null],
+    ])('keeps a %s preferred_username leniently', async (_label, preferred_username, expected) => {
+      const token = await fake.signIdToken({ nonce: NONCE, preferred_username });
+      await expect(fake.client().verifyIdToken(token, NONCE)).resolves.toMatchObject({
+        username: expected,
       });
     });
 

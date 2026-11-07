@@ -32,7 +32,7 @@ describe('slugSchema', () => {
     (slug) => {
       const result = slugSchema.safeParse(slug);
       expect(result.success).toBe(false);
-      expect(result.error?.issues[0]?.message).toBe(RESERVED_MESSAGE);
+      expect(result.error?.issues.map((issue) => issue.message)).toContain(RESERVED_MESSAGE);
     },
   );
 });

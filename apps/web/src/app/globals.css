@@ -36,6 +36,8 @@
   --color-koin-border: var(--koin-border);
   --color-success: var(--success);
   --color-success-surface: var(--success-surface);
+  --color-telegram: var(--telegram);
+  --color-telegram-foreground: var(--telegram-foreground);
   --container-feed: var(--feed-max-width);
   --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
 }
@@ -70,8 +72,10 @@
   --koin-border: #f1ddb3;
   --success: #1e6b3a;
   --success-surface: #e6f4ea;
+  --telegram: #1a7db0; /* "Masuk dengan Telegram" button only; white text 4.56:1 */
+  --telegram-foreground: #ffffff;
   --feed-max-width: 34rem;
-  --bottom-nav-height: 4rem; /* BottomNav height and toast offset (US-002); US-003 keeps it */
+  --bottom-nav-height: 4rem; /* BottomNav height (AppChrome spacer) and toast offset */
 }
 
 @layer base {

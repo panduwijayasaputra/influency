@@ -103,8 +103,22 @@ describe('GET /auth/me', () => {
     expect(meResponseSchema.parse(res.json())).toEqual({
       id: PLAIN,
       displayName: 'Me Plain',
+      username: null,
       roles: ['USER'],
     });
+  });
+
+  it('returns the Telegram username from the identity', async () => {
+    await prisma.authIdentity.create({
+      data: {
+        userId: PLAIN,
+        provider: 'TELEGRAM',
+        providerSub: 'me-spec-plain-sub',
+        username: 'me_plain',
+      },
+    });
+    expect((await me(TOKENS.plain)).json()).toMatchObject({ username: 'me_plain' });
+    await prisma.authIdentity.deleteMany({ where: { userId: PLAIN } });
   });
 
   it('returns USER, CREATOR, ADMIN in fixed order for an approved creator who is admin', async () => {

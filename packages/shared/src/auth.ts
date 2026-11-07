@@ -15,6 +15,8 @@ export type Role = (typeof ROLES)[number];
 export const meResponseSchema = z.object({
   id: z.string(),
   displayName: z.string(),
+  /** Telegram username, display only; null when Telegram sent none. */
+  username: z.string().nullable(),
   roles: z.array(z.enum(ROLES)),
 });
 export type MeResponse = z.infer<typeof meResponseSchema>;

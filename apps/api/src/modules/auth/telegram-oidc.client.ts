@@ -28,6 +28,8 @@ export interface TelegramOidcDeps {
 export interface VerifiedTelegramIdentity {
   sub: string;
   name: string | null;
+  /** Telegram username (`profile` scope); null when absent or malformed. Display only. */
+  username: string | null;
 }
 
 /** An expected login failure. `reason` is English, safe to log, and never contains tokens. */
@@ -42,6 +44,12 @@ const claimsSchema = z.object({
   sub: z.string().min(1),
   nonce: z.string(),
   name: z.string().optional(),
+  // A missing or odd username must never fail login: drop it instead.
+  preferred_username: z
+    .string()
+    .regex(/^[A-Za-z0-9_]{1,64}$/)
+    .optional()
+    .catch(undefined),
 });
 
 /** base64url(sha256(verifier)): the PKCE S256 challenge (RFC 7636). */
@@ -126,6 +134,10 @@ export class TelegramOidcClient {
     const claims = claimsSchema.safeParse(payload);
     if (!claims.success) throw new OidcError('id_token_claims_invalid');
     if (claims.data.nonce !== expectedNonce) throw new OidcError('id_token_nonce_mismatch');
-    return { sub: claims.data.sub, name: claims.data.name ?? null };
+    return {
+      sub: claims.data.sub,
+      name: claims.data.name ?? null,
+      username: claims.data.preferred_username ?? null,
+    };
   }
 }

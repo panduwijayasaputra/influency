@@ -1,10 +1,12 @@
-import { ArrowLeft, Lock, LockOpen } from 'lucide-react';
+import { Lock, LockOpen } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import type { PublicPostDetail } from '@influency/shared';
+import { IfSignedIn } from '@/components/if-signed-in';
 import { LikeButton } from '@/components/like-button';
+import { PageHeader } from '@/components/page-header';
 import { PostMediaViewer } from '@/components/post-media-viewer';
 import { ReportPostButton } from '@/components/report-post-button';
 import { Button } from '@/components/ui/button';
@@ -36,19 +38,20 @@ export default async function PostPage({ params }: Props) {
   if (!creator) notFound();
 
   return (
-    <main className="mx-auto flex w-full max-w-feed flex-1 flex-col gap-4 px-4 py-6 pb-12">
-      <Link
-        href={`/${creator.slug}`}
-        className="flex min-h-11 w-fit items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft aria-hidden className="size-4" />
-        {creator.displayName}
-      </Link>
-      {/* Reads the session cookie (owner/entitled viewers get the full post), so it streams in uncached. */}
-      <Suspense fallback={<p className="text-sm text-muted-foreground">Memuat postingan…</p>}>
-        <PostDetail slug={creator.slug} postId={postId} />
+    <>
+      {/* Guests get no top bar (US-007). */}
+      <Suspense fallback={null}>
+        <IfSignedIn>
+          <PageHeader title="Postingan" fallbackHref={`/${creator.slug}`} />
+        </IfSignedIn>
       </Suspense>
-    </main>
+      <main className="mx-auto flex w-full max-w-feed flex-1 flex-col gap-4 px-4 py-4">
+        {/* Reads the session cookie (owner/entitled viewers get the full post), so it streams in uncached. */}
+        <Suspense fallback={<p className="text-sm text-muted-foreground">Memuat postingan…</p>}>
+          <PostDetail slug={creator.slug} postId={postId} />
+        </Suspense>
+      </main>
+    </>
   );
 }
 

@@ -43,6 +43,8 @@ describe('Light Social theme tokens', () => {
       destructive: '#b42318',
       success: '#1e6b3a',
       'success-surface': '#e6f4ea',
+      telegram: '#1a7db0',
+      'telegram-foreground': '#ffffff',
     });
   });
 
@@ -64,6 +66,7 @@ describe('Light Social theme tokens', () => {
     ['success', 'card'],
     ['destructive', 'card'],
     ['destructive', 'background'],
+    ['telegram-foreground', 'telegram'],
   ])('%s on %s meets WCAG AA (4.5:1)', (fg, bg) => {
     expect(tokens[fg], fg).toBeDefined();
     expect(tokens[bg], bg).toBeDefined();

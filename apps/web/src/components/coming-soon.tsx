@@ -1,20 +1,30 @@
-import Link from 'next/link';
-import { BottomNav } from '@/components/bottom-nav';
-import { Button } from '@/components/ui/button';
+import type { ReactNode } from 'react';
+import { PageHeader } from '@/components/page-header';
 
-/** Placeholder page for a reserved route whose feature is not built yet. */
-export function ComingSoon({ title, description }: { title: string; description: string }) {
+/** Placeholder page for a route whose feature is not built yet. */
+export function ComingSoon({
+  title,
+  description,
+  children,
+  header,
+}: {
+  title: string;
+  description: string;
+  children?: ReactNode;
+  /** Replaces the default PageHeader (Home passes HomeTopBar); the title then becomes an sr-only h1. */
+  header?: ReactNode;
+}) {
   return (
     <>
-      <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-4 px-6 pt-16 pb-28">
-        <p className="w-fit rounded-full bg-muted px-3 py-1 text-xs font-semibold">Segera hadir</p>
-        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+      {header ?? <PageHeader title={title} asHeading />}
+      <main className="mx-auto flex w-full max-w-feed flex-1 flex-col items-center justify-center gap-3 px-4 py-12 text-center">
+        {header && <h1 className="sr-only">{title}</h1>}
+        <p className="rounded-full bg-accent px-3 py-1 text-xs font-bold text-primary-ink">
+          Segera hadir
+        </p>
         <p className="text-base text-muted-foreground">{description}</p>
-        <Button asChild variant="outline" className="self-start">
-          <Link href="/">Kembali ke beranda</Link>
-        </Button>
+        {children}
       </main>
-      <BottomNav />
     </>
   );
 }

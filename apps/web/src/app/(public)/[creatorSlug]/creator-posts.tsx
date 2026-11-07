@@ -7,7 +7,15 @@ const EMPTY = 'Belum ada konten yang dipublikasikan.';
  * Published posts as a filterable grid. Premium tiles show only the generated cover preview (US-048); post media
  * arrives through the access-checked path (US-021).
  */
-export async function CreatorPosts({ slug, creatorName }: { slug: string; creatorName: string }) {
+export async function CreatorPosts({
+  slug,
+  creatorName,
+  signedIn,
+}: {
+  slug: string;
+  creatorName: string;
+  signedIn: boolean;
+}) {
   // An API outage must not break the public page.
   const feed = await getPublicPosts(slug).catch(() => undefined);
   if (feed === undefined) {
@@ -25,5 +33,5 @@ export async function CreatorPosts({ slug, creatorName }: { slug: string; creato
       </p>
     );
   }
-  return <PostGrid slug={slug} creatorName={creatorName} posts={posts} />;
+  return <PostGrid slug={slug} creatorName={creatorName} posts={posts} signedIn={signedIn} />;
 }

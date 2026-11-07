@@ -84,13 +84,16 @@ function PostTile({
   slug,
   creatorName,
   post,
+  signedIn,
 }: {
   slug: string;
   creatorName: string;
   post: PublicPost;
+  signedIn: boolean;
 }) {
   const href = `/${slug}/posts/${post.id}`;
-  if (!post.offer) {
+  // Guests open the post page (its unlock is a login link) instead of the purchase sheet (US-007).
+  if (!post.offer || !signedIn) {
     return (
       <article>
         <Link href={href} className={TILE}>
@@ -126,10 +129,12 @@ export function PostGrid({
   slug,
   creatorName,
   posts,
+  signedIn,
 }: {
   slug: string;
   creatorName: string;
   posts: PublicPost[];
+  signedIn: boolean;
 }) {
   const [filter, setFilter] = useState<Filter>('ALL');
   const shown = filter === 'ALL' ? posts : posts.filter((p) => p.visibility === filter);
@@ -164,7 +169,13 @@ export function PostGrid({
       ) : (
         <div className="grid grid-cols-2 gap-x-3 gap-y-5">
           {shown.map((post) => (
-            <PostTile key={post.id} slug={slug} creatorName={creatorName} post={post} />
+            <PostTile
+              key={post.id}
+              slug={slug}
+              creatorName={creatorName}
+              post={post}
+              signedIn={signedIn}
+            />
           ))}
         </div>
       )}

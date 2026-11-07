@@ -12,7 +12,9 @@ vi.mock('next/navigation', () => ({
 }));
 
 const as = (roles: MeResponse['roles'] | null) =>
-  vi.mocked(getCurrentUser).mockResolvedValue(roles && { id: 'u1', displayName: 'Ana', roles });
+  vi
+    .mocked(getCurrentUser)
+    .mockResolvedValue(roles && { id: 'u1', displayName: 'Ana', username: 'ana', roles });
 
 describe('StudioGate', () => {
   it('redirects logged-out visitors to login, returning to /studio', async () => {

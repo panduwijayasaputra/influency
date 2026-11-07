@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
-import type { ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import { APP_NAME } from '@influency/shared';
-import { SiteHeader } from '@/components/site-header';
+import { SignedInChrome } from '@/components/signed-in-chrome';
 import { Toaster } from '@/components/ui/toast';
 import { jakarta } from './fonts';
 import './globals.css';
@@ -23,8 +23,11 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     <html lang="id" className={`${jakarta.variable} font-sans antialiased`}>
       <body className="flex min-h-dvh flex-col pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
         <Toaster>
-          <SiteHeader />
           {children}
+          {/* usePathname suspends on unknown dynamic params under cacheComponents */}
+          <Suspense fallback={null}>
+            <SignedInChrome />
+          </Suspense>
         </Toaster>
       </body>
     </html>

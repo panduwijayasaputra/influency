@@ -16,6 +16,9 @@ export const RESERVED_SLUGS = [
   'help',
   'become-creator',
   'account',
+  'me',
+  'notifications',
+  'following',
 ] as const;
 
 /** 3–30 chars, a-z 0-9 _ -, starts and ends with a letter/digit. Mirrored by a DB CHECK on creator_profiles.slug. */
