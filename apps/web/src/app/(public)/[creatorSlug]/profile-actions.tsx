@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { PurchaseSheet } from '@/components/purchase-sheet';
+import { SubscribeSheet } from '@/components/purchase-sheet';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { DEMO_SUBSCRIPTION } from '@/lib/demo';
@@ -62,20 +62,13 @@ export function ProfileActions({
           </span>
         </Button>
       ) : (
-        <PurchaseSheet
+        <SubscribeSheet
+          creatorName={creatorName}
           trigger={
             <Button type="button" aria-label={`Langganan · ${priceCoins} Koin / ${days} hari`}>
               Langganan
             </Button>
           }
-          kicker="Langganan kreator"
-          title={creatorName}
-          rows={[
-            ['Masa aktif', `${days} hari`],
-            ['Perpanjangan', 'Manual'],
-          ]}
-          priceCoins={priceCoins}
-          ctaLabel={`Langganan dengan ${priceCoins} Koin`}
         />
       )}
     </div>

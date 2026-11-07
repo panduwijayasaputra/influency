@@ -103,6 +103,70 @@
       "title": "Full-screen Media Viewer",
       "status": "ready_for_uat",
       "priority": "medium"
+    },
+    {
+      "id": "US-014",
+      "feature": "comments",
+      "file": "features/comments/US-014-comments-bottom-sheet.md",
+      "title": "Comments Bottom Sheet",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-015",
+      "feature": "comments",
+      "file": "features/comments/US-015-comment-thread-ui.md",
+      "title": "Comment Thread UI (replies, likes, labels)",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-016",
+      "feature": "comments",
+      "file": "features/comments/US-016-comment-actions-menu.md",
+      "title": "Comment Actions Menu (edit, delete, pin)",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-017",
+      "feature": "comments",
+      "file": "features/comments/US-017-replies-and-top-order-api.md",
+      "title": "Replies and Top Order API",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-018",
+      "feature": "comments",
+      "file": "features/comments/US-018-comment-likes-api.md",
+      "title": "Comment Likes API",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-019",
+      "feature": "comments",
+      "file": "features/comments/US-019-edit-comment-api.md",
+      "title": "Edit Comment API",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-020",
+      "feature": "comments",
+      "file": "features/comments/US-020-pin-comment-api.md",
+      "title": "Pin Comment API",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-021",
+      "feature": "comments",
+      "file": "features/comments/US-021-admin-comment-moderation.md",
+      "title": "Admin Comment Moderation",
+      "status": "ready_for_uat",
+      "priority": "medium"
     }
   ]
 }

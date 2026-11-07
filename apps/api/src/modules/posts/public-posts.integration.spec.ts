@@ -166,6 +166,7 @@ describe('GET /creators/:slug/posts', () => {
   afterAll(async () => {
     await app.close();
     const owned = { post: { creatorProfile: { userId: { in: userIds } } } };
+    await prisma.commentModerationAction.deleteMany({ where: owned });
     await prisma.postComment.deleteMany({ where: owned });
     await prisma.postLike.deleteMany({ where: owned });
     await prisma.userRole.deleteMany({ where: { userId: { in: userIds } } });

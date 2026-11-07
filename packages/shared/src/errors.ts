@@ -22,6 +22,7 @@ export const ERRORS = {
     status: 422,
     message: 'Video tidak dapat diproses. Gunakan MP4, MOV, atau WebM, maks. 200 MB dan 10 menit.',
   },
+  COMMENT_NOT_PINNABLE: { status: 422, message: 'Balasan tidak bisa disematkan.' },
   VIDEO_TOO_LONG: { status: 422, message: 'Durasi video maksimal 10 menit.' },
   OFFER_REQUIRES_PREMIUM: { status: 409, message: 'Harga hanya bisa diatur untuk post Premium.' },
   COVER_REQUIRES_PREMIUM: { status: 409, message: 'Sampul hanya bisa diatur untuk post Premium.' },

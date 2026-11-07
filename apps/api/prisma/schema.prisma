@@ -35,10 +35,12 @@ model User {
   creatorProfile            CreatorProfile?
   creatorApplicationReviews CreatorApplicationReview[] @relation("CreatorApplicationReviewer")
   postLikes                 PostLike[]
+  commentLikes              CommentLike[]              @relation("CommentLiker")
   postComments              PostComment[]              @relation("PostCommentAuthor")
   deletedPostComments       PostComment[]              @relation("PostCommentDeleter")
   postReports               PostReport[]
   moderationActionsTaken    ModerationAction[]         @relation("ModerationActionAdmin")
+  commentModerationActions  CommentModerationAction[]  @relation("CommentModerationActor")
   moderationActionsReceived ModerationAction[]         @relation("ModerationActionTarget")
 
   @@map("users")
@@ -192,28 +194,29 @@ enum PostStatus {
 /// A creator's post (US-015). Owned by the creator profile; never deleted by the app.
 /// CHECK (migration): char_length(caption) <= 2000 (POST_CAPTION_MAX_LENGTH).
 model Post {
-  id                String               @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  creatorProfileId  String               @map("creator_profile_id") @db.Uuid
-  visibility        PostVisibility
-  status            PostStatus           @default(DRAFT)
-  caption           String               @default("")
-  publishedAt       DateTime?            @map("published_at") @db.Timestamptz(3)
+  id                       String                    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  creatorProfileId         String                    @map("creator_profile_id") @db.Uuid
+  visibility               PostVisibility
+  status                   PostStatus                @default(DRAFT)
+  caption                  String                    @default("")
+  publishedAt              DateTime?                 @map("published_at") @db.Timestamptz(3)
   /// US-048: cover source when it is one of this post's media (null for a dedicated upload or no cover).
-  coverMediaId      String?              @map("cover_media_id") @db.Uuid
+  coverMediaId             String?                   @map("cover_media_id") @db.Uuid
   /// US-048: generated public-safe preview `post-previews/<uuid>`, new key on every change; never the source's key.
   /// CHECK posts_cover_has_preview (migration): a media cover always has a preview.
-  previewKey        String?              @unique @map("preview_key")
-  createdAt         DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt         DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
-  creatorProfile    CreatorProfile       @relation(fields: [creatorProfileId], references: [id], onDelete: Restrict)
-  media             MediaAsset[]         @relation("PostMedia")
-  coverMedia        MediaAsset?          @relation("PostCover", fields: [coverMediaId], references: [id], onDelete: Restrict)
-  offers            PostOffer[]
-  archiveEpisodes   PostArchiveEpisode[]
-  likes             PostLike[]
-  comments          PostComment[]
-  reports           PostReport[]
-  moderationActions ModerationAction[]
+  previewKey               String?                   @unique @map("preview_key")
+  createdAt                DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  creatorProfile           CreatorProfile            @relation(fields: [creatorProfileId], references: [id], onDelete: Restrict)
+  media                    MediaAsset[]              @relation("PostMedia")
+  coverMedia               MediaAsset?               @relation("PostCover", fields: [coverMediaId], references: [id], onDelete: Restrict)
+  offers                   PostOffer[]
+  archiveEpisodes          PostArchiveEpisode[]
+  likes                    PostLike[]
+  comments                 PostComment[]
+  reports                  PostReport[]
+  moderationActions        ModerationAction[]
+  commentModerationActions CommentModerationAction[]
 
   @@index([creatorProfileId, createdAt])
   @@index([coverMediaId])
@@ -327,21 +330,51 @@ model PostLike {
 /// CHECK post_comments_body_length (migration): char_length(body) BETWEEN 1 AND 500 (POST_COMMENT_MAX_LENGTH).
 /// CHECK post_comments_deleted_consistent (migration): deleted_at and deleted_by_user_id are set together.
 model PostComment {
-  id              String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  postId          String    @map("post_id") @db.Uuid
-  userId          String    @map("user_id") @db.Uuid
-  body            String
-  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
-  deletedByUserId String?   @map("deleted_by_user_id") @db.Uuid
-  post            Post      @relation(fields: [postId], references: [id], onDelete: Restrict)
-  user            User      @relation("PostCommentAuthor", fields: [userId], references: [id], onDelete: Restrict)
-  deletedBy       User?     @relation("PostCommentDeleter", fields: [deletedByUserId], references: [id], onDelete: Restrict)
+  id               String                   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  postId           String                   @map("post_id") @db.Uuid
+  userId           String                   @map("user_id") @db.Uuid
+  body             String
+  createdAt        DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  deletedAt        DateTime?                @map("deleted_at") @db.Timestamptz(3)
+  deletedByUserId  String?                  @map("deleted_by_user_id") @db.Uuid
+  /// US-017: null = top-level; a reply points at its top-level parent (one level, enforced in the service).
+  parentId         String?                  @map("parent_id") @db.Uuid
+  /// US-017: cached like count for Top order; US-018 keeps it in sync inside the like transaction.
+  likeCount        Int                      @default(0) @map("like_count")
+  /// US-019: set only by a real edit; null = never edited.
+  editedAt         DateTime?                @map("edited_at") @db.Timestamptz(3)
+  /// US-020: set while the comment is the post's pinned comment. At most one per post (partial unique index
+  /// post_comments_one_pinned_per_post) and top-level only (CHECK post_comments_pinned_top_level): raw SQL in the migration.
+  pinnedAt         DateTime?                @map("pinned_at") @db.Timestamptz(3)
+  parent           PostComment?             @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Restrict)
+  replies          PostComment[]            @relation("CommentReplies")
+  likes            CommentLike[]
+  moderationAction CommentModerationAction?
+  post             Post                     @relation(fields: [postId], references: [id], onDelete: Restrict)
+  user             User                     @relation("PostCommentAuthor", fields: [userId], references: [id], onDelete: Restrict)
+  deletedBy        User?                    @relation("PostCommentDeleter", fields: [deletedByUserId], references: [id], onDelete: Restrict)
 
   @@index([postId, id])
   @@index([userId, createdAt])
   @@index([deletedByUserId])
+  @@index([parentId, id])
+  @@index([postId, likeCount(sort: Desc), id(sort: Desc)])
   @@map("post_comments")
+}
+
+/// US-018: one like per (comment, user). Rows survive a soft delete of the comment and are never edited.
+/// post_comments.like_count is kept in sync in the same transaction (CommentLikesService).
+model CommentLike {
+  id        String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  commentId String      @map("comment_id") @db.Uuid
+  userId    String      @map("user_id") @db.Uuid
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  comment   PostComment @relation(fields: [commentId], references: [id], onDelete: Restrict)
+  user      User        @relation("CommentLiker", fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([commentId, userId])
+  @@index([userId])
+  @@map("comment_likes")
 }
 
 enum PostReportReason {
@@ -387,6 +420,31 @@ model ModerationAction {
   @@index([postId, createdAt])
   @@index([targetUserId, createdAt])
   @@map("moderation_actions")
+}
+
+enum CommentModerationActor {
+  CREATOR
+  ADMIN
+
+  @@map("comment_moderation_actor")
+}
+
+/// US-021: append-only audit of a comment deleted by someone other than its author (the post's creator or an
+/// admin). One row per comment (UNIQUE). Never updated or deleted. The author's own delete writes nothing.
+model CommentModerationAction {
+  id        String                 @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  commentId String                 @unique @map("comment_id") @db.Uuid
+  postId    String                 @map("post_id") @db.Uuid
+  actorId   String                 @map("actor_id") @db.Uuid
+  actorRole CommentModerationActor @map("actor_role")
+  createdAt DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  comment   PostComment            @relation(fields: [commentId], references: [id], onDelete: Restrict)
+  post      Post                   @relation(fields: [postId], references: [id], onDelete: Restrict)
+  actor     User                   @relation("CommentModerationActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([postId, createdAt])
+  @@index([actorId, createdAt])
+  @@map("comment_moderation_actions")
 }
 
 /// US-042: a user's report on a post. Open while resolved_by_action_id is null; resolved once, never deleted.

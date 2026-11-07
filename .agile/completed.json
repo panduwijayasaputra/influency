@@ -90,6 +90,62 @@
       "title": "Full-screen Media Viewer",
       "status": "ready_for_uat",
       "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-014",
+      "feature": "comments",
+      "title": "Comments Bottom Sheet",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-015",
+      "feature": "comments",
+      "title": "Comment Thread UI (replies, likes, labels)",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-016",
+      "feature": "comments",
+      "title": "Comment Actions Menu (edit, delete, pin)",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-017",
+      "feature": "comments",
+      "title": "Replies and Top Order API",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-018",
+      "feature": "comments",
+      "title": "Comment Likes API",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-019",
+      "feature": "comments",
+      "title": "Edit Comment API",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-020",
+      "feature": "comments",
+      "title": "Pin Comment API",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-021",
+      "feature": "comments",
+      "title": "Admin Comment Moderation",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
     }
   ]
 }

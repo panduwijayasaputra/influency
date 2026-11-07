@@ -6,6 +6,7 @@ import { DropdownMenu } from 'radix-ui';
 import { useState } from 'react';
 import type { PublicPost } from '@influency/shared';
 import { ShareButton } from '@/app/(public)/[creatorSlug]/share-button';
+import { CommentsSheet } from '@/components/comments/comments-sheet';
 import { ExpandableText } from '@/components/expandable-text';
 import { LikeButton } from '@/components/like-button';
 import { ReportPostButton } from '@/components/report-post-button';
@@ -41,6 +42,12 @@ export function PostCard({
   const [reporting, setReporting] = useState(false);
   // Shared with the full-screen viewer's Suka so both show the same state.
   const [like, setLike] = useState({ liked: post.viewer?.liked ?? false, count: post.likeCount });
+  // Mounted on first open only, so a feed of cards does not mount a dialog per card.
+  const [comments, setComments] = useState<{ opened: boolean; open: boolean }>({
+    opened: false,
+    open: false,
+  });
+  const [commentCount, setCommentCount] = useState(post.commentCount);
   const guest = post.viewer === null;
   const path = `/${creator.slug}`;
   const postHref = `${path}/posts/${post.id}`;
@@ -157,14 +164,27 @@ export function PostCard({
               onChange={setLike}
             />
           </div>
-          <Link
-            href={detail ? '#komentar' : `${postHref}#komentar`}
-            aria-label={`Komentar, ${post.commentCount}`}
-            className="flex h-11 items-center gap-1.5 rounded-full px-2 text-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-          >
-            <MessageCircle aria-hidden className="size-5" />
-            {post.commentCount}
-          </Link>
+          {detail ? (
+            <Link
+              href="#komentar"
+              aria-label={`Komentar, ${commentCount}`}
+              className="flex h-11 items-center gap-1.5 rounded-full px-2 text-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            >
+              <MessageCircle aria-hidden className="size-5" />
+              {commentCount}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              aria-label={`Komentar, ${commentCount}`}
+              aria-haspopup="dialog"
+              onClick={() => setComments({ opened: true, open: true })}
+              className="flex h-11 items-center gap-1.5 rounded-full px-2 text-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            >
+              <MessageCircle aria-hidden className="size-5" />
+              {commentCount}
+            </button>
+          )}
           {guest ? (
             <Link href={login} aria-label="Bagikan" className={ICON}>
               <Share2 aria-hidden className="size-5" />
@@ -204,6 +224,17 @@ export function PostCard({
         </div>
       ) : (
         detail && <p className="px-4 text-sm text-muted-foreground">Tanpa caption</p>
+      )}
+      {comments.opened && (
+        <CommentsSheet
+          post={post}
+          creator={creator}
+          open={comments.open}
+          onOpenChange={(open) => setComments((c) => ({ ...c, open }))}
+          size="tall"
+          count={commentCount}
+          onCountChange={(d) => setCommentCount((n) => n + d)}
+        />
       )}
     </article>
   );

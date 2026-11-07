@@ -7,7 +7,7 @@ import type { PublicPost } from '@influency/shared';
 import { PremiumCover } from '@/app/(public)/[creatorSlug]/premium-cover';
 import { MediaItemView } from '@/components/post-media-viewer';
 import { MediaViewer } from '@/components/media-viewer/media-viewer';
-import { PurchaseSheet } from '@/components/purchase-sheet';
+import { PostUnlockSheet } from '@/components/purchase-sheet';
 import { Button } from '@/components/ui/button';
 import { pauseAllVideos } from '@/lib/video-playback';
 import { useMediaAccess } from '@/lib/use-media-access';
@@ -85,7 +85,9 @@ function LockedMedia({
             {buka}
           </Link>
         ) : (
-          <PurchaseSheet
+          <PostUnlockSheet
+            post={post}
+            creatorName={creatorName}
             trigger={
               <button
                 type="button"
@@ -94,18 +96,13 @@ function LockedMedia({
                 {buka}
               </button>
             }
-            kicker={`Post premium · ${creatorName}`}
-            title={post.caption || 'Tanpa caption'}
-            rows={[['Masa akses', 'Permanen']]}
-            priceCoins={price}
-            ctaLabel={`Buka dengan ${price} Koin`}
           >
             {!detail && (
               <Button asChild variant="outline" className="h-12">
                 <Link href={postHref}>Lihat detail post</Link>
               </Button>
             )}
-          </PurchaseSheet>
+          </PostUnlockSheet>
         )}
       </div>
     </div>

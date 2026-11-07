@@ -32,6 +32,7 @@ admin/
 - Home is the only page with `HomeTopBar` (`components/home-top-bar.tsx`) instead of `PageHeader`; until the feed lands it is passed as `ComingSoon`'s `header`.
 - The account entry is `AccountDrawer` (right drawer), opened from the Home top bar burger via `AccountEntry` (server, streams the user in `Suspense`). Don't add a header account menu elsewhere.
 - Placeholder pages use `ComingSoon`.
+- Comments open in `CommentsSheet` (`components/comments/`): `size="compact"` over the viewer, `"tall"` from a PostCard (mounted on first open). A locked premium post (`access === 'locked'`) never fetches comments and shows only the Buka / Langganan CTAs.
 
 ## Server vs client components
 

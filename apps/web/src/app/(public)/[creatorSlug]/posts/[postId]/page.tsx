@@ -8,7 +8,7 @@ import { POST_STATUS_LABELS } from '@/app/studio/posts/labels';
 import { getPostComments } from '@/lib/api/post-comments';
 import { getPublicCreator } from '@/lib/api/public-creator';
 import { getPublicPost } from '@/lib/api/public-post';
-import { PostComments } from './post-comments';
+import { PostComments } from '@/components/comments/post-comments';
 import { ScrollToComments } from './scroll-to-comments';
 
 type Props = { params: Promise<{ creatorSlug: string; postId: string }> };

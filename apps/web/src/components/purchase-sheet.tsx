@@ -6,7 +6,8 @@ import { KoinIcon } from '@/components/koin';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
-import { DEMO_KOIN_BALANCE, DEMO_PURCHASE_MESSAGE } from '@/lib/demo';
+import type { PostCardPost } from '@/components/post-card/post-card';
+import { DEMO_KOIN_BALANCE, DEMO_PURCHASE_MESSAGE, DEMO_SUBSCRIPTION } from '@/lib/demo';
 
 /**
  * Bottom sheet confirming a Koin purchase (post unlock or subscription): price, terms and balance.
@@ -76,5 +77,56 @@ export function PurchaseSheet({
         Koin langsung terpotong dan tidak bisa dikembalikan. Harga dikunci saat pembelian.
       </p>
     </BottomSheet>
+  );
+}
+
+/** Unlock sheet for a locked premium post (shared by the PostCard and the locked comments sheet). */
+export function PostUnlockSheet({
+  post,
+  creatorName,
+  trigger,
+  children,
+}: {
+  post: Pick<PostCardPost, 'caption' | 'offer'>;
+  creatorName: string;
+  trigger: ReactNode;
+  children?: ReactNode;
+}) {
+  const price = post.offer?.priceCoins ?? 0;
+  return (
+    <PurchaseSheet
+      trigger={trigger}
+      kicker={`Post premium · ${creatorName}`}
+      title={post.caption || 'Tanpa caption'}
+      rows={[['Masa akses', 'Permanen']]}
+      priceCoins={price}
+      ctaLabel={`Buka dengan ${price} Koin`}
+    >
+      {children}
+    </PurchaseSheet>
+  );
+}
+
+/** Creator subscription sheet. shortcut: DEMO_SUBSCRIPTION until the purchases feature. */
+export function SubscribeSheet({
+  creatorName,
+  trigger,
+}: {
+  creatorName: string;
+  trigger: ReactNode;
+}) {
+  const { priceCoins, days } = DEMO_SUBSCRIPTION;
+  return (
+    <PurchaseSheet
+      trigger={trigger}
+      kicker="Langganan kreator"
+      title={creatorName}
+      rows={[
+        ['Masa aktif', `${days} hari`],
+        ['Perpanjangan', 'Manual'],
+      ]}
+      priceCoins={priceCoins}
+      ctaLabel={`Langganan dengan ${priceCoins} Koin`}
+    />
   );
 }

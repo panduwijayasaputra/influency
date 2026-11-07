@@ -132,7 +132,7 @@ describe('MediaViewer', () => {
     expect(await screen.findByText('Segera hadir')).toBeInTheDocument();
     respond(200, { items: [], nextCursor: null });
     fireEvent.click(screen.getByRole('button', { name: 'Komentar, 0' }));
-    expect(await screen.findByRole('dialog', { name: 'Komentar' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Komentar · 0' })).toBeInTheDocument();
   });
 
   it('starts at the tapped item and follows scrolling', async () => {

@@ -144,6 +144,7 @@ describe('/posts/:id/comments', () => {
   afterAll(async () => {
     await Promise.all([app, readOpenApp, writeOpenApp, limitedApp].map((a) => a.close()));
     const where = { creatorProfile: { userId: { in: userIds } } };
+    await prisma.commentModerationAction.deleteMany({ where: { post: where } });
     await prisma.postComment.deleteMany({ where: { post: where } });
     await prisma.postOffer.deleteMany({ where: { post: where } });
     await prisma.post.deleteMany({ where });
@@ -203,6 +204,8 @@ describe('/posts/:id/comments', () => {
         body: 'halo kak',
         author: { displayName: 'Comments fanA' },
         canDelete: true,
+        canEdit: true,
+        canPin: false,
       });
     });
 
@@ -235,35 +238,44 @@ describe('/posts/:id/comments', () => {
   });
 
   describe('list', () => {
-    it('anonymous visitors read free comments, oldest first, without user ids', async () => {
+    it('anonymous visitors read free comments, in Top order (newest first at 0 likes), without user ids', async () => {
       const res = await list(posts.free!);
       expect(res.headers['cache-control']).toBe('no-store');
       const page = parseList(res);
       expect(page.canComment).toBe(false);
-      expect(page.items.map((c) => c.body)).toEqual(['halo kak', '<script>alert(1)</script>']);
-      expect(page.items.every((c) => !c.canDelete)).toBe(true);
+      expect(page.items.map((c) => c.body)).toEqual(['<script>alert(1)</script>', 'halo kak']);
+      expect(page.items.every((c) => !c.canDelete && !c.canEdit && !c.canPin)).toBe(true);
       for (const id of userIds) expect(res.body).not.toContain(id);
     });
 
     it('canDelete is the author or the post owner; canComment for logged-in viewers', async () => {
       const asFanA = parseList(await list(posts.free!, 'fanA'));
       expect(asFanA.canComment).toBe(true);
-      expect(asFanA.items.map((c) => c.canDelete)).toEqual([true, false]);
+      expect(asFanA.items.map((c) => c.canDelete)).toEqual([false, true]);
       expect(parseList(await list(posts.free!, 'creator')).items.map((c) => c.canDelete)).toEqual([
         true,
         true,
       ]);
     });
 
+    it('canEdit is the author only; canPin is the post owner only', async () => {
+      const asFanA = parseList(await list(posts.free!, 'fanA'));
+      expect(asFanA.items.map((c) => c.canEdit)).toEqual([false, true]);
+      expect(asFanA.items.some((c) => c.canPin)).toBe(false);
+      const asOwner = parseList(await list(posts.free!, 'creator'));
+      expect(asOwner.items.map((c) => c.canPin)).toEqual([true, true]);
+      expect(asOwner.items.some((c) => c.canEdit)).toBe(false);
+    });
+
     it(`pages by ${POST_COMMENTS_PAGE_SIZE} with a cursor`, async () => {
       const first = parseList(await list(posts.paged!));
       expect(first.items).toHaveLength(POST_COMMENTS_PAGE_SIZE);
-      expect(first.items[0]!.body).toBe('komentar 1');
-      expect(first.nextCursor).toBe(seededId(POST_COMMENTS_PAGE_SIZE));
+      expect(first.items[0]!.body).toBe(`komentar ${POST_COMMENTS_PAGE_SIZE + 1}`);
+      expect(first.nextCursor).toBe(`0_${seededId(2)}`);
       const second = parseList(
         await list(posts.paged!, undefined, { query: `?cursor=${first.nextCursor}` }),
       );
-      expect(second.items.map((c) => c.body)).toEqual([`komentar ${POST_COMMENTS_PAGE_SIZE + 1}`]);
+      expect(second.items.map((c) => c.body)).toEqual(['komentar 1']);
       expect(second.nextCursor).toBeNull();
     });
 

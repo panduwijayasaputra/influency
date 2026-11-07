@@ -187,12 +187,8 @@ describe('PostCard', () => {
     expect(screen.queryByRole('button', { name: 'Kirim Tip' })).toBeNull();
   });
 
-  it('links Komentar to the post comments and toasts for Simpan', async () => {
+  it('toasts for Simpan', async () => {
     renderCard(post());
-    expect(screen.getByRole('link', { name: 'Komentar, 4' })).toHaveAttribute(
-      'href',
-      '/ana/posts/0190a000-0000-7000-8000-000000000001#komentar',
-    );
     fireEvent.click(screen.getByRole('button', { name: 'Simpan' }));
     expect(await screen.findByText('Segera hadir')).toBeInTheDocument();
   });
@@ -258,10 +254,83 @@ describe('PostCard detail mode', () => {
     expect(screen.getByRole('link', { name: 'Komentar, 4' })).toHaveAttribute('href', '#komentar');
     unmount();
     renderCard(post());
-    expect(screen.getByRole('link', { name: 'Komentar, 4' })).toHaveAttribute(
-      'href',
-      '/ana/posts/0190a000-0000-7000-8000-000000000001#komentar',
-    );
+    expect(screen.queryByRole('link', { name: 'Komentar, 4' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Komentar, 4' })).toBeInTheDocument();
+  });
+
+  describe('comments sheet', () => {
+    const list = {
+      items: [
+        {
+          id: '0190a000-0000-7000-8000-000000000101',
+          body: 'mantap',
+          createdAt: '2026-11-03T05:00:00.000Z',
+          author: { displayName: 'Budi' },
+          canDelete: false,
+          canEdit: false,
+          canPin: false,
+        },
+      ],
+      nextCursor: null,
+      canComment: true,
+    };
+    afterEach(() => vi.unstubAllGlobals());
+
+    it('opens from Komentar without navigating, and closing returns to the card', async () => {
+      const fetchMock = vi.fn(() => Promise.resolve(Response.json(list)));
+      vi.stubGlobal('fetch', fetchMock);
+      renderCard(post());
+      expect(screen.queryByRole('dialog')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Komentar, 4' }));
+      expect(await screen.findByRole('dialog', { name: 'Komentar · 4' })).toBeInTheDocument();
+      expect(await screen.findByText('mantap')).toBeInTheDocument();
+      fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+      expect(screen.getByRole('button', { name: 'Komentar, 4' })).toBeInTheDocument();
+    });
+
+    it('bumps the card count after a comment is posted', async () => {
+      const created = {
+        ...list.items[0]!,
+        id: '0190a000-0000-7000-8000-000000000102',
+        body: 'baru',
+      };
+      vi.stubGlobal(
+        'fetch',
+        vi.fn((_url: string, init?: RequestInit) =>
+          Promise.resolve(
+            init?.method === 'POST' ? Response.json(created, { status: 201 }) : Response.json(list),
+          ),
+        ),
+      );
+      renderCard(post());
+      fireEvent.click(screen.getByRole('button', { name: 'Komentar, 4' }));
+      await screen.findByText('mantap');
+      fireEvent.change(screen.getByLabelText('Tulis komentar'), { target: { value: 'baru' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Kirim' }));
+      await screen.findByText('baru');
+      expect(screen.getByRole('dialog', { name: 'Komentar · 5' })).toBeInTheDocument();
+    });
+
+    it('locked premium: shows the locked state and never asks for comments', () => {
+      const fetchMock = vi.fn();
+      vi.stubGlobal('fetch', fetchMock);
+      renderCard(post({ visibility: 'PREMIUM', access: 'locked', offer: { priceCoins: 8 } }));
+      fireEvent.click(screen.getByRole('button', { name: 'Komentar, 4' }));
+      expect(screen.getByText('Komentar khusus pendukung')).toBeInTheDocument();
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('guest on a free post reads comments and is sent to login to write', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(() => Promise.resolve(Response.json({ ...list, canComment: false }))),
+      );
+      renderCard(post({ viewer: null }));
+      fireEvent.click(screen.getByRole('button', { name: 'Komentar, 4' }));
+      expect(await screen.findByText('mantap')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Masuk untuk berkomentar' })).toBeInTheDocument();
+    });
   });
 
   it('sends a guest back to the post after login', () => {

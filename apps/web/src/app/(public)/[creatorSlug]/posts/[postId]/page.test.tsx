@@ -167,19 +167,21 @@ describe('CommentsSection', () => {
           createdAt: '2026-11-03T05:00:00.000Z',
           author: { displayName: 'Budi' },
           canDelete: false,
+          canEdit: false,
+          canPin: false,
         },
       ],
       nextCursor: null,
       canComment: false,
     });
-    render(await CommentsSection(props));
+    render(await CommentsSection(props), { wrapper: Toaster });
     expect(screen.getByText('mantap')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Masuk untuk berkomentar' })).toBeInTheDocument();
   });
 
   it('explains locked comments on a premium post without access', async () => {
     vi.mocked(getPostComments).mockResolvedValue('forbidden');
-    render(await CommentsSection(props));
+    render(await CommentsSection(props), { wrapper: Toaster });
     expect(
       screen.getByText('Buka post ini untuk melihat dan menulis komentar.'),
     ).toBeInTheDocument();

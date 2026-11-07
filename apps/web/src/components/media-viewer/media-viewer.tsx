@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { CommentsSheet } from '@/components/comments/comments-sheet';
 import { MediaItemView } from '@/components/post-media-viewer';
 import type { PostCardCreator, PostCardPost } from '@/components/post-card/post-card';
 import { SWIPE_CLOSE_PX, SWIPE_CLOSE_VELOCITY } from '@/components/ui/bottom-sheet';
@@ -17,7 +18,6 @@ import { Button } from '@/components/ui/button';
 import { useMediaAccess } from '@/lib/use-media-access';
 import { pauseAllVideos } from '@/lib/video-playback';
 import { ViewerActions } from './viewer-actions';
-import { ViewerComments } from './viewer-comments';
 
 export type MediaViewerProps = {
   /** Accessible posts only: callers never open the viewer for locked ones. */
@@ -206,11 +206,13 @@ export function MediaViewer({
             />
           </div>
           {/* Outside the frame: events from the portalled sheet bubble through React and must not start a drag. */}
-          <ViewerComments
+          <CommentsSheet
             post={post}
             creator={creator}
             open={commentsOpen}
             onOpenChange={setCommentsOpen}
+            size="compact"
+            count={post.commentCount}
           />
         </Dialog.Content>
       </Dialog.Portal>
