@@ -36,10 +36,10 @@ export default async function PostPage({ params }: Props) {
   if (!creator) notFound();
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 px-4 py-6 pb-12">
+    <main className="mx-auto flex w-full max-w-feed flex-1 flex-col gap-4 px-4 py-6 pb-12">
       <Link
         href={`/${creator.slug}`}
-        className="flex w-fit items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+        className="flex min-h-11 w-fit items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft aria-hidden className="size-4" />
         {creator.displayName}
@@ -78,7 +78,7 @@ export async function PostDetail({ slug, postId }: { slug: string; postId: strin
       {post.access === 'full' ? (
         <>
           {post.visibility === 'PREMIUM' && (
-            <p className="flex w-fit items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+            <p className="flex w-fit items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-foreground">
               <LockOpen aria-hidden className="size-3.5" />
               Sudah terbuka
             </p>

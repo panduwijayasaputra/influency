@@ -1,0 +1,200 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Decisions.dc.html": {
+      "h": 1400,
+      "title": "LOCKED \u00b7 PROPOSAL \u00b7 OPEN",
+      "w": 1200,
+      "x": 1750,
+      "y": 2408
+    },
+    "Login.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "00 \u00b7 Login (landing)",
+      "w": 390,
+      "x": -940,
+      "y": 0
+    },
+    "Onboarding.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "15 \u00b7 Become a Creator (creator stepper)",
+      "w": 390,
+      "x": 3290,
+      "y": 1204
+    },
+    "PostCard.dc.html": {
+      "h": 720,
+      "title": "PostCard component",
+      "w": 390,
+      "x": 0,
+      "y": 2408
+    },
+    "S03-Creator-BioLink.dc.html": {
+      "h": 844,
+      "title": "03 \u00b7 Creator Profile \u00b7 Posts (guest, bio-link)",
+      "w": 390,
+      "x": 940,
+      "y": 0
+    },
+    "S04-Creator-Grid.dc.html": {
+      "h": 844,
+      "title": "04 \u00b7 Creator Profile \u00b7 Grid (Video + Premium)",
+      "w": 390,
+      "x": 1410,
+      "y": 0
+    },
+    "S05-Comments-Entitled.dc.html": {
+      "h": 844,
+      "title": "05 \u00b7 Comments \u00b7 entitled, Top + pinned",
+      "w": 390,
+      "x": 1880,
+      "y": 0
+    },
+    "S06-Comments-Locked.dc.html": {
+      "h": 844,
+      "title": "06 \u00b7 Comments \u00b7 premium locked",
+      "w": 390,
+      "x": 2350,
+      "y": 0
+    },
+    "S07-Comments-Moderation.dc.html": {
+      "h": 844,
+      "title": "07 \u00b7 Comments \u00b7 creator menu, Recent",
+      "w": 390,
+      "x": 2820,
+      "y": 0
+    },
+    "S08-Account-Drawer.dc.html": {
+      "h": 844,
+      "title": "08 \u00b7 Right account drawer",
+      "w": 390,
+      "x": 0,
+      "y": 1204
+    },
+    "S09-MyProfile-Creator.dc.html": {
+      "h": 844,
+      "title": "09 \u00b7 My Profile \u00b7 creator owner",
+      "w": 390,
+      "x": 470,
+      "y": 1204
+    },
+    "S10-MyProfile-User.dc.html": {
+      "h": 844,
+      "title": "10 \u00b7 My Profile \u00b7 non-creator",
+      "w": 390,
+      "x": 940,
+      "y": 1204
+    },
+    "S11-Collection.dc.html": {
+      "h": 844,
+      "title": "11 \u00b7 My Collection",
+      "w": 390,
+      "x": 1410,
+      "y": 1204
+    },
+    "S12-Following.dc.html": {
+      "h": 844,
+      "title": "12 \u00b7 Following directory",
+      "w": 390,
+      "x": 1880,
+      "y": 1204
+    },
+    "S13-Wallet.dc.html": {
+      "h": 844,
+      "title": "13 \u00b7 Wallet",
+      "w": 390,
+      "x": 2350,
+      "y": 1204
+    },
+    "S14-Unlock-Insufficient.dc.html": {
+      "h": 844,
+      "title": "14 \u00b7 Unlock \u00b7 not enough Koin",
+      "w": 390,
+      "x": 2820,
+      "y": 1204
+    },
+    "System.dc.html": {
+      "h": 1400,
+      "title": "Design system & component map",
+      "w": 1200,
+      "x": 470,
+      "y": 2408
+    },
+    "Welcome.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "00b \u00b7 Onboarding stepper (user / creator)",
+      "w": 390,
+      "x": -470,
+      "y": 0
+    },
+    "Home.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "01 \u00b7 Home",
+      "is_interactive": true
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-11-04T09:00:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "row1": {
+      "kind": "title1",
+      "maxW": 4150,
+      "text": "Core flows \u00b7 P0 \u2014 feed, creator profile, comments",
+      "w": 240,
+      "x": -940,
+      "y": -260
+    },
+    "row2": {
+      "kind": "title1",
+      "maxW": 3680,
+      "text": "Account, collection, wallet & onboarding",
+      "w": 240,
+      "x": 0,
+      "y": 944
+    },
+    "row3": {
+      "kind": "title1",
+      "maxW": 2950,
+      "text": "System \u2014 component, tokens, decisions",
+      "w": 240,
+      "x": 0,
+      "y": 2148
+    }
+  },
+  "order": [
+    "Login.dc.html",
+    "Welcome.dc.html",
+    "Home.dc.html",
+    "S03-Creator-BioLink.dc.html",
+    "S04-Creator-Grid.dc.html",
+    "S05-Comments-Entitled.dc.html",
+    "S06-Comments-Locked.dc.html",
+    "S07-Comments-Moderation.dc.html",
+    "S08-Account-Drawer.dc.html",
+    "S09-MyProfile-Creator.dc.html",
+    "S10-MyProfile-User.dc.html",
+    "S11-Collection.dc.html",
+    "S12-Following.dc.html",
+    "S13-Wallet.dc.html",
+    "S14-Unlock-Insufficient.dc.html",
+    "Onboarding.dc.html",
+    "PostCard.dc.html",
+    "System.dc.html",
+    "Decisions.dc.html"
+  ],
+  "pages": [],
+  "title": "Influency \u2014 Light Social"
+}

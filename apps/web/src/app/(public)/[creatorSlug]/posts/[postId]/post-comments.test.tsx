@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { PostComment, PostCommentList } from '@influency/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { loginHref } from '@/lib/login-href';
@@ -89,16 +89,29 @@ describe('PostComments', () => {
 
   it('deletes only deletable comments, after confirmation', async () => {
     const fetchMock = stubFetch(() => Promise.resolve(new Response(null, { status: 204 })));
-    vi.stubGlobal('confirm', () => true);
     renderComments(page({ items: [comment(1), comment(2, { canDelete: true })] }));
     const buttons = screen.getAllByRole('button', { name: 'Hapus komentar' });
     expect(buttons).toHaveLength(1);
     fireEvent.click(buttons[0]!);
+    const sheet = screen.getByRole('dialog', { name: 'Hapus komentar ini?' });
+    expect(fetchMock).not.toHaveBeenCalled();
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Hapus' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
     await waitFor(() => expect(screen.queryByText('komentar 2')).toBeNull());
     expect(fetchMock).toHaveBeenCalledWith(`/api/v1/posts/${POST_ID}/comments/${comment(2).id}`, {
       method: 'DELETE',
     });
     expect(screen.getByText('komentar 1')).toBeInTheDocument();
+  });
+
+  it('keeps the comment when the delete sheet is cancelled', () => {
+    const fetchMock = stubFetch(() => Promise.resolve(new Response(null, { status: 204 })));
+    renderComments(page({ items: [comment(2, { canDelete: true })] }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hapus komentar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Batal' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.getByText('komentar 2')).toBeInTheDocument();
   });
 
   it('logged out: links to login returning to the post, no form', () => {

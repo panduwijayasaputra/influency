@@ -1,5 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { Toaster } from '@/components/ui/toast';
 import { loginHref } from '@/lib/login-href';
 import { ReportPostButton } from './report-post-button';
 
@@ -14,8 +15,9 @@ function stubFetch(impl: () => Promise<Response>) {
 }
 
 function openForm() {
-  render(<ReportPostButton postId={POST_ID} path={PATH} viewer={VIEWER} />);
+  render(<ReportPostButton postId={POST_ID} path={PATH} viewer={VIEWER} />, { wrapper: Toaster });
   fireEvent.click(screen.getByRole('button', { name: 'Laporkan' }));
+  return screen.getByRole('dialog', { name: 'Laporkan postingan ini' });
 }
 
 describe('ReportPostButton', () => {
@@ -24,15 +26,17 @@ describe('ReportPostButton', () => {
   });
 
   it('logged out: links to login returning to the post', () => {
-    render(<ReportPostButton postId={POST_ID} path={PATH} viewer={null} />);
+    render(<ReportPostButton postId={POST_ID} path={PATH} viewer={null} />, { wrapper: Toaster });
     expect(screen.getByRole('link', { name: 'Laporkan' })).toHaveAttribute('href', loginHref(PATH));
   });
 
   it('renders nothing when the viewer cannot report', () => {
-    const { container } = render(
+    render(
       <ReportPostButton postId={POST_ID} path={PATH} viewer={{ ...VIEWER, canReport: false }} />,
+      { wrapper: Toaster },
     );
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByRole('button', { name: 'Laporkan' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Laporkan' })).toBeNull();
   });
 
   it('needs a reason, and a note for Lainnya', () => {
@@ -45,14 +49,17 @@ describe('ReportPostButton', () => {
     expect(submit).toBeEnabled();
   });
 
-  it('sends the report and thanks the user', async () => {
+  it('sends the report, closes the sheet and thanks the user with a toast', async () => {
     const fetchMock = stubFetch(() => Promise.resolve(Response.json({ reported: true })));
     openForm();
     fireEvent.click(screen.getByRole('radio', { name: 'Spam' }));
     fireEvent.click(screen.getByRole('button', { name: 'Kirim laporan' }));
-    expect(await screen.findByRole('status')).toHaveTextContent(
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.getByRole('listitem')).toHaveTextContent(
       'Terima kasih, laporan Anda akan ditinjau.',
     );
+    expect(screen.queryByRole('button', { name: 'Laporkan' })).toBeNull();
+    await waitFor(() => expect(screen.getByText('Laporan terkirim.')).toHaveFocus());
     expect(fetchMock).toHaveBeenCalledWith(`/api/v1/posts/${POST_ID}/report`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -60,7 +67,7 @@ describe('ReportPostButton', () => {
     });
   });
 
-  it('shows the API error message', async () => {
+  it('shows the API error message inside the sheet', async () => {
     stubFetch(() =>
       Promise.resolve(
         Response.json(
@@ -76,18 +83,19 @@ describe('ReportPostButton', () => {
         ),
       ),
     );
-    openForm();
+    const sheet = openForm();
     fireEvent.click(screen.getByRole('radio', { name: 'Kekerasan' }));
     fireEvent.click(screen.getByRole('button', { name: 'Kirim laporan' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Terlalu banyak permintaan. Coba lagi sebentar.',
-    );
+    const alert = await screen.findByRole('alert');
+    expect(sheet).toContainElement(alert);
+    expect(alert).toHaveTextContent('Terlalu banyak permintaan. Coba lagi sebentar.');
     expect(screen.getByRole('button', { name: 'Kirim laporan' })).toBeEnabled();
   });
 
-  it('closes the form on Batal', () => {
+  it('closes the sheet on Batal and returns focus to Laporkan', async () => {
     openForm();
     fireEvent.click(screen.getByRole('button', { name: 'Batal' }));
-    expect(screen.getByRole('button', { name: 'Laporkan' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Laporkan' })).toHaveFocus());
   });
 });

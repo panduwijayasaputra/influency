@@ -1,7 +1,9 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { PublicPost } from '@influency/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { Toaster } from '@/components/ui/toast';
 import { getPublicPosts } from '@/lib/api/public-posts';
+import { DEMO_KOIN_BALANCE, DEMO_PURCHASE_MESSAGE } from '@/lib/demo';
 import { CreatorPosts } from './creator-posts';
 
 vi.mock('@/lib/api/public-posts', () => ({ getPublicPosts: vi.fn() }));
@@ -22,13 +24,17 @@ const post = (overrides: Partial<PublicPost>): PublicPost => ({
 async function renderFeed(posts: PublicPost[] | null | Error) {
   if (posts instanceof Error) vi.mocked(getPublicPosts).mockRejectedValue(posts);
   else vi.mocked(getPublicPosts).mockResolvedValue(posts && { posts });
-  return render(await CreatorPosts({ slug: 'claudiandreya' }));
+  return render(await CreatorPosts({ slug: 'claudiandreya', creatorName: 'Claudia Andreya' }), {
+    wrapper: Toaster,
+  });
 }
+
+const tiles = () => screen.queryAllByRole('article');
 
 describe('CreatorPosts', () => {
   afterEach(() => vi.clearAllMocks());
 
-  it('splits posts into Gratis and Premium sections', async () => {
+  it('shows free and premium tiles with their price, media and cover', async () => {
     const { container } = await renderFeed([
       post({
         caption: 'Premium satu',
@@ -38,14 +44,14 @@ describe('CreatorPosts', () => {
       }),
       post({ caption: 'Gratis satu', imageCount: 2 }),
     ]);
-    const free = screen.getByRole('region', { name: 'Gratis' });
-    const premium = screen.getByRole('region', { name: 'Premium' });
+    const [premium, free] = tiles() as [HTMLElement, HTMLElement];
     expect(free).toHaveTextContent('Gratis satu');
-    expect(free).toHaveTextContent('2 foto · 3 Nov 2026');
+    expect(free).toHaveTextContent('2 foto');
+    expect(free).toHaveTextContent('3 Nov 2026');
     expect(free).not.toHaveTextContent('Koin');
     expect(premium).toHaveTextContent('Premium satu');
     expect(premium).toHaveTextContent('1 video');
-    expect(within(premium).getByText(/8 Koin/)).toHaveTextContent('8 Koin · akses permanen');
+    expect(premium).toHaveTextContent('8 Koin · Premium');
     expect(premium).not.toHaveTextContent('hari');
     expect(container.querySelector('img, video')).toBeNull();
     expect(within(premium).getByTestId('locked-placeholder')).toBeInTheDocument();
@@ -53,22 +59,73 @@ describe('CreatorPosts', () => {
     expect(getPublicPosts).toHaveBeenCalledWith('claudiandreya');
   });
 
-  it('shows the generated preview on a premium card', async () => {
+  it('filters tiles with the Semua / Gratis / Premium chips', async () => {
+    await renderFeed([
+      post({ caption: 'Premium satu', visibility: 'PREMIUM', offer: { priceCoins: 8 } }),
+      post({ caption: 'Gratis satu' }),
+    ]);
+    expect(screen.getByRole('button', { name: 'Semua' })).toHaveAttribute('aria-pressed', 'true');
+    expect(tiles()).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Gratis' }));
+    expect(screen.getByRole('button', { name: 'Gratis' })).toHaveAttribute('aria-pressed', 'true');
+    expect(tiles()).toHaveLength(1);
+    expect(tiles()[0]).toHaveTextContent('Gratis satu');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Premium' }));
+    expect(tiles()).toHaveLength(1);
+    expect(tiles()[0]).toHaveTextContent('Premium satu');
+  });
+
+  it('shows an empty message when a filter matches no posts', async () => {
+    await renderFeed([post({ caption: 'Gratis satu' })]);
+    fireEvent.click(screen.getByRole('button', { name: 'Premium' }));
+    expect(tiles()).toHaveLength(0);
+    expect(screen.getByText('Belum ada konten di kategori ini.')).toBeInTheDocument();
+  });
+
+  it('shows the generated preview on a premium tile', async () => {
     const previewUrl = '/api/v1/creators/claudiandreya/posts/p/preview/x';
     const { container } = await renderFeed([
       post({ visibility: 'PREMIUM', offer: { priceCoins: 5 }, previewUrl }),
     ]);
-    const premium = screen.getByRole('region', { name: 'Premium' });
     expect(container.querySelectorAll('img')).toHaveLength(1);
-    expect(premium.querySelector('img')).toHaveAttribute('src', previewUrl);
-    expect(within(premium).queryByTestId('locked-placeholder')).toBeNull();
+    expect(tiles()[0]!.querySelector('img')).toHaveAttribute('src', previewUrl);
+    expect(screen.queryByTestId('locked-placeholder')).toBeNull();
   });
 
-  it('links every card to its post detail page', async () => {
-    const posts = [post({}), post({ visibility: 'PREMIUM', offer: { priceCoins: 5 } })];
-    await renderFeed(posts);
-    expect(screen.getAllByRole('link').map((a) => a.getAttribute('href'))).toEqual(
-      posts.map((p) => `/claudiandreya/posts/${p.id}`),
+  it('links free tiles to the post; premium tiles open the unlock sheet', async () => {
+    const free = post({});
+    const premium = post({ caption: 'Rahasia', visibility: 'PREMIUM', offer: { priceCoins: 5 } });
+    await renderFeed([free, premium]);
+    expect(screen.getAllByRole('link').map((a) => a.getAttribute('href'))).toEqual([
+      `/claudiandreya/posts/${free.id}`,
+    ]);
+
+    fireEvent.click(screen.getByRole('button', { name: /Rahasia/ }));
+    const sheet = screen.getByRole('dialog', { name: 'Rahasia' });
+    expect(sheet).toHaveTextContent('Post premium · Claudia Andreya');
+    expect(sheet).toHaveTextContent('Masa aksesPermanen');
+    expect(sheet).toHaveTextContent('Harga5 Koin');
+    expect(within(sheet).getByRole('link', { name: 'Lihat detail post' })).toHaveAttribute(
+      'href',
+      `/claudiandreya/posts/${premium.id}`,
+    );
+    // Buying is a demo: no request; the sheet closes with a toast.
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Buka dengan 5 Koin' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('listitem')).toHaveTextContent(DEMO_PURCHASE_MESSAGE);
+  });
+
+  it('sends the viewer to top up when the price exceeds the balance', async () => {
+    const priceCoins = DEMO_KOIN_BALANCE + 30;
+    await renderFeed([post({ caption: 'Mahal', visibility: 'PREMIUM', offer: { priceCoins } })]);
+    fireEvent.click(screen.getByRole('button', { name: /Mahal/ }));
+    const sheet = screen.getByRole('dialog', { name: 'Mahal' });
+    expect(within(sheet).queryByRole('button', { name: /^Buka dengan/ })).toBeNull();
+    expect(within(sheet).getByRole('link', { name: 'Isi Koin · kurang 30 Koin' })).toHaveAttribute(
+      'href',
+      '/wallet',
     );
   });
 
@@ -78,10 +135,9 @@ describe('CreatorPosts', () => {
     expect(screen.getAllByText(/suka/)).toHaveLength(1);
   });
 
-  it('shows "Tanpa caption" and omits an empty section', async () => {
+  it('shows "Tanpa caption" for an empty caption', async () => {
     await renderFeed([post({ caption: '', imageCount: 1 })]);
     expect(screen.getByText('Tanpa caption')).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Premium' })).toBeNull();
   });
 
   it.each([[[]], [null]])('shows the empty state for %j', async (posts) => {

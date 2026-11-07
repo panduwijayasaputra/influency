@@ -1,47 +1,39 @@
-# QA Report: TASK-001 — Root Workspace & Shared Config Package
+# QA Report: TASK-001 — Light Social tokens, radius scale and theme test
 
-**Story:** US-001
+**Story:** US-001 Light Social Design Tokens
+**Date:** 2026-11-07
 **Result:** PASS
-**Tester:** qa-agent
 
-## Code Review
+## Scope reviewed
 
-### Guidelines Compliance
-- [x] Workspace layout matches tech-stack.md (`apps/*`, `packages/*`)
-- [x] Exact version pins, no `^`/`~`; `packageManager` pinned to `pnpm@12.14.0`, `engines.node >=24`
-- [x] Shared tsconfig bases are `strict` with `noUncheckedIndexedAccess`
+- `apps/web/src/app/globals.css`
+  - The Light Social `:root` palette is written as hex, defined once, and follows the plan's mapping table.
+  - New `@theme` colours: `brand`, `primary-ink`, `koin-surface`, `koin-border`, `success-surface`.
+  - The radius scale is 9/12/14/16/20/22 px.
+  - `color-scheme: light` is set. `@custom-variant dark` and the unused sidebar/chart variables are removed.
+- `apps/web/src/app/layout.tsx`: the `dark` class is removed from `<html>`. Font, safe-area padding and `min-h-dvh` are unchanged.
+- `apps/web/src/app/theme.test.ts`: tests token values, 17 WCAG AA pairs, the accepted exception for white on `#D9584C` (3.85:1, at least 3), muted on accent (below 4.5), brand coral with white (below 3), and no dark theme.
+- `.agile/guidelines/codebase-map.md`: the theme bullet is rewritten for Light Social.
 
-### Security
-- [x] `.gitignore` excludes `.env` / `.env.*` but keeps `.env.example`
-- [x] No credentials or secrets introduced
+## Checks
 
-### Code Quality
-- [x] ESLint configs exported as functions taking `tsconfigRootDir` (needed for typed linting per package)
-- [x] Prettier ignores generated files and agent/planning docs
+| Check | Result |
+|---|---|
+| `vitest run src/app/theme.test.ts` | 22/22 pass |
+| `@influency/web test` (all) | 259/259 pass |
+| `@influency/web typecheck` | pass |
+| `@influency/web lint` | pass |
+| prettier on changed files | pass |
+| `grep` for leftover `dark` class / Dark Social references in `apps/web/src` | none |
+| `--radius` / sidebar / chart variables used elsewhere | none (shadcn `tailwind.css` doesn't read them) |
 
-## Acceptance Criteria Verification
+## Acceptance criteria (TASK-001 share)
 
-| # | Criterion | Result | Notes |
-|---|-----------|--------|-------|
-| 1 | Fresh `pnpm install` with Node from `.nvmrc` | PASS | Node v24.18.1, pnpm 12.14.0 via Corepack, 321 packages, lockfile written |
-| 4 | TypeScript `strict` in every package | PASS (base) | Enforced in `base.json`; per-package inheritance verified in later tasks |
-
-## Tests Run
-
-- [x] `pnpm install`: PASS
-- [x] `pnpm format:check`: PASS
-- [x] All four tsconfig files parse as JSON
-
-## Deviations from Plan
-
-- **ESLint 9.39.5, not latest 10**: `eslint-config-next` bundles eslint-plugin-react/import/jsx-a11y whose peers stop at ESLint 9.
-- **TypeScript 6.0.3, not 7**: typescript-eslint 8.72 requires `typescript <6.1.0`.
-- **`nest.json` uses `module: nodenext` (ESM)**: the NestJS 12 official template is ESM (`"type": "module"`); the plan assumed CommonJS. ESM-only also simplifies the shared package.
-- TS 6 defaults `types` to `[]`, so `types: ["node"]` is set explicitly in `nest.json` / `library.json`.
-- ESLint configs take `tsconfigRootDir`, so they are exported as `baseConfig()`/`nestConfig()`/`nextConfig()` functions rather than static arrays.
-- Added `.gitattributes` (`eol=lf`) so Windows checkouts match `.editorconfig` and Prettier.
+- AC1 is met: the tokens follow design/HANDOFF.md, are defined once, and the Dark Social palette is gone.
+- AC2 is met at the token level: the contrast pairs and the documented exception are enforced by tests. Button and link usage is covered by TASK-002.
+- AC3 is met for the radius tokens. Button heights are covered by TASK-002.
 
 ## Notes
 
-- ESLint configs are exercised in TASK-002–004, where each package lints itself.
-- pnpm was not installed on this machine; Corepack's shim was installed to `%APPDATA%\npm` (user-level, already on PATH).
+- `components/ui/*` still contain `dark:` classes. They are inert now that the variant is gone, and TASK-002 deletes them.
+- The visual sweep of existing pages is part of TASK-002.

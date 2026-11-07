@@ -2,10 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 
 /** Revokes the server session (same-origin POST, so the browser sends the cookie and Origin). */
-export function LogoutButton() {
+export function useLogout() {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -28,16 +27,5 @@ export function LogoutButton() {
     setFailed(true);
   }
 
-  return (
-    <>
-      <Button variant="ghost" onClick={() => void logout()} disabled={pending}>
-        {pending ? 'Keluar…' : 'Keluar'}
-      </Button>
-      {failed && (
-        <p role="alert" className="text-sm text-destructive">
-          Gagal keluar. Silakan coba lagi.
-        </p>
-      )}
-    </>
-  );
+  return { logout, pending, failed };
 }

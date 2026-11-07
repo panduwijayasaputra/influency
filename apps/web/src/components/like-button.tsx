@@ -25,7 +25,7 @@ export function LikeButton({ postId, path, likeCount, viewer }: Props) {
 
   const content = (
     <>
-      <Heart aria-hidden className={cn('size-4', liked && 'fill-current text-primary')} />
+      <Heart aria-hidden className={cn('size-4', liked && 'fill-current text-brand')} />
       <span>{count}</span>
     </>
   );
@@ -35,7 +35,7 @@ export function LikeButton({ postId, path, likeCount, viewer }: Props) {
       <Link
         href={loginHref(path)}
         aria-label={`Masuk untuk menyukai · ${count} suka`}
-        className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        className="flex min-h-11 w-fit min-w-11 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
       >
         {content}
       </Link>

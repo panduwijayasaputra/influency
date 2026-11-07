@@ -2,7 +2,7 @@
 
 import { Flag } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   API_PREFIX,
   errorResponseSchema,
@@ -11,9 +11,11 @@ import {
   type PostReportReason,
   type PublicPostDetail,
 } from '@influency/shared';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/components/ui/toast';
 import { loginHref } from '@/lib/login-href';
 import { REPORT_REASON_LABELS } from '@/lib/report-reasons';
 
@@ -25,10 +27,11 @@ type Props = {
 };
 
 const FAILED = 'Gagal mengirim laporan. Coba lagi.';
+const THANKS = 'Terima kasih, laporan Anda akan ditinjau.';
 const linkClass =
-  'flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground';
+  'flex min-h-11 w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground';
 
-/** "Laporkan" (US-042). Logged out → login link; own or unpublished post → nothing. The API enforces the rule. */
+/** "Laporkan" (US-042) in a bottom sheet. Logged out → login link; own or unpublished post → nothing. The API enforces the rule. */
 export function ReportPostButton({ postId, path, viewer }: Props) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<PostReportReason | null>(null);
@@ -36,15 +39,8 @@ export function ReportPostButton({ postId, path, viewer }: Props) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
-  const legendRef = useRef<HTMLLegendElement>(null);
   const statusRef = useRef<HTMLParagraphElement>(null);
-
-  useEffect(() => {
-    if (open) legendRef.current?.focus();
-  }, [open]);
-  useEffect(() => {
-    if (sent) statusRef.current?.focus();
-  }, [sent]);
+  const toast = useToast();
 
   if (!viewer) {
     return (
@@ -55,21 +51,6 @@ export function ReportPostButton({ postId, path, viewer }: Props) {
     );
   }
   if (!viewer.canReport) return null;
-  if (sent) {
-    return (
-      <p ref={statusRef} tabIndex={-1} role="status" className="text-sm text-muted-foreground">
-        Terima kasih, laporan Anda akan ditinjau.
-      </p>
-    );
-  }
-  if (!open) {
-    return (
-      <Button variant="ghost" size="sm" className="w-fit" onClick={() => setOpen(true)}>
-        <Flag aria-hidden className="size-4" />
-        Laporkan
-      </Button>
-    );
-  }
 
   const noteRequired = reason === 'OTHER';
   const canSubmit = reason !== null && (!noteRequired || note.trim() !== '') && !pending;
@@ -87,6 +68,8 @@ export function ReportPostButton({ postId, path, viewer }: Props) {
       });
       if (res.ok) {
         setSent(true);
+        setOpen(false);
+        toast(THANKS);
         return;
       }
       const parsed = errorResponseSchema.safeParse(await res.json().catch(() => null));
@@ -97,50 +80,79 @@ export function ReportPostButton({ postId, path, viewer }: Props) {
     setPending(false);
   }
 
+  // The toast announces success; this stays as the visible marker and takes focus from the removed trigger.
+  const status = (
+    <p ref={statusRef} tabIndex={-1} className="text-sm text-muted-foreground outline-none">
+      Laporan terkirim.
+    </p>
+  );
+
   return (
-    <form onSubmit={(e) => void submit(e)} className="flex flex-col gap-3 rounded-lg border p-4">
-      <fieldset className="flex flex-col gap-2">
-        <legend ref={legendRef} tabIndex={-1} className="mb-1 font-medium outline-none">
-          Laporkan postingan ini
-        </legend>
-        {POST_REPORT_REASONS.map((r) => (
-          <label key={r} className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="reason"
-              value={r}
-              checked={reason === r}
-              onChange={() => setReason(r)}
+    <>
+      {sent && status}
+      <BottomSheet
+        title="Laporkan postingan ini"
+        open={open}
+        onOpenChange={(v) => {
+          setOpen(v);
+          if (!v) setError(null);
+        }}
+        onCloseAutoFocus={(e) => {
+          if (!sent) return;
+          e.preventDefault();
+          statusRef.current?.focus();
+        }}
+        trigger={
+          sent ? undefined : (
+            <Button variant="ghost" size="sm" className="w-fit">
+              <Flag aria-hidden className="size-4" />
+              Laporkan
+            </Button>
+          )
+        }
+      >
+        <form onSubmit={(e) => void submit(e)} className="flex flex-col gap-4">
+          <fieldset className="flex flex-col gap-1">
+            <legend className="mb-1 text-sm font-bold">Alasan</legend>
+            {POST_REPORT_REASONS.map((r) => (
+              <label key={r} className="flex min-h-11 items-center gap-3 text-sm">
+                <input
+                  type="radio"
+                  name="reason"
+                  value={r}
+                  checked={reason === r}
+                  onChange={() => setReason(r)}
+                  className="size-4 accent-primary"
+                />
+                {REPORT_REASON_LABELS[r]}
+              </label>
+            ))}
+          </fieldset>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor={`report-note-${postId}`}>
+              Keterangan{noteRequired ? '' : ' (opsional)'}
+            </Label>
+            <Textarea
+              id={`report-note-${postId}`}
+              value={note}
+              maxLength={MODERATION_NOTE_MAX_LENGTH}
+              required={noteRequired}
+              onChange={(e) => setNote(e.target.value)}
             />
-            {REPORT_REASON_LABELS[r]}
-          </label>
-        ))}
-      </fieldset>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor={`report-note-${postId}`}>
-          Keterangan{noteRequired ? '' : ' (opsional)'}
-        </Label>
-        <Textarea
-          id={`report-note-${postId}`}
-          value={note}
-          maxLength={MODERATION_NOTE_MAX_LENGTH}
-          required={noteRequired}
-          onChange={(e) => setNote(e.target.value)}
-        />
-      </div>
-      {error && (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
-      <div className="flex gap-2">
-        <Button type="submit" size="sm" disabled={!canSubmit}>
-          Kirim laporan
-        </Button>
-        <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
-          Batal
-        </Button>
-      </div>
-    </form>
+          </div>
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
+          <Button type="submit" disabled={!canSubmit}>
+            Kirim laporan
+          </Button>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            Batal
+          </Button>
+        </form>
+      </BottomSheet>
+    </>
   );
 }

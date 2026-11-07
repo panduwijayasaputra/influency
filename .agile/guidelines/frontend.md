@@ -19,7 +19,7 @@ studio/ (posts, plans, earnings, payouts)
 admin/
 ```
 
-- Reserved top-level segments must be real routes or blocked, and the API rejects them as slugs: `login, wallet, studio, admin, auth, api, discover, subscriptions, library, terms, privacy, help`. Keep this list in `packages/shared` and use it in both apps.
+- Reserved top-level segments must be real routes or blocked, and the API rejects them as slugs: `login, wallet, studio, admin, auth, api, discover, subscriptions, library, terms, privacy, help, become-creator, account`. Keep this list in `packages/shared` and use it in both apps.
 - `studio/` and `admin/` layouts check the session server-side and redirect/404 for unauthorized users. The API still enforces authorization — UI guards are convenience only.
 
 ## Server vs client components
@@ -57,6 +57,7 @@ admin/
 - Format dates/times in `Asia/Jakarta`; amounts as integers (`5 Koin`, `Rp25.000` via `Intl.NumberFormat('id-ID')`).
 - User-facing copy in Bahasa Indonesia.
 - Accessible: labeled controls, focus states, sufficient contrast.
+- Sheets and dialogs on user-facing pages use `BottomSheet` (`components/ui/bottom-sheet.tsx`); short confirmations use `useToast()` (`components/ui/toast.tsx`, `Toaster` is mounted in the root layout, so component tests render with `{ wrapper: Toaster }`). Never use `window.confirm`/`alert` outside `/admin`.
 
 ## Testing
 

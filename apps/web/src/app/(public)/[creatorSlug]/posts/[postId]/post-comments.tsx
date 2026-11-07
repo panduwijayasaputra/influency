@@ -10,6 +10,7 @@ import {
   postCommentListSchema,
   postCommentSchema,
 } from '@influency/shared';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -40,6 +41,7 @@ export function PostComments({ postId, path, initial, loggedIn }: Props) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sentNote, setSentNote] = useState(false);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const base = `/${API_PREFIX}/posts/${postId}/comments`;
 
   async function run(action: () => Promise<Response | null>) {
@@ -72,7 +74,6 @@ export function PostComments({ postId, path, initial, loggedIn }: Props) {
 
   const remove = (id: string) =>
     run(async () => {
-      if (!window.confirm('Hapus komentar ini?')) return null;
       const res = await fetch(`${base}/${id}`, { method: 'DELETE' });
       if (!res.ok && res.status !== 404) return res;
       setItems((list) => list.filter((c) => c.id !== id));
@@ -111,7 +112,7 @@ export function PostComments({ postId, path, initial, loggedIn }: Props) {
                     size="sm"
                     aria-label="Hapus komentar"
                     disabled={pending}
-                    onClick={() => void remove(c.id)}
+                    onClick={() => setConfirmId(c.id)}
                   >
                     Hapus
                   </Button>
@@ -165,7 +166,7 @@ export function PostComments({ postId, path, initial, loggedIn }: Props) {
         !loggedIn && (
           <Link
             href={loginHref(path)}
-            className="w-fit text-sm font-medium text-primary hover:underline"
+            className="flex min-h-11 w-fit items-center text-sm font-semibold text-foreground underline-offset-4 hover:underline"
           >
             Masuk untuk berkomentar
           </Link>
@@ -176,6 +177,29 @@ export function PostComments({ postId, path, initial, loggedIn }: Props) {
           {error}
         </p>
       )}
+      <BottomSheet
+        title="Hapus komentar ini?"
+        description="Komentar akan dihapus dan tidak bisa dikembalikan."
+        open={confirmId !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmId(null);
+        }}
+      >
+        <Button
+          variant="destructive"
+          disabled={pending}
+          onClick={() => {
+            const id = confirmId;
+            setConfirmId(null);
+            if (id) void remove(id);
+          }}
+        >
+          Hapus
+        </Button>
+        <Button variant="outline" onClick={() => setConfirmId(null)}>
+          Batal
+        </Button>
+      </BottomSheet>
     </div>
   );
 }

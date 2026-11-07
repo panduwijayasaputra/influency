@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import type { CreatorProfileResponse } from '@influency/shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Toaster } from '@/components/ui/toast';
 import { getCurrentUser } from '@/lib/api/current-user';
 import { getPublicCreator } from '@/lib/api/public-creator';
 import CreatorPage, { generateMetadata, LoginCta } from './page';
@@ -31,8 +32,8 @@ describe('CreatorPage', () => {
     vi.mocked(getCurrentUser).mockReturnValue(new Promise(() => {}));
   });
 
-  it('shows the profile, images, the streaming feed and the empty plans section', async () => {
-    const { container } = render(await CreatorPage(props()));
+  it('shows the profile, images, the streaming feed, the subscription card and the tab bar', async () => {
+    const { container } = render(await CreatorPage(props()), { wrapper: Toaster });
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Claudia Andreya');
     expect(screen.getByText('influency.com/claudiandreya')).toBeInTheDocument();
     expect(screen.getByText('Lifestyle')).toBeInTheDocument();
@@ -43,9 +44,17 @@ describe('CreatorPage', () => {
     ]);
     // The uncached feed streams in behind its fallback (CreatorPosts has its own tests).
     expect(screen.getByRole('region', { name: 'Konten' })).toHaveTextContent('Memuat konten…');
-    expect(screen.getByRole('region', { name: 'Langganan' })).toHaveTextContent(
-      'Kreator ini belum membuka langganan.',
+    expect(screen.getByRole('region', { name: 'Langganan Claudia Andreya' })).toHaveTextContent(
+      /Langganan · \d+ Koin \/ \d+ hari/,
     );
+    expect(screen.getByRole('button', { name: 'Bagikan halaman' })).toBeInTheDocument();
+    const tabs = screen.getByRole('navigation', { name: 'Navigasi utama' }).querySelectorAll('a');
+    expect([...tabs].map((a) => a.getAttribute('href'))).toEqual([
+      '/discover',
+      '/library',
+      '/subscriptions',
+      '/wallet',
+    ]);
   });
 
   it('falls back to initials and a gradient without images, and hides empty fields', async () => {
@@ -56,7 +65,7 @@ describe('CreatorPage', () => {
       avatarUrl: null,
       bannerUrl: null,
     });
-    const { container } = render(await CreatorPage(props()));
+    const { container } = render(await CreatorPage(props()), { wrapper: Toaster });
     expect(container.querySelector('img')).toBeNull();
     expect(screen.getByText('CA')).toBeInTheDocument();
     expect(screen.queryByText('Lifestyle')).not.toBeInTheDocument();

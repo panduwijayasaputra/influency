@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Influency onboarding</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #FFFFFF; color: #25262B; font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif; display: flex; flex-direction: column">
+
+  <!-- ========== HEADER / STEPPER ========== -->
+  <sc-if value="{{showStepper}}" hint-placeholder-val="{{false}}">
+    <div style="flex: none; padding: 8px 16px 0; display: flex; flex-direction: column; gap: 10px">
+      <div style="height: 44px; display: flex; align-items: center; justify-content: space-between">
+        <button type="button" onClick="{{back}}" aria-label="Back" style="width: 44px; height: 44px; margin-left: -10px; border-radius: 22px; border: 0; background: none; color: #25262B; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
+        </button>
+        <span style="font-size: 13px; font-weight: 700; color: #6B6B75">{{stepLabel}}</span>
+        <sc-if value="{{canSkip}}" hint-placeholder-val="{{false}}">
+          <button type="button" onClick="{{skip}}" style="height: 44px; padding: 0 4px; margin-right: -4px; border: 0; background: none; font: inherit; font-size: 14px; font-weight: 700; color: #B4463B; cursor: pointer">Skip</button>
+        </sc-if>
+        <sc-if value="{{noSkip}}" hint-placeholder-val="{{true}}"><span style="width: 44px"></span></sc-if>
+      </div>
+      <div role="progressbar" aria-label="Onboarding progress" aria-valuemin="1" aria-valuemax="{{stepCount}}" aria-valuenow="{{stepNum}}" style="display: grid; grid-template-columns: repeat({{stepCount}}, minmax(0, 1fr)); gap: 6px">
+        <sc-for list="{{bars}}" as="b" hint-placeholder-count="3">
+          <span style="height: 4px; border-radius: 2px; background: {{b.bg}}"></span>
+        </sc-for>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat({{stepCount}}, minmax(0, 1fr)); gap: 6px">
+        <sc-for list="{{bars}}" as="b" hint-placeholder-count="3">
+          <span style="font-size: 11px; font-weight: {{b.fw}}; color: {{b.fg}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{b.label}}</span>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ========== CONTENT ========== -->
+  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 20px 16px 16px; display: flex; flex-direction: column; gap: 20px">
+
+    <!-- Choose path -->
+    <sc-if value="{{isChoice}}" hint-placeholder-val="{{true}}">
+      <div style="display: flex; align-items: center; gap: 8px; padding-top: 12px">
+        <span style="width: 32px; height: 32px; border-radius: 10px; background: #EF8176; display: flex; align-items: center; justify-content: center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 11v8"/><circle cx="12" cy="5.5" r="1.6" fill="#FFFFFF" stroke="none"/></svg>
+        </span>
+        <span style="font-size: 19px; font-weight: 800; letter-spacing: -0.02em">influency</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <h1 style="margin: 0; font-size: 26px; line-height: 1.2; font-weight: 800; letter-spacing: -0.02em">Welcome, {{firstName}}. How will you use Influency?</h1>
+        <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #45464D">You can become a creator later from your account menu.</p>
+      </div>
+      <div role="radiogroup" aria-label="Account type" style="display: flex; flex-direction: column; gap: 12px">
+        <sc-for list="{{choices}}" as="c" hint-placeholder-count="2">
+          <button type="button" role="radio" aria-checked="{{c.sel}}" onClick="{{c.pick}}" style="text-align: left; display: flex; gap: 14px; align-items: flex-start; padding: 16px; border-radius: 18px; border: {{c.border}}; background: {{c.bg}}; font: inherit; color: inherit; cursor: pointer">
+            <span style="width: 48px; height: 48px; border-radius: 14px; background: {{c.iconBg}}; color: {{c.iconFg}}; display: flex; align-items: center; justify-content: center; flex: none">
+              <sc-if value="{{c.isUser}}" hint-placeholder-val="{{true}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"/></svg></sc-if>
+              <sc-if value="{{c.isCreator}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg></sc-if>
+            </span>
+            <span style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+              <span style="font-size: 16px; font-weight: 800">{{c.title}}</span>
+              <span style="font-size: 13.5px; line-height: 1.5; color: #45464D">{{c.desc}}</span>
+            </span>
+            <span aria-hidden="true" style="width: 22px; height: 22px; border-radius: 50%; box-sizing: border-box; border: {{c.dotBorder}}; background: {{c.dotBg}}; flex: none; margin-top: 2px"></span>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <!-- Step: Profile -->
+    <sc-if value="{{isProfile}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.02em">Set up your profile</h1>
+        <p style="margin: 0; font-size: 14.5px; line-height: 1.5; color: #45464D">We filled this in from Telegram. Change anything you like.</p>
+      </div>
+      <sc-if value="{{isCreatorPath}}" hint-placeholder-val="{{false}}">
+        <div style="position: relative; height: 112px; border-radius: 16px; background: {{cover}}; margin-bottom: 32px">
+          <button type="button" onClick="{{changeCover}}" style="position: absolute; right: 10px; top: 10px; height: 34px; padding: 0 12px; border-radius: 17px; border: 0; background: rgba(20,20,24,.6); color: #FFFFFF; font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer">Change cover</button>
+          <div style="position: absolute; left: 16px; bottom: -36px; width: 76px; height: 76px">
+            <span style="width: 76px; height: 76px; border-radius: 50%; box-sizing: border-box; border: 4px solid #FFFFFF; background: {{av.bg}}; color: {{av.ink}}; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800">{{initials}}</span>
+            <button type="button" onClick="{{changeAvatar}}" aria-label="Change avatar" style="position: absolute; right: -6px; bottom: -4px; width: 34px; height: 34px; border-radius: 50%; border: 3px solid #FFFFFF; background: #D9584C; color: #FFFFFF; display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg></button>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{isUserPath}}" hint-placeholder-val="{{true}}">
+        <div style="display: flex; justify-content: center">
+          <div style="position: relative; width: 88px; height: 88px">
+            <span style="width: 88px; height: 88px; border-radius: 50%; background: {{av.bg}}; color: {{av.ink}}; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800">{{initials}}</span>
+            <button type="button" onClick="{{changeAvatar}}" aria-label="Change avatar" style="position: absolute; right: -4px; bottom: -2px; width: 36px; height: 36px; border-radius: 50%; border: 3px solid #FFFFFF; background: #D9584C; color: #FFFFFF; display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg></button>
+          </div>
+        </div>
+      </sc-if>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="ob-name" style="font-size: 14px; font-weight: 700">Name</label>
+        <input id="ob-name" type="text" value="{{name}}" onChange="{{onName}}" autocomplete="name" style="height: 48px; box-sizing: border-box; border-radius: 12px; border: 1.5px solid {{nameBorder}}; padding: 0 14px; font: inherit; font-size: 16px; color: #25262B">
+        <sc-if value="{{nameErr}}" hint-placeholder-val="{{false}}"><span role="alert" style="font-size: 12.5px; color: #B42318">Enter a display name.</span></sc-if>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="ob-handle" style="font-size: 14px; font-weight: 700">Username</label>
+        <div style="display: flex; align-items: center; gap: 2px; height: 48px; box-sizing: border-box; border-radius: 12px; border: 1.5px solid {{handleBorder}}; padding: 0 14px">
+          <span aria-hidden="true" style="font-size: 16px; font-weight: 600; color: #6B6B75">@</span>
+          <input id="ob-handle" type="text" value="{{handle}}" onChange="{{onHandle}}" autocapitalize="none" spellcheck="false" autocomplete="username" style="flex: 1; min-width: 0; height: 44px; border: 0; outline: none; background: none; font: inherit; font-size: 16px; color: #25262B">
+        </div>
+        <span style="font-size: 12.5px; line-height: 1.5; color: {{handleHelpColor}}">{{handleHelp}}</span>
+      </div>
+      <sc-if value="{{isCreatorPath}}" hint-placeholder-val="{{false}}">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <label for="ob-bio" style="font-size: 14px; font-weight: 700">Bio</label>
+          <textarea id="ob-bio" rows="3" value="{{bio}}" onChange="{{onBio}}" placeholder="What will you share with supporters?" style="width: 100%; box-sizing: border-box; border-radius: 12px; border: 1.5px solid #DCD6D5; padding: 12px 14px; font: inherit; font-size: 16px; line-height: 1.45; resize: none; color: #25262B"></textarea>
+        </div>
+      </sc-if>
+    </sc-if>
+
+    <!-- Step: Interests (user) -->
+    <sc-if value="{{isInterests}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.02em">What are you into?</h1>
+        <p style="margin: 0; font-size: 14.5px; line-height: 1.5; color: #45464D">Pick a few topics. We'll use them to suggest creators.</p>
+      </div>
+      <div role="group" aria-label="Interests" style="display: flex; flex-wrap: wrap; gap: 8px">
+        <sc-for list="{{interests}}" as="t" hint-placeholder-count="8">
+          <button type="button" aria-pressed="{{t.sel}}" onClick="{{t.pick}}" style="height: 40px; padding: 0 16px; border-radius: 20px; border: 1.5px solid {{t.border}}; background: {{t.bg}}; color: {{t.fg}}; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer">{{t.label}}</button>
+        </sc-for>
+      </div>
+      <span style="font-size: 12.5px; color: #6B6B75">{{interestCount}}</span>
+    </sc-if>
+
+    <!-- Step: Follow creators (user) -->
+    <sc-if value="{{isFollow}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.02em">Follow a few creators</h1>
+        <p style="margin: 0; font-size: 14.5px; line-height: 1.5; color: #45464D">Following is free. Their new posts show up in your feed.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <sc-for list="{{suggest}}" as="r" hint-placeholder-count="5">
+          <div style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid #ECE8E7; border-radius: 16px">
+            <span style="width: 48px; height: 48px; border-radius: 50%; background: {{r.avatar}}; color: {{r.ink}}; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; flex: none">{{r.initials}}</span>
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+              <span style="font-size: 15px; font-weight: 800">{{r.name}}</span>
+              <span style="font-size: 12.5px; color: #6B6B75">@{{r.handle}} · {{r.topic}}</span>
+            </span>
+            <button type="button" onClick="{{r.toggle}}" aria-pressed="{{r.sel}}" aria-label="{{r.label}} {{r.name}}" style="flex: none; height: 36px; padding: 0 16px; border-radius: 18px; border: 1px solid {{r.border}}; background: {{r.bg}}; color: {{r.fg}}; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer">{{r.label}}</button>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <!-- Step: Subscription (creator) -->
+    <sc-if value="{{isSub}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.02em">Set your subscription</h1>
+        <p style="margin: 0; font-size: 14.5px; line-height: 1.5; color: #45464D">One plan for 30 days. Subscribers get your eligible premium posts while their subscription is active.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="ob-price" style="font-size: 14px; font-weight: 700">Price per 30 days</label>
+        <div style="display: flex; align-items: center; gap: 8px; height: 52px; box-sizing: border-box; border-radius: 12px; border: 1.5px solid {{priceBorder}}; padding: 0 14px">
+          <span aria-hidden="true" style="width: 24px; height: 24px; border-radius: 50%; background: #D6A443; color: #FFFFFF; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex: none">K</span>
+          <input id="ob-price" type="number" inputmode="numeric" min="10" max="5000" step="1" value="{{price}}" onChange="{{onPrice}}" style="flex: 1; min-width: 0; height: 48px; border: 0; outline: none; background: none; font: inherit; font-size: 20px; font-weight: 800; color: #25262B">
+          <span style="font-size: 14px; font-weight: 700; color: #6B6B75">Koin</span>
+        </div>
+        <span style="font-size: 12.5px; line-height: 1.5; color: {{priceHelpColor}}">{{priceHelp}}</span>
+      </div>
+      <div role="group" aria-label="Suggested prices" style="display: flex; gap: 8px; flex-wrap: wrap">
+        <sc-for list="{{pricePresets}}" as="o" hint-placeholder-count="4">
+          <button type="button" aria-pressed="{{o.sel}}" onClick="{{o.pick}}" style="height: 36px; padding: 0 14px; border-radius: 18px; border: 1px solid {{o.border}}; background: {{o.bg}}; color: {{o.fg}}; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer">{{o.label}}</button>
+        </sc-for>
+      </div>
+      <div style="padding: 14px; border-radius: 14px; background: #FAFAFA; border: 1px solid #ECE8E7; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.5; color: #45464D">
+        <span>· Renewal is manual; no automatic charges.</span>
+        <span>· Premium posts are priced per post (5–1,000 Koin) when you publish them.</span>
+        <span>· Tips go to you with no platform fee.</span>
+      </div>
+    </sc-if>
+
+    <!-- Step: Payout (creator) -->
+    <sc-if value="{{isPayout}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.02em">Where should we send your earnings?</h1>
+        <p style="margin: 0; font-size: 14.5px; line-height: 1.5; color: #45464D">Add the bank account for payouts. You can change it later in Earnings.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="ob-bank" style="font-size: 14px; font-weight: 700">Bank</label>
+        <select id="ob-bank" value="{{bank}}" onChange="{{onBank}}" style="height: 48px; border-radius: 12px; border: 1.5px solid #DCD6D5; background: #FFFFFF; padding: 0 12px; font: inherit; font-size: 16px; font-weight: 600; color: #25262B">
+          <sc-for list="{{banks}}" as="b" hint-placeholder-count="4"><option value="{{b}}">{{b}}</option></sc-for>
+        </select>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="ob-acct" style="font-size: 14px; font-weight: 700">Account number</label>
+        <input id="ob-acct" type="text" inputmode="numeric" autocomplete="off" value="{{acct}}" onChange="{{onAcct}}" placeholder="e.g. 1234567890" style="height: 48px; box-sizing: border-box; border-radius: 12px; border: 1.5px solid {{acctBorder}}; padding: 0 14px; font: inherit; font-size: 16px; letter-spacing: .04em; color: #25262B">
+        <sc-if value="{{acctErr}}" hint-placeholder-val="{{false}}"><span role="alert" style="font-size: 12.5px; color: #B42318">Enter 6–20 digits.</span></sc-if>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="ob-holder" style="font-size: 14px; font-weight: 700">Account holder name</label>
+        <input id="ob-holder" type="text" value="{{holder}}" onChange="{{onHolder}}" style="height: 48px; box-sizing: border-box; border-radius: 12px; border: 1.5px solid {{holderBorder}}; padding: 0 14px; font: inherit; font-size: 16px; color: #25262B">
+        <span style="font-size: 12.5px; line-height: 1.5; color: #6B6B75">Must match the name on the bank account.</span>
+      </div>
+      <span style="align-self: flex-start; display: inline-flex; padding: 6px 10px; border-radius: 8px; border: 1px dashed #D8C3BF; background: #FFF7F5; color: #8F3A31; font-size: 12px; font-weight: 700">Identity verification and payout fees need confirmation</span>
+    </sc-if>
+
+    <!-- Step: Review (creator) -->
+    <sc-if value="{{isReview}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.02em">Review and submit</h1>
+        <p style="margin: 0; font-size: 14.5px; line-height: 1.5; color: #45464D">Check your details. You can edit them anytime from your profile.</p>
+      </div>
+      <div style="border: 1px solid #ECE8E7; border-radius: 16px; overflow: hidden">
+        <div style="height: 64px; background: {{cover}}"></div>
+        <div style="padding: 0 14px 14px; display: flex; flex-direction: column; gap: 2px">
+          <span style="width: 56px; height: 56px; margin-top: -28px; border-radius: 50%; box-sizing: border-box; border: 3px solid #FFFFFF; background: {{av.bg}}; color: {{av.ink}}; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 800">{{initials}}</span>
+          <span style="font-size: 16px; font-weight: 800; margin-top: 4px">{{name}}</span>
+          <span style="font-size: 13px; color: #6B6B75">@{{handle}}</span>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; border: 1px solid #ECE8E7; border-radius: 16px; padding: 0 14px">
+        <sc-for list="{{reviewRows}}" as="r" hint-placeholder-count="3">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; border-bottom: 1px solid {{r.divider}}">
+            <span style="font-size: 13.5px; color: #6B6B75">{{r.k}}</span>
+            <span style="display: flex; align-items: center; gap: 6px">
+              <span style="font-size: 14px; font-weight: 700; text-align: right">{{r.v}}</span>
+              <button type="button" onClick="{{r.edit}}" aria-label="Edit {{r.k}}" style="height: 36px; padding: 0 4px; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 700; color: #B4463B; cursor: pointer">Edit</button>
+            </span>
+          </div>
+        </sc-for>
+      </div>
+      <label style="display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; line-height: 1.5; color: #45464D; cursor: pointer">
+        <input type="checkbox" checked="{{agree}}" onChange="{{onAgree}}" style="width: 20px; height: 20px; margin: 1px 0 0; accent-color: #D9584C; flex: none">
+        <span>I agree to the <a href="#creator-terms" style="color: #B4463B; font-weight: 700">Creator Terms</a> and confirm my content follows the content rules.</span>
+      </label>
+      <sc-if value="{{agreeErr}}" hint-placeholder-val="{{false}}"><span role="alert" style="font-size: 12.5px; color: #B42318; margin-top: -10px">Please accept the Creator Terms to continue.</span></sc-if>
+    </sc-if>
+
+    <!-- Done -->
+    <sc-if value="{{isDone}}" hint-placeholder-val="{{false}}">
+      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; padding: 40px 12px">
+        <span style="width: 88px; height: 88px; border-radius: 50%; background: {{av.bg}}; color: {{av.ink}}; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; box-shadow: 0 0 0 8px #FFE8E2">{{initials}}</span>
+        <h1 style="margin: 8px 0 0; font-size: 26px; font-weight: 800; letter-spacing: -0.02em">{{doneTitle}}</h1>
+        <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #45464D; max-width: 300px">{{doneBody}}</p>
+      </div>
+    </sc-if>
+  </div>
+
+  <!-- ========== FOOTER CTA ========== -->
+  <div style="flex: none; padding: 12px 16px calc(20px + env(safe-area-inset-bottom)); border-top: 1px solid {{footerBorder}}; background: #FFFFFF">
+    <sc-if value="{{notDone}}" hint-placeholder-val="{{true}}">
+      <button type="button" onClick="{{next}}" aria-disabled="{{nextDisabled}}" style="width: 100%; height: 52px; border-radius: 14px; border: 0; background: {{nextBg}}; color: #FFFFFF; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer">{{nextLabel}}</button>
+    </sc-if>
+    <sc-if value="{{doneUser}}" hint-placeholder-val="{{false}}">
+      <a href="Home.dc.html" style="width: 100%; height: 52px; border-radius: 14px; background: #D9584C; color: #FFFFFF; text-decoration: none; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700">Start exploring</a>
+    </sc-if>
+    <sc-if value="{{doneCreator}}" hint-placeholder-val="{{false}}">
+      <a href="S09-MyProfile-Creator.dc.html" style="width: 100%; height: 52px; border-radius: 14px; background: #D9584C; color: #FFFFFF; text-decoration: none; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700">Go to my profile</a>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;startPath&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;choose&quot;,&quot;user&quot;,&quot;creator&quot;],&quot;default&quot;:&quot;choose&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844}}">
+var INTERESTS = ['Photography', 'Food & cooking', 'Dance', 'Fitness', 'Art & illustration', 'Music', 'Travel', 'Woodworking', 'Fashion', 'Beauty', 'Gaming', 'Film'];
+var SUGGEST = [
+  { id: 'nadia', name: 'Nadia Kirana', handle: 'nadia.kirana', initials: 'NK', avatar: '#F3B6A6', ink: '#5A2B25', topic: 'Photography' },
+  { id: 'raka', name: 'Raka Pratama', handle: 'rakacooks', initials: 'RP', avatar: '#F2D49B', ink: '#5B4314', topic: 'Food & cooking' },
+  { id: 'sekar', name: 'Sekar Ayu', handle: 'sekar.moves', initials: 'SA', avatar: '#BFD8D2', ink: '#1F4A43', topic: 'Dance' },
+  { id: 'lintang', name: 'Lintang Maharani', handle: 'lintang.ink', initials: 'LM', avatar: '#C9D7EE', ink: '#22385E', topic: 'Art & illustration' },
+  { id: 'dimas', name: 'Dimas Arya', handle: 'dimas.builds', initials: 'DA', avatar: '#D6CBE8', ink: '#3E3260', topic: 'Woodworking' },
+  { id: 'rina', name: 'Rina Wijaya', handle: 'rina.travels', initials: 'RW', avatar: '#CDE3F0', ink: '#1F4560', topic: 'Travel' }
+];
+var BANKS = ['BCA', 'BNI', 'BRI', 'Mandiri', 'Bank Jago', 'Permata', 'CIMB Niaga'];
+var AVATARS = [['#DCE3EC', '#2B3A4E'], ['#F3B6A6', '#5A2B25'], ['#BFD8D2', '#1F4A43'], ['#F2D49B', '#5B4314'], ['#D6CBE8', '#3E3260']];
+var COVERS = ['linear-gradient(160deg,#F7D9C4 0%,#EFA48F 55%,#B96A6A 100%)', 'linear-gradient(160deg,#D3E5EC 0%,#93B9C9 60%,#2F4F5F 100%)', 'linear-gradient(160deg,#E3F1EC 0%,#A8CFC4 60%,#356A5F 100%)', 'linear-gradient(160deg,#F0E9F7 0%,#C5B6E0 60%,#56457E 100%)'];
+var STEPS = { user: ['Profile', 'Interests', 'Follow'], creator: ['Profile', 'Subscription', 'Payout', 'Review'] };
+function rp(n) { return 'Rp' + String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    var sp = (props && props.startPath) || 'choose';
+    this.state = { path: sp === 'choose' ? null : sp, choice: sp === 'choose' ? null : sp, step: 0, done: false, tried: false,
+      name: 'Bima Santoso', handle: 'bima.s', bio: '', ai: 0, ci: 0, interests: {}, follows: {},
+      price: '50', bank: 'BCA', acct: '', holder: 'Bima Santoso', agree: false };
+  }
+  renderVals() {
+    var s = this.state;
+    var path = s.path;
+    var steps = path ? STEPS[path] : [];
+    var cur = path ? steps[s.step] : null;
+    var set = (k) => (e) => { var o = {}; o[k] = e.target.value; this.setState(o); };
+    var nameOk = s.name.trim().length > 0;
+    var handleOk = /^[a-z0-9._]{3,30}$/.test(s.handle);
+    var priceN = parseInt(s.price, 10);
+    var priceOk = /^\d+$/.test(String(s.price).trim()) && priceN >= 10 && priceN <= 5000;
+    var acctOk = /^\d{6,20}$/.test(s.acct.replace(/\s/g, ''));
+    var holderOk = s.holder.trim().length > 0;
+    var valid = !path ? !!s.choice
+      : s.done ? true
+      : cur === 'Profile' ? nameOk && handleOk
+      : cur === 'Subscription' ? priceOk
+      : cur === 'Payout' ? acctOk && holderOk
+      : cur === 'Review' ? s.agree : true;
+    var initials = (s.name.trim() || '?').split(/\s+/).map(function (w) { return w.charAt(0); }).join('').slice(0, 2).toUpperCase();
+    var nInterests = Object.keys(s.interests).filter(function (k) { return s.interests[k]; }).length;
+    var nFollows = Object.keys(s.follows).filter(function (k) { return s.follows[k]; }).length;
+    var goStep = (i) => this.setState({ step: i, tried: false });
+    var tried = s.tried;
+
+    var choices = [
+      { key: 'user', title: 'Explore and support creators', desc: 'Follow creators, unlock premium posts, subscribe and send tips with Koin.' },
+      { key: 'creator', title: 'Share content as a creator', desc: 'Post free and premium content, offer a subscription and receive earnings.' }
+    ].map((c) => { var sel = s.choice === c.key; return Object.assign(c, {
+      sel: sel ? 'true' : 'false', isUser: c.key === 'user', isCreator: c.key === 'creator',
+      border: sel ? '2px solid #EF8176' : '1px solid #ECE8E7', bg: sel ? '#FFF7F5' : '#FFFFFF',
+      iconBg: sel ? '#FFE8E2' : '#F4F2F1', iconFg: sel ? '#B4463B' : '#45464D',
+      dotBorder: sel ? '6px solid #D9584C' : '2px solid #CFCAC9', dotBg: '#FFFFFF',
+      pick: () => this.setState({ choice: c.key }) }); });
+
+    return {
+      showStepper: !!path && !s.done, isChoice: !path,
+      stepCount: steps.length || 1, stepNum: s.step + 1,
+      stepLabel: path ? 'Step ' + (s.step + 1) + ' of ' + steps.length : '',
+      bars: steps.map(function (lbl, i) { return { label: lbl, bg: i <= s.step ? '#EF8176' : '#F1EEED', fg: i === s.step ? '#25262B' : '#6B6B75', fw: i === s.step ? 800 : 600 }; }),
+      canSkip: cur === 'Interests' || cur === 'Follow', noSkip: !(cur === 'Interests' || cur === 'Follow'),
+      back: () => { if (s.step > 0) goStep(s.step - 1); else if (!this.props.startPath || this.props.startPath === 'choose') this.setState({ path: null, tried: false }); },
+      skip: () => { if (s.step < steps.length - 1) goStep(s.step + 1); else this.setState({ done: true }); },
+      firstName: s.name.split(' ')[0] || 'there', choices: choices,
+      isCreatorPath: path === 'creator', isUserPath: path === 'user',
+      isProfile: !s.done && cur === 'Profile', isInterests: !s.done && cur === 'Interests', isFollow: !s.done && cur === 'Follow',
+      isSub: !s.done && cur === 'Subscription', isPayout: !s.done && cur === 'Payout', isReview: !s.done && cur === 'Review',
+      isDone: s.done, notDone: !s.done, doneUser: s.done && path === 'user', doneCreator: s.done && path === 'creator',
+      name: s.name, handle: s.handle, bio: s.bio, onName: set('name'), onBio: set('bio'),
+      onHandle: (e) => this.setState({ handle: e.target.value.replace(/^@/, '').toLowerCase() }),
+      nameErr: tried && !nameOk, nameBorder: tried && !nameOk ? '#B42318' : '#DCD6D5',
+      handleBorder: handleOk ? '#DCD6D5' : '#B42318',
+      handleHelp: handleOk ? 'influency.com/' + s.handle + ' · imported from Telegram' : '3–30 characters: lowercase letters, numbers, dots or underscores.',
+      handleHelpColor: handleOk ? '#6B6B75' : '#B42318',
+      initials: initials, av: { bg: AVATARS[s.ai][0], ink: AVATARS[s.ai][1] }, cover: COVERS[s.ci],
+      changeAvatar: () => this.setState({ ai: (s.ai + 1) % AVATARS.length }),
+      changeCover: () => this.setState({ ci: (s.ci + 1) % COVERS.length }),
+
+      interests: INTERESTS.map((t) => { var on = !!s.interests[t]; return { label: t, sel: on ? 'true' : 'false',
+        border: on ? '#D9584C' : '#DCD6D5', bg: on ? '#FFE8E2' : '#FFFFFF', fg: on ? '#8F3A31' : '#25262B',
+        pick: () => { var o = Object.assign({}, s.interests); o[t] = !on; this.setState({ interests: o }); } }; }),
+      interestCount: nInterests ? nInterests + ' selected' : 'Optional · you can change this later',
+
+      suggest: SUGGEST.map((c) => { var on = !!s.follows[c.id]; return Object.assign({}, c, { sel: on ? 'true' : 'false', label: on ? 'Following' : 'Follow',
+        bg: on ? '#FFFFFF' : '#25262B', fg: on ? '#25262B' : '#FFFFFF', border: on ? '#DCD6D5' : '#25262B',
+        toggle: () => { var o = Object.assign({}, s.follows); o[c.id] = !on; this.setState({ follows: o }); } }); }),
+
+      price: s.price, onPrice: set('price'),
+      priceBorder: priceOk ? '#DCD6D5' : '#B42318',
+      priceHelp: priceOk ? '≈ ' + rp(priceN * 1000) + ' per 30 days · you receive ≈ ' + rp(priceN * 850) + ' after the 15% platform fee' : 'Set a whole number between 10 and 5,000 Koin.',
+      priceHelpColor: priceOk ? '#6B6B75' : '#B42318',
+      pricePresets: [25, 50, 100, 150].map((n) => { var on = String(n) === String(s.price).trim(); return { label: n + ' Koin', sel: on ? 'true' : 'false',
+        border: on ? '#D9584C' : '#DCD6D5', bg: on ? '#FFE8E2' : '#FFFFFF', fg: on ? '#8F3A31' : '#25262B', pick: () => this.setState({ price: String(n) }) }; }),
+
+      banks: BANKS, bank: s.bank, onBank: set('bank'), acct: s.acct, onAcct: set('acct'), holder: s.holder, onHolder: set('holder'),
+      acctErr: tried && !acctOk, acctBorder: tried && !acctOk ? '#B42318' : '#DCD6D5', holderBorder: tried && !holderOk ? '#B42318' : '#DCD6D5',
+
+      reviewRows: [
+        { k: 'Subscription', v: (priceOk ? priceN : '—') + ' Koin / 30 days', edit: () => goStep(1) },
+        { k: 'Payout', v: s.bank + ' •••• ' + (s.acct.replace(/\s/g, '').slice(-4) || '—'), edit: () => goStep(2) },
+        { k: 'Profile', v: '@' + s.handle, edit: () => goStep(0) }
+      ].map(function (r, i, a) { return Object.assign(r, { divider: i === a.length - 1 ? 'transparent' : '#F1EEED' }); }),
+      agree: s.agree, onAgree: (e) => this.setState({ agree: e.target.checked }), agreeErr: tried && !s.agree,
+
+      doneTitle: path === 'creator' ? 'Your creator profile is ready' : 'Welcome, ' + (s.name.split(' ')[0] || 'there') + '!',
+      doneBody: path === 'creator' ? 'Post your first content and share your profile link in your bio. Payout verification may take a little time.'
+        : (nFollows ? 'You’re following ' + nFollows + (nFollows === 1 ? ' creator' : ' creators') + '. Their new posts are waiting in Home.' : 'Your feed is ready. Explore creators from Home and Discover.'),
+      doneCta: path === 'creator' ? 'Go to my profile' : 'Start exploring',
+      footerBorder: s.done ? 'transparent' : '#ECE8E7',
+
+      nextLabel: !path ? 'Continue' : s.step === steps.length - 1 ? (path === 'creator' ? 'Submit' : 'Finish') : 'Continue',
+      nextBg: valid ? '#D9584C' : '#E3B5AF', nextDisabled: valid ? 'false' : 'true',
+      next: () => {
+        if (!path) { if (s.choice) this.setState({ path: s.choice, step: 0, tried: false, holder: s.name }); return; }
+        if (!valid) { this.setState({ tried: true }); return; }
+        if (s.step < steps.length - 1) goStep(s.step + 1); else this.setState({ done: true });
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

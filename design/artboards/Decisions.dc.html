@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Influency decisions register</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1200px; height: 1400px; box-sizing: border-box; padding: 56px; background: #FFFFFF; color: #25262B; font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 32px">
+  <header style="display: flex; flex-direction: column; gap: 8px">
+    <span style="font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #B4463B">Handoff</span>
+    <h1 style="margin: 0; font-size: 44px; font-weight: 800; letter-spacing: -0.03em">What's locked, proposed and open</h1>
+    <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #45464D; max-width: 760px">Everything marked PROPOSAL is a presentation choice made for this prototype. OPEN items are drawn as placeholders with a dashed label and should not be read as policy.</p>
+  </header>
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; flex: 1; min-height: 0">
+    <sc-for list="{{cols}}" as="col" hint-placeholder-count="3">
+      <section style="border-radius: 20px; background: {{col.bg}}; border: 1px solid {{col.border}}; padding: 24px; display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; align-items: center; justify-content: space-between">
+          <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: {{col.ink}}">{{col.title}}</h2>
+          <span style="font-size: 13px; font-weight: 700; color: {{col.ink}}">{{col.count}}</span>
+        </div>
+        <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #45464D">{{col.sub}}</p>
+        <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px">
+          <sc-for list="{{col.items}}" as="it" hint-placeholder-count="8">
+            <li style="display: flex; gap: 10px; font-size: 13.5px; line-height: 1.45">
+              <span style="width: 6px; height: 6px; border-radius: 3px; background: {{col.dot}}; flex: none; margin-top: 7px"></span>
+              <span>{{it}}</span>
+            </li>
+          </sc-for>
+        </ul>
+      </section>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1200,"height":1400}}'>
+var LOCKED = [
+  'Light Social direction with warm coral accent',
+  'Five bottom tabs in order: Home, Notification, Discover, Wallet, Profile, visible on every app page including bio-link creator profiles',
+  'Top bar: logo left, Search and avatar right; avatar opens the right drawer, never the profile',
+  'Top bar hides on scroll DOWN and shows on scroll UP (reversed from the original brief on founder request)',
+  'Home has exactly For You and Following; For You on every Home entry',
+  'Creator Profile tabs are exactly Posts and Grid',
+  'One reusable PostCard; Like, Comment, Share left; Send Tip right only when eligible',
+  'Grid: individual media, no captions; Media and Access filters compose',
+  'Video Option B: muted autoplay for free and entitled premium only; locked premium never plays',
+  'Comment always opens a bottom sheet over the feed',
+  'Premium threads are private; locked sheet shows no names, avatars or text',
+  'Top and Recent only; Top is default each open; pinned parent always first, once',
+  'Author edits anytime with an Edited label; creator removes any comment on own post; one pinned top-level',
+  'Deleted parent with replies becomes a placeholder; with none it is omitted',
+  'Koin packages 10 / 25 / 50 / 100 / 250; post 5–1,000; subscription 10–5,000 per 30 days; tips 1–1,000',
+  'Become a Creator is standalone, with no app shell'
+];
+var PROPOSAL = [
+  'primary.strong #D9584C for filled buttons and muted #6B6B75, both for AA contrast',
+  'Logo tap routes Home',
+  'Carousel slides at 86% width with a counter and dots; locked posts show a single preview tile',
+  'Comment count hidden on locked posts so nothing about the thread leaks',
+  '3-column square grid with play, lock and Premium badges',
+  'Inline edit with Save and Cancel; inline confirm before Delete or Remove',
+  'Creator menu: Pin to top, Unpin, Remove; viewer menu: Report',
+  'New comments show Posting… then settle; your fresh comment sits under the pinned one in Top',
+  'Top ordered by likes in the prototype only, as a local stand-in',
+  'Free-post comments readable by guests; writing needs login',
+  'Unlock and Send Tip sheets, with an insufficient-Koin path to Wallet',
+  'Collection: item shows once when liked and purchased; Purchased or Liked tag in Grid',
+  'Following sort: Recently followed or Name A–Z'
+];
+var OPEN = [
+  'Grid tile tap: full-screen viewer or post detail',
+  'Content below the header on a non-creator profile',
+  'Login and sign-up flow, guest policy details',
+  'Checkout, payment method and refunds for Koin top-up',
+  'How to reach high subscription prices when one top-up is at most 250 Koin',
+  'Discover recommendations and search scope',
+  'Notification events and policies',
+  'For You ranking and Top comment ranking formulas',
+  'Can a non-entitled viewer like a locked premium post (allowed in the demo)',
+  'Media count limits, crops, post edit, archive and upload flows',
+  'Reply depth, comment length, report flow, retention',
+  'Does subscribing auto-follow',
+  'Subscription card details and renewal controls',
+  'Creator onboarding steps and verification',
+  'Settings screen (deferred)'
+];
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      cols: [
+        { title: 'LOCKED', count: LOCKED.length + ' rules', sub: 'Founder decisions. Built as specified.', items: LOCKED, bg: '#FFFFFF', border: '#DCD6D5', ink: '#25262B', dot: '#25262B' },
+        { title: 'PROPOSAL', count: PROPOSAL.length + ' choices', sub: 'Design choices made here. Easy to revise.', items: PROPOSAL, bg: '#FFF7F5', border: '#F3D3CC', ink: '#8F3A31', dot: '#EF8176' },
+        { title: 'OPEN', count: OPEN.length + ' questions', sub: 'Need a product decision. Shown as placeholders.', items: OPEN, bg: '#FAFAFA', border: '#ECE8E7', ink: '#45464D', dot: '#A9A9B2' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

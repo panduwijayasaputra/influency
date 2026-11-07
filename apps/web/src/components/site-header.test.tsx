@@ -15,6 +15,7 @@ describe('UserMenu', () => {
     vi.mocked(getCurrentUser).mockResolvedValue(null);
     render(await UserMenu());
     expect(screen.getByRole('link', { name: 'Masuk' })).toHaveAttribute('href', '/login');
+    expect(screen.queryByRole('link', { name: /Saldo/ })).toBeNull();
   });
 
   it('falls back to "Masuk" when the API is down', async () => {
@@ -23,29 +24,15 @@ describe('UserMenu', () => {
     expect(screen.getByRole('link', { name: 'Masuk' })).toBeInTheDocument();
   });
 
-  it('shows the name and logout, without role links, for a plain user', async () => {
+  it('shows the Koin balance and the account menu button when logged in', async () => {
     as(['USER']);
     render(await UserMenu());
-    expect(screen.getByText('Ana')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Keluar' })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Studio' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Admin' })).not.toBeInTheDocument();
-  });
-
-  it('shows Studio and Admin links by role', async () => {
-    as(['USER', 'CREATOR', 'ADMIN']);
-    render(await UserMenu());
-    expect(screen.getByRole('link', { name: 'Studio' })).toHaveAttribute('href', '/studio');
-    expect(screen.getByRole('link', { name: 'Admin' })).toHaveAttribute('href', '/admin');
-    expect(screen.queryByRole('link', { name: 'Jadi Kreator' })).not.toBeInTheDocument();
-  });
-
-  it('offers "Jadi Kreator" to users who are not creators', async () => {
-    as(['USER']);
-    render(await UserMenu());
-    expect(screen.getByRole('link', { name: 'Jadi Kreator' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /^Saldo: \d+ Koin$/ })).toHaveAttribute(
       'href',
-      '/become-creator',
+      '/wallet',
     );
+    // Menu items by role: account-menu.test.tsx.
+    expect(screen.getByRole('button', { name: 'Menu akun' })).toHaveTextContent('A');
+    expect(screen.queryByRole('link', { name: 'Masuk' })).toBeNull();
   });
 });

@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import type { CreatorProfileResponse, PublicPostDetail } from '@influency/shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Toaster } from '@/components/ui/toast';
 import { getCurrentUser } from '@/lib/api/current-user';
 import { getPostComments } from '@/lib/api/post-comments';
 import { getPublicCreator } from '@/lib/api/public-creator';
@@ -50,7 +51,7 @@ const locked = (previewUrl: string | null = null) =>
 
 async function renderDetail(detail: PublicPostDetail) {
   vi.mocked(getPublicPost).mockResolvedValue(detail);
-  return render(await PostDetail({ slug: 'ana', postId: POST_ID }));
+  return render(await PostDetail({ slug: 'ana', postId: POST_ID }), { wrapper: Toaster });
 }
 
 describe('PostDetail', () => {
