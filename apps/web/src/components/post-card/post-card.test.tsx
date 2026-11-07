@@ -86,6 +86,14 @@ describe('PostCard', () => {
     expect(screen.getByRole('menuitem', { name: 'Laporkan' })).toBeInTheDocument();
   });
 
+  it('links the creator to their profile only when asked (Home feed)', () => {
+    const { unmount } = renderCard(post());
+    expect(screen.queryByRole('link', { name: /Ana Putri/ })).toBeNull();
+    unmount();
+    render(<PostCard post={post()} creator={CREATOR} linkCreator />, { wrapper: Toaster });
+    expect(screen.getByRole('link', { name: /Ana Putri/ })).toHaveAttribute('href', '/ana');
+  });
+
   it.each([
     ['a guest', null],
     ['a signed-in user', SIGNED_IN],

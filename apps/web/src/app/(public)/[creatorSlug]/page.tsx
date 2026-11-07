@@ -5,12 +5,14 @@ import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { APP_NAME, type CreatorProfileResponse } from '@influency/shared';
 import { PageHeader } from '@/components/page-header';
+import { getFollowState } from '@/lib/api/creator-follow.server';
 import { getCurrentUser } from '@/lib/api/current-user';
 import { getMyCreatorProfile } from '@/lib/api/creator-profile';
 import { getPublicCreator } from '@/lib/api/public-creator';
 import { DEMO_SUBSCRIBED } from '@/lib/demo';
 import { loginHref } from '@/lib/login-href';
 import { CreatorPosts } from './creator-posts';
+import { FollowerCount, FollowProvider } from './follow-state';
 import { SHARE_BUTTON_CLASS, ShareButton } from './share-button';
 import { ProfileActions } from './profile-actions';
 import { ProfileHeader } from './profile-header';
@@ -44,7 +46,10 @@ export default async function CreatorPage({ params }: Props) {
 /** The creator page for this viewer: guests get no top bar and every action goes to login (US-007). */
 export async function CreatorView({ creator }: { creator: CreatorProfileResponse }) {
   // An API outage counts as a guest, the same rule as /login.
-  const user = await getCurrentUser().catch(() => null);
+  const [user, follow] = await Promise.all([
+    getCurrentUser().catch(() => null),
+    getFollowState(creator.slug),
+  ]);
   const signedIn = user !== null;
   const login = loginHref(`/${creator.slug}`);
   // UX only: the studio guards decide. Only creators pay for the extra lookup; a failure means "not the owner".
@@ -56,32 +61,36 @@ export async function CreatorView({ creator }: { creator: CreatorProfileResponse
     <>
       {signedIn && <PageHeader title={creator.displayName} />}
       <main className="mx-auto flex w-full max-w-feed flex-1 flex-col pb-6">
-        <ProfileHeader
-          creator={creator}
-          editHref={isOwner ? '/studio/profile' : undefined}
-          share={
-            signedIn ? (
-              <ShareButton title={creator.displayName} label="Bagikan profil" />
-            ) : (
-              <Link href={login} aria-label="Bagikan" className={SHARE_BUTTON_CLASS}>
-                <Share aria-hidden className="size-4" />
-              </Link>
-            )
-          }
-          actions={
-            isOwner ? null : (
-              <ProfileActions
-                creatorName={creator.displayName}
-                loginHref={signedIn ? undefined : login}
-                subscribedDaysLeft={
-                  signedIn && DEMO_SUBSCRIBED.slugs.includes(creator.slug)
-                    ? DEMO_SUBSCRIBED.daysLeft
-                    : undefined
-                }
-              />
-            )
-          }
-        />
+        <FollowProvider initial={follow}>
+          <ProfileHeader
+            creator={creator}
+            stats={<FollowerCount />}
+            editHref={isOwner ? '/studio/profile' : undefined}
+            share={
+              signedIn ? (
+                <ShareButton title={creator.displayName} label="Bagikan profil" />
+              ) : (
+                <Link href={login} aria-label="Bagikan" className={SHARE_BUTTON_CLASS}>
+                  <Share aria-hidden className="size-4" />
+                </Link>
+              )
+            }
+            actions={
+              isOwner ? null : (
+                <ProfileActions
+                  slug={creator.slug}
+                  creatorName={creator.displayName}
+                  loginHref={signedIn ? undefined : login}
+                  subscribedDaysLeft={
+                    signedIn && DEMO_SUBSCRIBED.slugs.includes(creator.slug)
+                      ? DEMO_SUBSCRIBED.daysLeft
+                      : undefined
+                  }
+                />
+              )
+            }
+          />
+        </FollowProvider>
 
         <div className="mt-4 px-5">
           {/* Uncached so hidden posts disappear immediately; the profile above stays cached. */}

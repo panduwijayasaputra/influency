@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { EntitlementsModule } from '../entitlements/entitlements.module.js';
+import { CreatorFollowsController } from './creator-follows.controller.js';
+import { CreatorFollowsService } from './creator-follows.service.js';
 import { CommentPinsController } from './comment-pins.controller.js';
 import { CommentPinsService } from './comment-pins.service.js';
 import { CommentLikesController } from './comment-likes.controller.js';
@@ -11,7 +13,7 @@ import { PostLikesService } from './post-likes.service.js';
 import { PostReportsController } from './post-reports.controller.js';
 import { PostReportsService } from './post-reports.service.js';
 
-/** Post engagement: likes (US-051), comments (US-052) and reports (US-042). */
+/** Post engagement: likes (US-051), comments (US-052) reports (US-042) and creator follows (US-024). */
 @Module({
   imports: [EntitlementsModule],
   controllers: [
@@ -20,6 +22,7 @@ import { PostReportsService } from './post-reports.service.js';
     PostReportsController,
     CommentLikesController,
     CommentPinsController,
+    CreatorFollowsController,
   ],
   providers: [
     PostLikesService,
@@ -27,6 +30,7 @@ import { PostReportsService } from './post-reports.service.js';
     PostReportsService,
     CommentLikesService,
     CommentPinsService,
+    CreatorFollowsService,
   ],
 })
 export class EngagementModule {}

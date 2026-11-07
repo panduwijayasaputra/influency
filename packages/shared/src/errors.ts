@@ -46,6 +46,7 @@ export const ERRORS = {
     status: 403,
     message: 'Anda tidak dapat melaporkan postingan sendiri.',
   },
+  CANNOT_FOLLOW_SELF: { status: 400, message: 'Kamu tidak bisa mengikuti profilmu sendiri.' },
   USER_STATUS_CONFLICT: { status: 409, message: 'Status akun tidak memungkinkan tindakan ini.' },
   CANNOT_SUSPEND_ADMIN: { status: 409, message: 'Akun admin tidak dapat ditangguhkan.' },
   TOPUP_NOT_FOUND: { status: 404, message: 'Top-up tidak ditemukan.' },

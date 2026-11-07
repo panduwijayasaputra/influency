@@ -29,7 +29,7 @@ admin/
 - `AppChrome` owns the bottom nav and the bottom spacer. Pages never mount `BottomNav` or add bottom padding for it.
 - Routes without the nav are listed in `STANDALONE_PREFIXES` (`components/app-chrome.tsx`); add new standalone routes (e.g. onboarding) there.
 - Every non-Home page starts with `PageHeader` (`components/page-header.tsx`). Pass `asHeading` only when the page has no other `<h1>`, and `fallbackHref` when a direct visit should still offer a back link.
-- Home is the only page with `HomeTopBar` (`components/home-top-bar.tsx`) instead of `PageHeader`; until the feed lands it is passed as `ComingSoon`'s `header`.
+- Home is the only page with `HomeTopBar` (`components/home-top-bar.tsx`) instead of `PageHeader`. Its feed is `HomeFeed` (`components/home-feed/`, US-022): one mixed list of `PostCard`s (`linkCreator`), infinite scroll through `fetchHomeFeedPage(cursor)` (`lib/api/home-feed.ts`, the only place that knows where feed pages come from), skeleton / error-with-retry / empty states.
 - The account entry is `AccountDrawer` (right drawer), opened from the Home top bar burger via `AccountEntry` (server, streams the user in `Suspense`). Don't add a header account menu elsewhere.
 - Placeholder pages use `ComingSoon`.
 - Comments open in `CommentsSheet` (`components/comments/`): `size="compact"` over the viewer, `"tall"` from a PostCard (mounted on first open). A locked premium post (`access === 'locked'`) never fetches comments and shows only the Buka / Langganan CTAs.

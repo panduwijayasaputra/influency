@@ -15,11 +15,13 @@ import {
   type CreatorProfileResponse,
   PROFILE_IMAGE_MAX_BYTES,
   type ProfileImageKind,
+  type RecommendedCreator,
   type UpdateCreatorProfileInput,
   updateCreatorProfileSchema,
 } from '@influency/shared';
 import { z } from 'zod';
 import { ApprovedCreatorGuard } from '../../common/role.guards.js';
+import { SessionGuard } from '../../common/session.guard.js';
 import { ZodValidationPipe } from '../../common/zod-validation.pipe.js';
 import { CreatorProfileService } from './creator-profile.service.js';
 
@@ -58,6 +60,14 @@ export class CreatorProfileController {
     @Body() body: unknown,
   ): Promise<CreatorProfileResponse> {
     return this.profiles.uploadImage(req.creatorProfileId!, kind, body);
+  }
+
+  /** Home "Creator untukmu": approved creators the viewer does not follow. Declared before `:slug`. */
+  @Get('recommended')
+  @UseGuards(SessionGuard)
+  @Header('cache-control', 'no-store')
+  async recommended(@Req() req: FastifyRequest): Promise<{ creators: RecommendedCreator[] }> {
+    return { creators: await this.profiles.recommended(req.authSession!.userId) };
   }
 
   /** Public profile for /{creatorSlug}. */

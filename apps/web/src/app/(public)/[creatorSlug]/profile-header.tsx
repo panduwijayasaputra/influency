@@ -11,12 +11,15 @@ export function ProfileHeader({
   share,
   actions,
   editHref,
+  stats,
 }: {
   creator: CreatorProfileResponse;
   share: ReactNode;
   actions: ReactNode;
   /** Set when the creator views their own profile: shows Edit Profil on the cover line. */
   editHref?: string;
+  /** Shown under the @slug line (follower count). */
+  stats?: ReactNode;
 }) {
   return (
     <>
@@ -59,6 +62,7 @@ export function ProfileHeader({
             <p className="min-w-0 truncate text-sm text-muted-foreground">@{creator.slug}</p>
             {share}
           </div>
+          {stats}
         </div>
         {creator.category && (
           <p className="w-fit rounded-full bg-muted px-3 py-1 text-xs font-medium">

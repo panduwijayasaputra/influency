@@ -1,6 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   API_PREFIX,
+  HOME_FEED_PAGE_SIZE,
+  type HomeFeedPage,
   PUBLIC_FEED_LIMIT,
   type PublicPost,
   type PublicPostDetail,
@@ -15,10 +17,11 @@ import {
 } from '../../common/object-storage.js';
 import { PrismaService } from '../../common/prisma.service.js';
 import type { MediaKind, Post, PostOffer } from '../../generated/prisma/client.js';
-import { PUBLIC_CREATOR } from '../creators/creator-profile.service.js';
+import { imageUrl, PUBLIC_CREATOR } from '../creators/creator-profile.service.js';
 import { canEngage } from '../engagement/post-likes.service.js';
 import { decidePostAccess } from '../entitlements/post-access.js';
 import { PostAccessService } from '../entitlements/post-access.service.js';
+import { encodeFeedCursor, FEED_ORDER, feedCursorWhere } from './feed-order.js';
 import { currentOffer, PREVIEW_KEY_PREFIX, previewId } from './posts.service.js';
 
 // Display order = the order GET /posts/:id/media-access returns (createdAt asc).
@@ -102,21 +105,80 @@ export class PublicPostsService {
     if (!creator) throw new DomainError('NOT_FOUND');
     // shortcut: newest PUBLIC_FEED_LIMIT only, add cursor pagination when creators exceed it.
     // shortcut: no (creator_profile_id, status, published_at) index; add one if the feed query gets slow.
-    const [rows, adminRole] = await Promise.all([
-      this.prisma.post.findMany({
-        where: { creatorProfileId: creator.id, status: 'PUBLISHED' },
-        orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
-        take: PUBLIC_FEED_LIMIT,
-        include: { ...readyMedia, ...currentOffer, ...counts },
-      }),
-      userId
-        ? this.prisma.userRole.findUnique({
-            where: { userId_role: { userId, role: 'ADMIN' } },
-            select: { id: true },
-          })
-        : null,
-    ]);
-    // Viewer facts are batched: one admin lookup and one likes lookup for the whole page.
+    const rows = await this.prisma.post.findMany({
+      where: { creatorProfileId: creator.id, status: 'PUBLISHED' },
+      orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
+      take: PUBLIC_FEED_LIMIT,
+      include: { ...readyMedia, ...currentOffer, ...counts },
+    });
+    const entries = await this.toPublicPosts(
+      rows.map((row) => ({ ...row, creatorProfile: creator })),
+      userId,
+    );
+    return entries.map((e) => e.post);
+  }
+
+  /**
+   * Home feed (US-025): PUBLISHED posts of every visible creator except the viewer's own, in FEED_ORDER, one keyset
+   * page at a time. Entitlement runs through the same mapper as a creator's feed, so a locked premium post carries
+   * only its preview. userId from the session only.
+   * shortcut: no (status, published_at, id) index; add one if the query gets slow.
+   */
+  async feed(userId: string, cursor: string | null): Promise<HomeFeedPage> {
+    const rows = await this.prisma.post.findMany({
+      where: {
+        status: 'PUBLISHED',
+        creatorProfile: { ...PUBLIC_CREATOR, userId: { not: userId } },
+        ...(cursor ? feedCursorWhere(cursor) : {}),
+      },
+      orderBy: FEED_ORDER,
+      take: HOME_FEED_PAGE_SIZE + 1,
+      include: {
+        ...readyMedia,
+        ...currentOffer,
+        ...counts,
+        creatorProfile: {
+          select: { slug: true, userId: true, displayName: true, avatarKey: true },
+        },
+      },
+    });
+    const page = rows.slice(0, HOME_FEED_PAGE_SIZE);
+    const entries = await this.toPublicPosts(page, userId);
+    const last = page.at(-1);
+    return {
+      items: entries.map(({ row, post }) => ({
+        ...post,
+        creator: {
+          slug: row.creatorProfile.slug,
+          displayName: row.creatorProfile.displayName,
+          avatarUrl: imageUrl(row.creatorProfile.slug, row.creatorProfile.avatarKey),
+        },
+      })),
+      nextCursor:
+        rows.length > HOME_FEED_PAGE_SIZE && last
+          ? encodeFeedCursor({ publishedAt: last.publishedAt!, id: last.id })
+          : null,
+    };
+  }
+
+  /**
+   * The one place a PUBLISHED post of a public creator becomes a PublicPost for a viewer: access, like state and
+   * report flag. Viewer facts are batched (one admin lookup, one likes lookup for the whole page).
+   */
+  private async toPublicPosts<
+    R extends Post & {
+      media: { kind: MediaKind; durationSeconds: number | null }[];
+      offers: PostOffer[];
+      _count: { likes: number; comments: number };
+      creatorProfile: { slug: string; userId: string };
+    },
+  >(rows: R[], userId: string | null): Promise<{ row: R; post: PublicPost }[]> {
+    const adminRole = userId
+      ? await this.prisma.userRole.findUnique({
+          where: { userId_role: { userId, role: 'ADMIN' } },
+          select: { id: true },
+        })
+      : null;
     const likedIds = new Set(
       userId && rows.length > 0
         ? (
@@ -129,12 +191,12 @@ export class PublicPostsService {
     );
     const viewer = userId ? { userId, isAdmin: adminRole !== null } : null;
     return rows.flatMap((row) => {
-      // The query already guarantees a PUBLISHED post of a public creator.
+      // Callers already guarantee a PUBLISHED post of a public creator.
       const access = decidePostAccess(
         {
           status: row.status,
           visibility: row.visibility,
-          ownerUserId: creator.userId,
+          ownerUserId: row.creatorProfile.userId,
           creatorPublic: true,
         },
         viewer,
@@ -142,16 +204,19 @@ export class PublicPostsService {
       if (access === 'hidden') return []; // unreachable for these rows; never leak a hidden post
       return [
         {
-          ...publicPostFields(row, creator.slug),
-          publishedAt: row.publishedAt!.toISOString(),
-          access,
-          viewer: viewerOf(
-            userId,
-            likedIds.has(row.id),
-            canEngage(access, row.status, this.env.PREMIUM_LIKES_WITHOUT_ACCESS),
-            row.status,
-            creator.userId,
-          ),
+          row,
+          post: {
+            ...publicPostFields(row, row.creatorProfile.slug),
+            publishedAt: row.publishedAt!.toISOString(),
+            access,
+            viewer: viewerOf(
+              userId,
+              likedIds.has(row.id),
+              canEngage(access, row.status, this.env.PREMIUM_LIKES_WITHOUT_ACCESS),
+              row.status,
+              row.creatorProfile.userId,
+            ),
+          },
         },
       ];
     });

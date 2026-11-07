@@ -146,6 +146,41 @@
       "title": "Admin Comment Moderation",
       "status": "ready_for_uat",
       "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-022",
+      "feature": "home-feed",
+      "title": "Home Feed UI",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-023",
+      "feature": "home-feed",
+      "title": "\"Creator untukmu\" Block",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-024",
+      "feature": "home-feed",
+      "title": "Follow API",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-026",
+      "feature": "home-feed",
+      "title": "Recommended Creators API",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-025",
+      "feature": "home-feed",
+      "title": "Home Feed API",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
     }
   ]
 }

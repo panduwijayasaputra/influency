@@ -19,6 +19,7 @@ export const RESERVED_SLUGS = [
   'me',
   'notifications',
   'following',
+  'recommended', // GET /creators/recommended would shadow /creators/:slug
 ] as const;
 
 /** 3–30 chars, a-z 0-9 _ -, starts and ends with a letter/digit. Mirrored by a DB CHECK on creator_profiles.slug. */
@@ -131,3 +132,24 @@ export const creatorProfileResponseSchema = z.object({
   bannerUrl: z.string().nullable(),
 });
 export type CreatorProfileResponse = z.infer<typeof creatorProfileResponseSchema>;
+
+/** Most creators GET /creators/recommended returns (Home "Creator untukmu"). */
+export const RECOMMENDED_CREATORS_LIMIT = 15;
+
+/** A suggested creator: public fields only. */
+export const recommendedCreatorSchema = z.object({
+  slug: z.string(),
+  displayName: z.string(),
+  avatarUrl: z.string().nullable(),
+  bannerUrl: z.string().nullable(),
+  followerCount: z.int(),
+});
+export type RecommendedCreator = z.infer<typeof recommendedCreatorSchema>;
+
+export const recommendedCreatorListSchema = z.object({
+  creators: z.array(recommendedCreatorSchema),
+});
+
+/** GET/PUT/DELETE /creators/:slug/follow (US-024). Follower count covers ACTIVE users only. */
+export const followStateSchema = z.object({ following: z.boolean(), followerCount: z.int() });
+export type FollowState = z.infer<typeof followStateSchema>;

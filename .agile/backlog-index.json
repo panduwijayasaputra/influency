@@ -167,6 +167,46 @@
       "title": "Admin Comment Moderation",
       "status": "ready_for_uat",
       "priority": "medium"
+    },
+    {
+      "id": "US-022",
+      "feature": "home-feed",
+      "file": "features/home-feed/US-022-home-feed-ui.md",
+      "title": "Home Feed UI",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-023",
+      "feature": "home-feed",
+      "file": "features/home-feed/US-023-creator-untukmu-block.md",
+      "title": "\"Creator untukmu\" Block",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-024",
+      "feature": "home-feed",
+      "file": "features/home-feed/US-024-follow-api.md",
+      "title": "Follow API",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-025",
+      "feature": "home-feed",
+      "file": "features/home-feed/US-025-home-feed-api.md",
+      "title": "Home Feed API",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-026",
+      "feature": "home-feed",
+      "file": "features/home-feed/US-026-recommended-creators-api.md",
+      "title": "Recommended Creators API",
+      "status": "ready_for_uat",
+      "priority": "medium"
     }
   ]
 }

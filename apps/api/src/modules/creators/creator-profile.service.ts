@@ -5,6 +5,8 @@ import {
   type CreatorProfileResponse,
   PROFILE_IMAGE_MAX_BYTES,
   type ProfileImageKind,
+  RECOMMENDED_CREATORS_LIMIT,
+  type RecommendedCreator,
   type UpdateCreatorProfileInput,
 } from '@influency/shared';
 import { z } from 'zod';
@@ -17,6 +19,7 @@ import {
 } from '../../common/object-storage.js';
 import { PrismaService } from '../../common/prisma.service.js';
 import type { Prisma } from '../../generated/prisma/client.js';
+import { RECOMMENDED_ORDER } from './recommended-order.js';
 
 const KEY_PREFIX = 'profile-images/';
 const KEY_COLUMN = { avatar: 'avatarKey', banner: 'bannerKey' } as const;
@@ -112,6 +115,29 @@ export class CreatorProfileService {
     return toResponse(row);
   }
 
+  /** Approved creators the viewer neither is nor follows, in placeholder rank order. */
+  async recommended(userId: string): Promise<RecommendedCreator[]> {
+    const rows = await this.prisma.creatorProfile.findMany({
+      where: { ...PUBLIC_CREATOR, userId: { not: userId }, follows: { none: { userId } } },
+      orderBy: RECOMMENDED_ORDER,
+      take: RECOMMENDED_CREATORS_LIMIT,
+      select: {
+        slug: true,
+        displayName: true,
+        avatarKey: true,
+        bannerKey: true,
+        _count: { select: { follows: { where: { user: { status: 'ACTIVE' } } } } },
+      },
+    });
+    return rows.map((r) => ({
+      slug: r.slug,
+      displayName: r.displayName,
+      avatarUrl: imageUrl(r.slug, r.avatarKey),
+      bannerUrl: imageUrl(r.slug, r.bannerKey),
+      followerCount: r._count.follows,
+    }));
+  }
+
   /** Public: only the current avatar/banner of a publicly visible creator is served. */
   async getPublicImage(slug: string, imageId: string): Promise<StoredObject> {
     if (!z.uuid().safeParse(imageId).success) throw new DomainError('NOT_FOUND');
@@ -131,7 +157,7 @@ export class CreatorProfileService {
   }
 }
 
-function imageUrl(slug: string, key: string | null): string | null {
+export function imageUrl(slug: string, key: string | null): string | null {
   return key ? `/${API_PREFIX}/creators/${slug}/images/${key.slice(KEY_PREFIX.length)}` : null;
 }
 

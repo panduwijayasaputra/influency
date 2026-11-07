@@ -3,6 +3,8 @@ import {
   creatorApplicationResponseSchema,
   creatorApplicationSchema,
   creatorProfileResponseSchema,
+  followStateSchema,
+  recommendedCreatorListSchema,
   rejectCreatorApplicationSchema,
   RESERVED_SLUGS,
   slugSchema,
@@ -139,5 +141,35 @@ describe('creatorProfileResponseSchema', () => {
       bannerUrl: null,
     };
     expect(creatorProfileResponseSchema.parse(body)).toEqual(body);
+  });
+});
+
+describe('recommendedCreatorListSchema', () => {
+  const creator = {
+    slug: 'nadia',
+    displayName: 'Nadia',
+    avatarUrl: null,
+    bannerUrl: null,
+    followerCount: 12,
+  };
+
+  it('parses public creator fields', () => {
+    expect(recommendedCreatorListSchema.parse({ creators: [creator] }).creators[0]!.slug).toBe(
+      'nadia',
+    );
+  });
+
+  it('rejects a creator without a follower count', () => {
+    const bare = { ...creator, followerCount: undefined };
+    expect(recommendedCreatorListSchema.safeParse({ creators: [bare] }).success).toBe(false);
+  });
+});
+
+describe('followStateSchema', () => {
+  it('parses a follow state and rejects a fractional count', () => {
+    expect(followStateSchema.parse({ following: true, followerCount: 3 }).followerCount).toBe(3);
+    expect(followStateSchema.safeParse({ following: true, followerCount: 1.5 }).success).toBe(
+      false,
+    );
   });
 });

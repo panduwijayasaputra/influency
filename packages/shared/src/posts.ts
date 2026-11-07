@@ -142,6 +142,26 @@ export type PublicPost = z.infer<typeof publicPostSchema>;
 export const publicPostListSchema = z.object({ posts: z.array(publicPostSchema) });
 export type PublicPostList = z.infer<typeof publicPostListSchema>;
 
+/** Posts per Home feed page. */
+export const HOME_FEED_PAGE_SIZE = 10;
+
+/** A Home feed item: a public post plus the creator fields PostCard needs. */
+export const homeFeedItemSchema = publicPostSchema.extend({
+  creator: z.object({
+    slug: z.string(),
+    displayName: z.string(),
+    avatarUrl: z.string().nullable(),
+  }),
+});
+export type HomeFeedItem = z.infer<typeof homeFeedItemSchema>;
+
+/** One Home feed page. `nextCursor` is opaque (pass it back as ?cursor=); null = end of the feed. */
+export const homeFeedPageSchema = z.object({
+  items: z.array(homeFeedItemSchema),
+  nextCursor: z.string().nullable(),
+});
+export type HomeFeedPage = z.infer<typeof homeFeedPageSchema>;
+
 /** GET /creators/:slug/posts/:postId. Like the feed item (no media refs); owner/admin may see non-published posts. */
 export const publicPostDetailSchema = publicPostSchema.extend({
   status: z.enum(POST_STATUSES),

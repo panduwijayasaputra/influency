@@ -35,6 +35,7 @@ model User {
   creatorProfile            CreatorProfile?
   creatorApplicationReviews CreatorApplicationReview[] @relation("CreatorApplicationReviewer")
   postLikes                 PostLike[]
+  creatorFollows            CreatorFollow[]
   commentLikes              CommentLike[]              @relation("CommentLiker")
   postComments              PostComment[]              @relation("PostCommentAuthor")
   deletedPostComments       PostComment[]              @relation("PostCommentDeleter")
@@ -145,6 +146,7 @@ model CreatorProfile {
   user                User                       @relation(fields: [userId], references: [id], onDelete: Restrict)
   reviews             CreatorApplicationReview[]
   posts               Post[]
+  follows             CreatorFollow[]
 
   @@map("creator_profiles")
 }
@@ -310,6 +312,20 @@ model PostArchiveEpisode {
 
   @@index([postId, archivedAt])
   @@map("post_archive_episodes")
+}
+
+/// US-024: a user follows a creator. Social only: never grants or revokes an entitlement or subscription.
+model CreatorFollow {
+  id               String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId           String         @map("user_id") @db.Uuid
+  creatorProfileId String         @map("creator_profile_id") @db.Uuid
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  user             User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  creatorProfile   CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, creatorProfileId])
+  @@index([creatorProfileId])
+  @@map("creator_follows")
 }
 
 /// US-051: one like per (post, user); like = insert ON CONFLICT DO NOTHING, unlike = delete.

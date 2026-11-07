@@ -1,19 +1,24 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Toaster } from '@/components/ui/toast';
+import { setFollow } from '@/lib/api/creator-follow';
 import { ProfileActions } from './profile-actions';
 
+vi.mock('@/lib/api/creator-follow', () => ({ setFollow: vi.fn() }));
+
 const renderActions = (props: Partial<Parameters<typeof ProfileActions>[0]> = {}) =>
-  render(<ProfileActions creatorName="Ana" {...props} />, { wrapper: Toaster });
+  render(<ProfileActions slug="ana" creatorName="Ana" {...props} />, { wrapper: Toaster });
 
 describe('ProfileActions', () => {
-  it('toggles Ikuti locally with a Segera hadir toast', () => {
+  it('calls the follow API from Ikuti and says Langganan is unaffected on unfollow', async () => {
+    vi.mocked(setFollow).mockResolvedValue({ following: true, followerCount: 1 });
     renderActions();
     fireEvent.click(screen.getByRole('button', { name: 'Ikuti' }));
-    expect(screen.getByRole('button', { name: 'Diikuti' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByText('Segera hadir')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Diikuti' }));
-    expect(screen.getByRole('button', { name: 'Ikuti' })).toHaveAttribute('aria-pressed', 'false');
+    expect(setFollow).toHaveBeenCalledWith('ana', true);
+    vi.mocked(setFollow).mockResolvedValue({ following: false, followerCount: 0 });
+    fireEvent.click(await screen.findByRole('button', { name: 'Diikuti' }));
+    expect(setFollow).toHaveBeenLastCalledWith('ana', false);
+    expect(await screen.findByText(/Langganan tidak terpengaruh/)).toBeInTheDocument();
   });
 
   it('opens the demo subscription sheet from Langganan', () => {

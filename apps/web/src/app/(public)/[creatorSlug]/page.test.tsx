@@ -2,11 +2,13 @@ import { render, screen } from '@testing-library/react';
 import type { CreatorProfileResponse } from '@influency/shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Toaster } from '@/components/ui/toast';
+import { getFollowState } from '@/lib/api/creator-follow.server';
 import { getCurrentUser } from '@/lib/api/current-user';
 import { getMyCreatorProfile } from '@/lib/api/creator-profile';
 import { getPublicCreator } from '@/lib/api/public-creator';
 import CreatorPage, { CreatorView, generateMetadata } from './page';
 
+vi.mock('@/lib/api/creator-follow.server', () => ({ getFollowState: vi.fn() }));
 vi.mock('@/lib/api/current-user', () => ({ getCurrentUser: vi.fn() }));
 vi.mock('@/lib/api/creator-profile', () => ({ getMyCreatorProfile: vi.fn() }));
 vi.mock('@/lib/api/public-creator', () => ({ getPublicCreator: vi.fn() }));
@@ -31,6 +33,7 @@ const props = (creatorSlug = 'claudiandreya') => ({ params: Promise.resolve({ cr
 describe('CreatorPage', () => {
   beforeEach(() => {
     vi.mocked(getPublicCreator).mockResolvedValue(CREATOR);
+    vi.mocked(getFollowState).mockResolvedValue({ following: true, followerCount: 1200 });
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'u1',
       displayName: 'Ana',
@@ -57,7 +60,10 @@ describe('CreatorPage', () => {
     ]);
     // The uncached feed streams in behind its fallback (CreatorPosts has its own tests).
     expect(screen.getByText('Memuat konten…')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Ikuti' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Diikuti' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('@claudiandreya').parentElement?.parentElement).toHaveTextContent(
+      '1,2 rb pengikut',
+    );
     expect(screen.getByRole('button', { name: /Langganan · \d+ Koin/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Bagikan profil' })).toBeInTheDocument();
     // Page header: the name as plain text (the h1 stays in the profile), no back on a direct visit.
@@ -105,6 +111,9 @@ describe('CreatorPage', () => {
 });
 
 describe('CreatorView', () => {
+  beforeEach(() =>
+    vi.mocked(getFollowState).mockResolvedValue({ following: false, followerCount: 1200 }),
+  );
   const view = async () => render(await CreatorView({ creator: CREATOR }), { wrapper: Toaster });
   const LOGIN = '/login?returnTo=%2Fclaudiandreya';
 
@@ -122,6 +131,7 @@ describe('CreatorView', () => {
         expect(screen.getByRole('link', { name })).toHaveAttribute('href', LOGIN);
       }
       expect(screen.queryByRole('link', { name: 'Masuk' })).toBeNull();
+      expect(screen.getByText(/1,2 rb/)).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Bagikan profil' })).toBeNull();
       expect(screen.getByText('Memuat konten…')).toBeInTheDocument();
     },

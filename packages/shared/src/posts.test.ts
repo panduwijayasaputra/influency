@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createPostSchema,
+  homeFeedPageSchema,
   isPostEditable,
   POST_CAPTION_MAX_LENGTH,
   POST_STATUSES,
@@ -201,5 +202,36 @@ describe('postLikeResponseSchema', () => {
       liked: true,
       likeCount: 1,
     });
+  });
+});
+
+describe('homeFeedPageSchema', () => {
+  const item = {
+    id: 'p',
+    visibility: 'FREE',
+    caption: '',
+    publishedAt: '2026-11-07T00:00:00.000Z',
+    imageCount: 1,
+    videoCount: 0,
+    offer: null,
+    previewUrl: null,
+    likeCount: 0,
+    access: 'full',
+    viewer: null,
+    commentCount: 0,
+    media: [],
+    creator: { slug: 'nadia', displayName: 'Nadia', avatarUrl: null },
+  };
+
+  it('parses an item with its creator and an opaque cursor', () => {
+    expect(
+      homeFeedPageSchema.parse({ items: [item], nextCursor: 'abc' }).items[0]!.creator.slug,
+    ).toBe('nadia');
+    expect(homeFeedPageSchema.parse({ items: [], nextCursor: null }).nextCursor).toBeNull();
+  });
+
+  it('rejects an item without its creator', () => {
+    const bare = { ...item, creator: undefined };
+    expect(homeFeedPageSchema.safeParse({ items: [bare], nextCursor: null }).success).toBe(false);
   });
 });

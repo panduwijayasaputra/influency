@@ -32,9 +32,12 @@ export function PostCard({
   post,
   creator,
   detail = false,
+  linkCreator = false,
 }: {
   post: PostCardPost;
   creator: PostCardCreator;
+  /** Home feed: the creator's avatar and name open their profile (it is the current page everywhere else). */
+  linkCreator?: boolean;
   /** The post's own page: full caption, Komentar scrolls to the comments below, login returns to the post. */
   detail?: boolean;
 }) {
@@ -70,34 +73,49 @@ export function PostCard({
     );
   }
 
+  const creatorBlock = (
+    <>
+      {creator.avatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- same-origin API image
+        <img src={creator.avatarUrl} alt="" className="size-9 rounded-full object-cover" />
+      ) : (
+        <span
+          aria-hidden
+          className="flex size-9 items-center justify-center rounded-full bg-primary text-xs font-extrabold text-primary-foreground"
+        >
+          {initials(creator.displayName)}
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-bold">{creator.displayName}</p>
+        <p className="truncate text-xs text-muted-foreground">
+          @{creator.slug}
+          {post.publishedAt && (
+            <>
+              {' · '}
+              <time dateTime={post.publishedAt} suppressHydrationWarning>
+                {formatRelativeTime(post.publishedAt, new Date())}
+              </time>
+            </>
+          )}
+        </p>
+      </div>
+    </>
+  );
+
   return (
     <article aria-label={`Post oleh ${creator.displayName}`} className="flex flex-col gap-2 py-4">
       <header className="flex items-center gap-3 px-4">
-        {creator.avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- same-origin API image
-          <img src={creator.avatarUrl} alt="" className="size-9 rounded-full object-cover" />
-        ) : (
-          <span
-            aria-hidden
-            className="flex size-9 items-center justify-center rounded-full bg-primary text-xs font-extrabold text-primary-foreground"
+        {linkCreator ? (
+          <Link
+            href={path}
+            className="flex min-w-0 flex-1 items-center gap-3 rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            {initials(creator.displayName)}
-          </span>
+            {creatorBlock}
+          </Link>
+        ) : (
+          <div className="flex min-w-0 flex-1 items-center gap-3">{creatorBlock}</div>
         )}
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold">{creator.displayName}</p>
-          <p className="truncate text-xs text-muted-foreground">
-            @{creator.slug}
-            {post.publishedAt && (
-              <>
-                {' · '}
-                <time dateTime={post.publishedAt} suppressHydrationWarning>
-                  {formatRelativeTime(post.publishedAt, new Date())}
-                </time>
-              </>
-            )}
-          </p>
-        </div>
         <DropdownMenu.Root>
           <DropdownMenu.Trigger aria-label="Lainnya" className={ICON}>
             <MoreHorizontal aria-hidden className="size-5" />
