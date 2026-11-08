@@ -49,6 +49,15 @@ export const ERRORS = {
   CANNOT_FOLLOW_SELF: { status: 400, message: 'Kamu tidak bisa mengikuti profilmu sendiri.' },
   USER_STATUS_CONFLICT: { status: 409, message: 'Status akun tidak memungkinkan tindakan ini.' },
   CANNOT_SUSPEND_ADMIN: { status: 409, message: 'Akun admin tidak dapat ditangguhkan.' },
+  PACKAGE_NOT_AVAILABLE: { status: 404, message: 'Paket Koin tidak tersedia.' },
+  REQUEST_IN_PROGRESS: {
+    status: 409,
+    message: 'Permintaan sebelumnya masih diproses. Coba lagi sebentar.',
+  },
+  PAYMENT_GATEWAY_UNAVAILABLE: {
+    status: 502,
+    message: 'Layanan pembayaran sedang tidak tersedia. Coba lagi nanti.',
+  },
   TOPUP_NOT_FOUND: { status: 404, message: 'Top-up tidak ditemukan.' },
   INSUFFICIENT_COINS: { status: 402, message: 'Saldo Koin tidak cukup.' },
   OFFER_CHANGED: {
@@ -59,7 +68,7 @@ export const ERRORS = {
   DUPLICATE_REQUEST: { status: 409, message: 'Permintaan ganda terdeteksi.' },
   PAYMENT_PENDING: { status: 409, message: 'Pembayaran masih diproses.' },
   PAYOUT_ON_HOLD: { status: 409, message: 'Pencairan sedang ditahan.' },
-  PAYMENT_VERIFICATION_FAILED: { status: 400, message: 'Verifikasi pembayaran gagal.' },
+  PAYMENT_VERIFICATION_FAILED: { status: 401, message: 'Verifikasi pembayaran gagal.' },
   RATE_LIMITED: { status: 429, message: 'Terlalu banyak permintaan. Coba lagi sebentar.' },
   INTERNAL_ERROR: { status: 500, message: 'Terjadi kesalahan pada server. Silakan coba lagi.' },
 } as const satisfies Record<string, { status: number; message: string }>;

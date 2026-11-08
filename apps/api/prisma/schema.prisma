@@ -36,6 +36,9 @@ model User {
   creatorApplicationReviews CreatorApplicationReview[] @relation("CreatorApplicationReviewer")
   postLikes                 PostLike[]
   creatorFollows            CreatorFollow[]
+  coinWallet                CoinWallet?
+  topupOrders               TopupOrder[]
+  idempotencyKeys           IdempotencyKey[]
   commentLikes              CommentLike[]              @relation("CommentLiker")
   postComments              PostComment[]              @relation("PostCommentAuthor")
   deletedPostComments       PostComment[]              @relation("PostCommentDeleter")
@@ -482,4 +485,158 @@ model PostReport {
   @@index([reporterId])
   @@index([resolvedByActionId])
   @@map("post_reports")
+}
+
+/// koin-wallet US-029: the five LOCKED top-up packages (Monetization Spec v1 §2). Orders snapshot coins + price, so edits never touch history.
+model CoinPackage {
+  id          String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  coins       Int          @unique
+  priceIdr    Int          @map("price_idr")
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  topupOrders TopupOrder[]
+
+  @@map("coin_packages")
+}
+
+/// One wallet per user. `balance_coins` is a projection of `coin_ledger_entries`, written only by WalletsService in the same transaction as the ledger row.
+model CoinWallet {
+  id           String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId       String            @unique @map("user_id") @db.Uuid
+  balanceCoins BigInt            @default(0) @map("balance_coins")
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user         User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  ledger       CoinLedgerEntry[]
+  lots         CoinLot[]
+
+  @@map("coin_wallets")
+}
+
+/// Purchases (feature 6) adds the debit types.
+enum CoinEntryType {
+  TOPUP_CREDIT
+
+  @@map("coin_entry_type")
+}
+
+/// What a ledger entry or lot came from; `source_id` is that row's id (no FK: the source tables differ).
+enum CoinSourceType {
+  TOPUP_ORDER
+
+  @@map("coin_source_type")
+}
+
+/// Append-only Koin ledger (a DB trigger rejects UPDATE and DELETE). A source posts once per entry type.
+model CoinLedgerEntry {
+  id                String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  walletId          String         @map("wallet_id") @db.Uuid
+  entryType         CoinEntryType  @map("entry_type")
+  amountCoins       BigInt         @map("amount_coins")
+  balanceAfterCoins BigInt         @map("balance_after_coins")
+  sourceType        CoinSourceType @map("source_type")
+  sourceId          String         @map("source_id") @db.Uuid
+  createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  wallet            CoinWallet     @relation(fields: [walletId], references: [id], onDelete: Restrict)
+
+  @@unique([sourceType, sourceId, entryType])
+  @@index([walletId, createdAt(sort: Desc), id(sort: Desc)])
+  @@map("coin_ledger_entries")
+}
+
+/// Koin issued by one source (a top-up) with its IDR basis and what is still unspent; purchases consume lots FIFO.
+model CoinLot {
+  id           String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  walletId     String         @map("wallet_id") @db.Uuid
+  sourceType   CoinSourceType @map("source_type")
+  sourceId     String         @map("source_id") @db.Uuid
+  issuedCoins  BigInt         @map("issued_coins")
+  unspentCoins BigInt         @map("unspent_coins")
+  basisIdr     BigInt         @map("basis_idr")
+  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  wallet       CoinWallet     @relation(fields: [walletId], references: [id], onDelete: Restrict)
+
+  @@unique([sourceType, sourceId])
+  @@index([walletId, createdAt])
+  @@map("coin_lots")
+}
+
+enum TopupStatus {
+  CREATED
+  PENDING
+  CREDITED
+  FAILED
+  EXPIRED
+  CANCELED
+
+  @@map("topup_status")
+}
+
+/// A Koin top-up (koin-wallet US-030). Coins and price are a snapshot of the package at creation and never change.
+/// `order_number` is the Midtrans order_id. There is no PAID state: paid and credited happen in one transaction.
+model TopupOrder {
+  id               String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId           String      @map("user_id") @db.Uuid
+  packageId        String      @map("package_id") @db.Uuid
+  orderNumber      String      @unique @map("order_number")
+  coins            BigInt
+  priceIdr         BigInt      @map("price_idr")
+  feeIdr           BigInt      @default(0) @map("fee_idr")
+  totalIdr         BigInt      @map("total_idr")
+  currency         String      @default("IDR")
+  status           TopupStatus @default(CREATED)
+  providerStatus   String?     @map("provider_status")
+  providerTxRef    String?     @unique @map("provider_tx_ref")
+  paymentType      String?     @map("payment_type")
+  redirectUrl      String?     @map("redirect_url")
+  expiresAt        DateTime?   @map("expires_at") @db.Timestamptz(3)
+  paidAt           DateTime?   @map("paid_at") @db.Timestamptz(3)
+  creditedAt       DateTime?   @map("credited_at") @db.Timestamptz(3)
+  failureReason    String?     @map("failure_reason")
+  quarantinedAt    DateTime?   @map("quarantined_at") @db.Timestamptz(3)
+  quarantineReason String?     @map("quarantine_reason")
+  checkAttempts    Int         @default(0) @map("check_attempts")
+  nextCheckAt      DateTime?   @map("next_check_at") @db.Timestamptz(3)
+  lastCheckedAt    DateTime?   @map("last_checked_at") @db.Timestamptz(3)
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user             User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  package          CoinPackage @relation(fields: [packageId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status, nextCheckAt])
+  @@map("topup_orders")
+}
+
+/// Generic Idempotency-Key store (top-ups now, purchases later): same (user, scope, key) + same request hash replays the result.
+model IdempotencyKey {
+  id          String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  scope       String
+  key         String
+  requestHash String   @map("request_hash")
+  resultId    String?  @map("result_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, scope, key])
+  @@map("idempotency_keys")
+}
+
+/// Every Midtrans payment notification / status answer, stored before it is processed (koin-wallet US-031).
+/// `fingerprint` dedupes identical deliveries; processing is idempotent either way. The payload holds no secret (`signature_key` is a hash).
+model PaymentWebhookEvent {
+  id             String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  /// 'midtrans' (notification) or 'midtrans_status' (status API answer, US-032).
+  provider       String
+  orderNumber    String    @map("order_number")
+  fingerprint    String    @unique
+  signatureValid Boolean   @map("signature_valid")
+  payload        Json
+  outcome        String?
+  receivedAt     DateTime  @default(now()) @map("received_at") @db.Timestamptz(3)
+  processedAt    DateTime? @map("processed_at") @db.Timestamptz(3)
+
+  @@index([orderNumber])
+  @@map("payment_webhook_events")
 }

@@ -181,6 +181,48 @@
       "title": "Home Feed API",
       "status": "ready_for_uat",
       "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-027",
+      "feature": "koin-wallet",
+      "title": "Dompet Page UI",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-028",
+      "feature": "koin-wallet",
+      "title": "Beli Koin Checkout & Top-Up Status UI",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-029",
+      "feature": "koin-wallet",
+      "title": "Koin Packages & Wallet Ledger API",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-030",
+      "feature": "koin-wallet",
+      "title": "Create Top-Up Order (Midtrans Snap Sandbox)",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-031",
+      "feature": "koin-wallet",
+      "title": "Credit Koin from Verified Midtrans Notification",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-032",
+      "feature": "koin-wallet",
+      "title": "Reconcile Pending Top-Ups",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-07"
     }
   ]
 }

@@ -8,3 +8,4 @@ export * from './moderation.js';
 export * from './post-media.js';
 export * from './posts.js';
 export * from './return-to.js';
+export * from './wallet.js';

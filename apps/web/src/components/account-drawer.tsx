@@ -22,7 +22,7 @@ import { ICON_BUTTON_CLASS } from '@/components/home-top-bar';
 import { KoinIcon } from '@/components/koin';
 import { Button } from '@/components/ui/button';
 import { useLogout } from '@/components/use-logout';
-import { DEMO_KOIN_BALANCE } from '@/lib/demo';
+import { useWalletBalance } from '@/lib/use-wallet-balance';
 import { initials } from '@/lib/utils';
 
 const ROW =
@@ -32,6 +32,7 @@ const ROW =
 export function AccountDrawer({ user }: { user: MeResponse }) {
   const [open, setOpen] = useState(false);
   const { logout, pending, failed } = useLogout();
+  const { balance } = useWalletBalance(open);
   const close = () => setOpen(false);
   const creator = user.roles.includes('CREATOR');
   const links = [
@@ -88,13 +89,11 @@ export function AccountDrawer({ user }: { user: MeResponse }) {
               </div>
             </div>
 
-            {/* shortcut: demo balance until koin-wallet; read GET /wallet then. */}
             <div className="flex items-center gap-3 rounded-xl border border-koin-border bg-koin-surface p-3">
               <KoinIcon className="size-7 text-xs" />
               <div className="min-w-0">
-                <p className="font-bold text-koin-foreground">{DEMO_KOIN_BALANCE} Koin</p>
-                <p className="w-fit rounded-full bg-card px-2 text-xs font-bold text-koin-foreground">
-                  Demo
+                <p className="font-bold text-koin-foreground">
+                  {balance === null ? '—' : balance} Koin
                 </p>
               </div>
               <Button asChild size="sm" className="ml-auto">

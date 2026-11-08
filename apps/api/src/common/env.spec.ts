@@ -18,6 +18,12 @@ const R2 = {
   R2_BUCKET: 'test-bucket',
 };
 const BASE = { DATABASE_URL, ...TELEGRAM, ...R2, STORAGE_DRIVER: 'r2' };
+const MIDTRANS = {
+  PAYMENT_PROVIDER: 'midtrans',
+  MIDTRANS_SERVER_KEY: 'SB-Mid-server-secret',
+  MIDTRANS_CLIENT_KEY: 'SB-Mid-client',
+  MIDTRANS_MERCHANT_ID: 'G000',
+};
 const STREAM = {
   VIDEO_DRIVER: 'stream',
   CLOUDFLARE_STREAM_ACCOUNT_ID: 'test-stream-account',
@@ -45,6 +51,9 @@ describe('parseEnv', () => {
       PREMIUM_COMMENTS_READ_WITHOUT_ACCESS: false,
       PREMIUM_COMMENTS_WRITE_WITHOUT_ACCESS: false,
       COMMENT_RATE_LIMIT_PER_MINUTE: 10,
+      PAYMENT_PROVIDER: 'fake',
+      TOPUP_EXPIRY_MINUTES: 60,
+      TOPUP_RECONCILE_INTERVAL_SECONDS: 60,
       MIDTRANS_IS_PRODUCTION: false,
     });
   });
@@ -68,7 +77,9 @@ describe('parseEnv', () => {
     expect(() => parseEnv({ DATABASE_URL, ...TELEGRAM, NODE_ENV: 'production' })).toThrow(
       '- STORAGE_DRIVER: local storage is for development only',
     );
-    expect(parseEnv({ ...BASE, ...STREAM, NODE_ENV: 'production' }).STORAGE_DRIVER).toBe('r2');
+    expect(
+      parseEnv({ ...BASE, ...STREAM, ...MIDTRANS, NODE_ENV: 'production' }).STORAGE_DRIVER,
+    ).toBe('r2');
   });
 
   it('defaults to the stub video driver without any Stream variables', () => {
@@ -289,5 +300,40 @@ describe('loadEnvFile', () => {
 
     expect(process.env.INFLUENCY_TEST_NEW).toBe('from-file');
     expect(process.env.INFLUENCY_TEST_EXISTING).toBe('from-env');
+  });
+
+  it('defaults to the fake payment provider and rejects it in production', () => {
+    expect(parseEnv(BASE).PAYMENT_PROVIDER).toBe('fake');
+    expect(() => parseEnv({ ...BASE, ...STREAM, NODE_ENV: 'production' })).toThrow(
+      '- PAYMENT_PROVIDER: fake payments are for development and test only',
+    );
+  });
+
+  it('requires the Midtrans keys for PAYMENT_PROVIDER=midtrans, never echoing values', () => {
+    expect(() => parseEnv({ ...BASE, PAYMENT_PROVIDER: 'midtrans' })).toThrow(
+      '- MIDTRANS_SERVER_KEY: required when PAYMENT_PROVIDER=midtrans',
+    );
+    const keys = {
+      MIDTRANS_SERVER_KEY: 'SB-Mid-server-secret',
+      MIDTRANS_CLIENT_KEY: 'SB-Mid-client',
+      MIDTRANS_MERCHANT_ID: 'G000',
+    };
+    expect(
+      parseEnv({
+        ...BASE,
+        ...STREAM,
+        ...keys,
+        PAYMENT_PROVIDER: 'midtrans',
+        NODE_ENV: 'production',
+      }).PAYMENT_PROVIDER,
+    ).toBe('midtrans');
+    expect(() =>
+      parseEnv({ ...BASE, PAYMENT_PROVIDER: 'midtrans', MIDTRANS_IS_PRODUCTION: 'true', ...keys }),
+    ).toThrow(/MIDTRANS_IS_PRODUCTION/);
+  });
+
+  it('bounds the top-up expiry', () => {
+    expect(() => parseEnv({ ...BASE, TOPUP_EXPIRY_MINUTES: '14' })).toThrow();
+    expect(parseEnv({ ...BASE, TOPUP_EXPIRY_MINUTES: '30' }).TOPUP_EXPIRY_MINUTES).toBe(30);
   });
 });

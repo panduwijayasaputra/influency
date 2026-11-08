@@ -9,6 +9,12 @@ export const R2_VARS = [
   'R2_BUCKET',
 ] as const;
 
+export const MIDTRANS_VARS = [
+  'MIDTRANS_SERVER_KEY',
+  'MIDTRANS_CLIENT_KEY',
+  'MIDTRANS_MERCHANT_ID',
+] as const;
+
 export const STREAM_VARS = ['CLOUDFLARE_STREAM_ACCOUNT_ID', 'CLOUDFLARE_STREAM_TOKEN'] as const;
 
 /** One proxy address or CIDR, e.g. 127.0.0.1, ::1, 10.0.0.0/8. */
@@ -121,6 +127,15 @@ export const envSchema = z
       .transform((v) => v === 'true'),
     // TBD placeholder: comments one user may create per rolling minute (spam brake).
     COMMENT_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(1000).default(10),
+    // Payments: `fake` (in-process gateway, development/test only) or `midtrans` (Snap Sandbox, needs the keys below).
+    PAYMENT_PROVIDER: z.enum(['fake', 'midtrans']).default('fake'),
+    MIDTRANS_SERVER_KEY: z.string().min(1).optional(),
+    MIDTRANS_CLIENT_KEY: z.string().min(1).optional(),
+    MIDTRANS_MERCHANT_ID: z.string().min(1).optional(),
+    // How often pending top-ups are checked with the Midtrans status API (in-process timer); 0 = off.
+    TOPUP_RECONCILE_INTERVAL_SECONDS: z.coerce.number().int().min(0).max(3600).default(60),
+    // TBD placeholder: how long a top-up checkout stays payable.
+    TOPUP_EXPIRY_MINUTES: z.coerce.number().int().min(15).max(1440).default(60),
     MIDTRANS_IS_PRODUCTION: z
       .enum(['true', 'false'])
       .default('false')
@@ -142,6 +157,22 @@ export const envSchema = z
         code: 'custom',
         path: ['STORAGE_DRIVER'],
         message: 'local storage is for development only',
+      });
+    }
+    if (env.PAYMENT_PROVIDER === 'midtrans') {
+      for (const name of MIDTRANS_VARS) {
+        if (!env[name])
+          ctx.addIssue({
+            code: 'custom',
+            path: [name],
+            message: 'required when PAYMENT_PROVIDER=midtrans',
+          });
+      }
+    } else if (env.NODE_ENV === 'production') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['PAYMENT_PROVIDER'],
+        message: 'fake payments are for development and test only',
       });
     }
     if (env.VIDEO_DRIVER === 'stream') {

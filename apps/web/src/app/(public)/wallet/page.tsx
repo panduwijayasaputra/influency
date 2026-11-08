@@ -1,12 +1,15 @@
-import { ComingSoon } from '@/components/coming-soon';
+import { PageHeader } from '@/components/page-header';
+import { WalletView } from '@/components/wallet/wallet-view';
 
 export const metadata = { title: 'Dompet' };
 
 export default function Page() {
   return (
-    <ComingSoon
-      title="Dompet"
-      description="Saldo Koin, isi ulang dan riwayat transaksi akan muncul di sini."
-    />
+    <>
+      <PageHeader title="Dompet" asHeading />
+      <main className="mx-auto w-full max-w-feed flex-1 px-4 py-4">
+        <WalletView />
+      </main>
+    </>
   );
 }

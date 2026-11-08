@@ -1,9 +1,10 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { MeResponse } from '@influency/shared';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DEMO_KOIN_BALANCE } from '@/lib/demo';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fetchWallet } from '@/lib/api/wallet';
 import { AccountDrawer } from './account-drawer';
 
+vi.mock('@/lib/api/wallet', () => ({ fetchWallet: vi.fn() }));
 const replace = vi.fn();
 const refresh = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace, refresh }) }));
@@ -19,6 +20,10 @@ const menuLinks = (dialog: HTMLElement) =>
   within(within(dialog).getByRole('navigation', { name: 'Menu akun' }))
     .getAllByRole('link')
     .map((a) => [a.textContent, a.getAttribute('href')]);
+
+beforeEach(() => {
+  vi.mocked(fetchWallet).mockResolvedValue({ balanceCoins: 120 });
+});
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -40,17 +45,23 @@ describe('AccountDrawer', () => {
     expect(trigger).toHaveFocus();
   });
 
+  it('shows a dash when the balance cannot be loaded', async () => {
+    vi.mocked(fetchWallet).mockImplementation(() => Promise.reject(new Error('x')));
+    const dialog = openDrawer();
+    await waitFor(() => expect(fetchWallet).toHaveBeenCalled());
+    expect(dialog).toHaveTextContent('— Koin');
+  });
+
   it('closes on the X button', async () => {
     fireEvent.click(within(openDrawer()).getByRole('button', { name: 'Tutup' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
-  it('shows the user, the demo Koin card and the user items in order', () => {
+  it('shows the user, the Koin card and the user items in order', async () => {
     const dialog = openDrawer();
     expect(dialog).toHaveTextContent('Ana Putri');
     expect(dialog).toHaveTextContent('@ana');
-    expect(dialog).toHaveTextContent(`${DEMO_KOIN_BALANCE} Koin`);
-    expect(dialog).toHaveTextContent('Demo');
+    await waitFor(() => expect(dialog).toHaveTextContent('120 Koin'));
     expect(within(dialog).getByRole('link', { name: 'Beli Koin' })).toHaveAttribute(
       'href',
       '/wallet',

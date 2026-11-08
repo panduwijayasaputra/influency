@@ -8,6 +8,8 @@ import { DevStorageModule } from './modules/dev-storage/dev-storage.module.js';
 import { EntitlementsModule } from './modules/entitlements/entitlements.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { PostsModule } from './modules/posts/posts.module.js';
+import { TopupsModule } from './modules/topups/topups.module.js';
+import { WalletsModule } from './modules/wallets/wallets.module.js';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { PostsModule } from './modules/posts/posts.module.js';
     PostsModule,
     EntitlementsModule,
     EngagementModule,
+    WalletsModule,
+    TopupsModule,
     AdminModule,
     DevStorageModule,
   ],

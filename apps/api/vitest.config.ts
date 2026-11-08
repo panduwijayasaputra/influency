@@ -26,6 +26,10 @@ export default defineConfig({
       R2_ACCESS_KEY_ID: 'test-access-key',
       R2_SECRET_ACCESS_KEY: 'test-secret',
       R2_BUCKET: 'test-bucket',
+      // Never the real gateway, whatever the local .env says.
+      PAYMENT_PROVIDER: 'fake',
+      // Specs call TopupReconcileService directly; no background timer.
+      TOPUP_RECONCILE_INTERVAL_SECONDS: '0',
       // Specs call PostMediaService.sweep directly; no background timer.
       MEDIA_SWEEP_INTERVAL_SECONDS: '0',
     },

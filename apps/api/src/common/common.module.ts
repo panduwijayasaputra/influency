@@ -3,7 +3,11 @@ import { APP_GUARD } from '@nestjs/core';
 import { CloudflareStreamVideoProvider } from './cloudflare-stream-video-provider.js';
 import { CsrfGuard } from './csrf.guard.js';
 import { ENV, type Env, parseEnv } from './env.js';
+import { FakePaymentGateway } from './fake-payment-gateway.js';
+import { IdempotencyService } from './idempotency.js';
 import { LocalObjectStorage } from './local-object-storage.js';
+import { MidtransSnapGateway } from './midtrans-snap-gateway.js';
+import { PAYMENT_GATEWAY } from './payment-gateway.js';
 import { OBJECT_STORAGE, type ObjectStorage } from './object-storage.js';
 import { PreviewGenerator } from './preview-generator.js';
 import { PrismaService } from './prisma.service.js';
@@ -34,6 +38,15 @@ import { VIDEO_PROVIDER } from './video-provider.js';
           : new StubVideoProvider(storage),
       inject: [ENV, OBJECT_STORAGE],
     },
+    {
+      provide: PAYMENT_GATEWAY,
+      useFactory: (env: Env) =>
+        env.PAYMENT_PROVIDER === 'midtrans'
+          ? new MidtransSnapGateway(env)
+          : new FakePaymentGateway(),
+      inject: [ENV],
+    },
+    IdempotencyService,
     PrismaService,
     PreviewGenerator,
     SessionGuard,
@@ -47,6 +60,8 @@ import { VIDEO_PROVIDER } from './video-provider.js';
     ENV,
     OBJECT_STORAGE,
     VIDEO_PROVIDER,
+    PAYMENT_GATEWAY,
+    IdempotencyService,
     PrismaService,
     PreviewGenerator,
     SessionGuard,

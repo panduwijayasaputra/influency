@@ -7,7 +7,8 @@ import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import type { PostCardPost } from '@/components/post-card/post-card';
-import { DEMO_KOIN_BALANCE, DEMO_PURCHASE_MESSAGE, DEMO_SUBSCRIPTION } from '@/lib/demo';
+import { DEMO_PURCHASE_MESSAGE, DEMO_SUBSCRIPTION } from '@/lib/demo';
+import { useWalletBalance } from '@/lib/use-wallet-balance';
 
 /**
  * Bottom sheet confirming a Koin purchase (post unlock or subscription): price, terms and balance.
@@ -32,7 +33,8 @@ export function PurchaseSheet({
 }) {
   const [open, setOpen] = useState(false);
   const toast = useToast();
-  const short = DEMO_KOIN_BALANCE < priceCoins;
+  const { balance } = useWalletBalance(open);
+  const short = balance !== null && balance < priceCoins;
   return (
     <BottomSheet
       trigger={trigger}
@@ -52,18 +54,19 @@ export function PurchaseSheet({
           <dt className="text-muted-foreground">Saldo kamu</dt>
           <dd className="flex items-center gap-1.5 font-bold">
             <KoinIcon />
-            {DEMO_KOIN_BALANCE} Koin
+            {balance === null ? '…' : balance} Koin
           </dd>
         </div>
       </dl>
 
       {short ? (
         <Button asChild className="h-13 text-base font-extrabold">
-          <Link href="/wallet">Isi Koin · kurang {priceCoins - DEMO_KOIN_BALANCE} Koin</Link>
+          <Link href="/wallet">Isi Koin · kurang {priceCoins - balance} Koin</Link>
         </Button>
       ) : (
         <Button
           className="h-13 text-base font-extrabold"
+          disabled={balance === null}
           onClick={() => {
             setOpen(false);
             toast(DEMO_PURCHASE_MESSAGE);

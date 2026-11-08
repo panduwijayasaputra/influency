@@ -207,6 +207,54 @@
       "title": "Recommended Creators API",
       "status": "ready_for_uat",
       "priority": "medium"
+    },
+    {
+      "id": "US-027",
+      "feature": "koin-wallet",
+      "file": "features/koin-wallet/US-027-dompet-page-ui.md",
+      "title": "Dompet Page UI",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-028",
+      "feature": "koin-wallet",
+      "file": "features/koin-wallet/US-028-beli-koin-checkout-and-status-ui.md",
+      "title": "Beli Koin Checkout & Top-Up Status UI",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-029",
+      "feature": "koin-wallet",
+      "file": "features/koin-wallet/US-029-koin-packages-and-wallet-ledger-api.md",
+      "title": "Koin Packages & Wallet Ledger API",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-030",
+      "feature": "koin-wallet",
+      "file": "features/koin-wallet/US-030-create-top-up-order-midtrans-snap-sandbox.md",
+      "title": "Create Top-Up Order (Midtrans Snap Sandbox)",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-031",
+      "feature": "koin-wallet",
+      "file": "features/koin-wallet/US-031-credit-koin-from-verified-midtrans-notification.md",
+      "title": "Credit Koin from Verified Midtrans Notification",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-032",
+      "feature": "koin-wallet",
+      "file": "features/koin-wallet/US-032-reconcile-pending-top-ups.md",
+      "title": "Reconcile Pending Top-Ups",
+      "status": "ready_for_uat",
+      "priority": "high"
     }
   ]
 }
