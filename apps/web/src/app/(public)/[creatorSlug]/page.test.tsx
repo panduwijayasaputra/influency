@@ -71,9 +71,7 @@ describe('CreatorPage', () => {
     // The uncached feed streams in behind its fallback (CreatorPosts has its own tests).
     expect(screen.getByText('Memuat konten…')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Diikuti' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByText('@claudiandreya').parentElement?.parentElement).toHaveTextContent(
-      '1,2 rb pengikut',
-    );
+    expect(screen.getByLabelText('1.200 pengikut')).toHaveTextContent('1,2 rb');
     expect(screen.getByRole('button', { name: /Langganan · \d+ Koin/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Bagikan profil' })).toBeInTheDocument();
     // Page header: the name as plain text (the h1 stays in the profile), no back on a direct visit.

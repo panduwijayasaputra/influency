@@ -1,5 +1,6 @@
 'use client';
 
+import { Users } from 'lucide-react';
 import { createContext, type ReactNode, useContext, useState } from 'react';
 import type { FollowState } from '@influency/shared';
 import { FollowButton } from '@/components/follow-button';
@@ -27,18 +28,39 @@ export function FollowProvider({
   return <FollowContext.Provider value={{ state, setState }}>{children}</FollowContext.Provider>;
 }
 
-/** "1,2 rb pengikut"; nothing when the count is unknown. */
+/** Stats row item: icon + count (`aria-label` carries the words). */
+export function StatItem({
+  icon,
+  count,
+  label,
+}: {
+  icon: ReactNode;
+  count: number;
+  label: string;
+}) {
+  return (
+    <li
+      aria-label={`${full.format(count)} ${label}`}
+      className="flex items-center gap-1.5 text-muted-foreground"
+    >
+      {icon}
+      <span aria-hidden className="text-sm font-extrabold text-foreground">
+        {compact.format(count)}
+      </span>
+    </li>
+  );
+}
+
+/** Follower count; nothing when the count is unknown. */
 export function FollowerCount() {
   const { state } = useFollow();
   if (!state) return null;
   return (
-    <p
-      className="text-sm text-muted-foreground"
-      aria-label={`${full.format(state.followerCount)} pengikut`}
-    >
-      <span className="font-semibold text-foreground">{compact.format(state.followerCount)}</span>{' '}
-      pengikut
-    </p>
+    <StatItem
+      icon={<Users aria-hidden className="size-4.5" />}
+      count={state.followerCount}
+      label="pengikut"
+    />
   );
 }
 

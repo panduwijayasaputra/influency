@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus } from 'lucide-react';
+import { LayoutGrid, Plus, Rows2 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Tabs } from 'radix-ui';
@@ -9,14 +9,14 @@ import { PostCard, type PostCardCreator } from '@/components/post-card/post-card
 import { PostGrid } from '@/components/post-grid/post-grid';
 
 const TRIGGER =
-  'min-h-11 text-sm font-bold text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=active]:text-foreground data-[state=active]:shadow-[inset_0_-2px_0_var(--brand)]';
+  'relative flex h-12 items-center justify-center gap-2 text-[15px] font-semibold text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=active]:font-extrabold data-[state=active]:text-foreground data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-1/2 data-[state=active]:after:h-0.75 data-[state=active]:after:w-9 data-[state=active]:after:-translate-x-1/2 data-[state=active]:after:rounded-full data-[state=active]:after:bg-brand';
 
 /** Owner-only entry to the studio editor (creator-studio US-054). */
 export function NewPostLink() {
   return (
     <Link
       href="/studio/posts/new"
-      className="mx-5 my-3 flex h-12 items-center justify-center gap-2 rounded-[14px] bg-primary text-sm font-bold text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      className="flex h-12 items-center justify-center gap-2 rounded-[14px] bg-primary text-[15px] font-bold text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
     >
       <Plus aria-hidden className="size-5" />
       Post Baru
@@ -47,16 +47,17 @@ export function CreatorContent({
         router.replace(next === 'grid' ? `${pathname}?tab=grid` : pathname, { scroll: false })
       }
     >
-      <Tabs.List aria-label="Konten" className="-mx-5 grid grid-cols-2 border-b">
+      <Tabs.List aria-label="Konten" className="grid grid-cols-2 border-y bg-card">
         <Tabs.Trigger value="posts" className={TRIGGER}>
+          <Rows2 aria-hidden className="size-4.5" />
           Postingan
         </Tabs.Trigger>
         <Tabs.Trigger value="grid" className={TRIGGER}>
+          <LayoutGrid aria-hidden className="size-4.5" />
           Grid
         </Tabs.Trigger>
       </Tabs.List>
-      <Tabs.Content value="posts" className="-mx-5 flex flex-col divide-y">
-        {isOwner && <NewPostLink />}
+      <Tabs.Content value="posts" className="flex flex-col gap-2 pt-2">
         {posts.map((post) => (
           <PostCard
             key={post.id}
@@ -66,7 +67,7 @@ export function CreatorContent({
           />
         ))}
       </Tabs.Content>
-      <Tabs.Content value="grid" className="-mx-5">
+      <Tabs.Content value="grid">
         <PostGrid posts={posts} creator={creator} />
       </Tabs.Content>
     </Tabs.Root>

@@ -35,15 +35,16 @@ export type CommentRowProps = {
 const ACTION =
   'flex min-h-11 items-center text-xs font-semibold text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none';
 
-function Avatar({ name, url }: { name: string; url?: string | null }) {
+function Avatar({ name, url, small }: { name: string; url?: string | null; small?: boolean }) {
+  const size = small ? 'size-7' : 'size-9';
   if (url) {
     // eslint-disable-next-line @next/next/no-img-element -- same-origin API image
-    return <img src={url} alt="" className="size-8 shrink-0 rounded-full object-cover" />;
+    return <img src={url} alt="" className={`${size} shrink-0 rounded-full object-cover`} />;
   }
   return (
     <span
       aria-hidden
-      className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-extrabold text-accent-foreground"
+      className={`flex ${size} shrink-0 items-center justify-center rounded-full bg-accent text-xs font-extrabold text-accent-foreground`}
     >
       {initials(name)}
     </span>
@@ -84,7 +85,7 @@ export function CommentItem({
   const pinned = !reply && 'pinned' in comment && comment.pinned === true;
   return (
     <div className="flex min-w-0 gap-3">
-      <Avatar name={comment.author.displayName} url={comment.avatarUrl} />
+      <Avatar name={comment.author.displayName} url={comment.avatarUrl} small={reply} />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         {pinned && (
           <p className="flex items-center gap-1 text-xs font-semibold text-primary-ink">

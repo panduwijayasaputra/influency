@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useToast } from '@/components/ui/toast';
 
 export const SHARE_BUTTON_CLASS =
-  'flex size-11 items-center justify-center rounded-full border hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none';
+  'flex size-11 items-center justify-center rounded-full text-[#45464D] hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none';
 
 /** Native share sheet where available (mobile), else copies the page link and confirms with a toast. */
 export function ShareButton({

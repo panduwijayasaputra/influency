@@ -1,6 +1,6 @@
 import type { PostCardCreator } from '@/components/post-card/post-card';
 import { getPublicPosts } from '@/lib/api/public-posts';
-import { CreatorContent, NewPostLink } from './creator-content';
+import { CreatorContent } from './creator-content';
 
 const EMPTY = 'Belum ada konten yang dipublikasikan.';
 
@@ -28,7 +28,6 @@ export async function CreatorPosts({
   if (posts.length === 0) {
     return (
       <>
-        {isOwner && <NewPostLink />}
         <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
           {EMPTY}
         </p>

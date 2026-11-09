@@ -21,7 +21,7 @@ export function isStandalone(pathname: string): boolean {
 }
 
 /** App shell for signed-in users (mounted by SignedInChrome in the root layout): bottom nav + spacer, and the in-app navigation tracker. */
-export function AppChrome() {
+export function AppChrome({ ownSlug }: { ownSlug?: string }) {
   const pathname = usePathname();
   const first = useRef(pathname);
   useEffect(() => {
@@ -36,7 +36,7 @@ export function AppChrome() {
         aria-hidden
         className="h-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom))] shrink-0"
       />
-      <BottomNav pathname={pathname} />
+      <BottomNav pathname={pathname} ownSlug={ownSlug} />
     </>
   );
 }

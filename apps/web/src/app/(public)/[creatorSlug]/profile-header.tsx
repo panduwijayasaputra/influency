@@ -18,58 +18,67 @@ export function ProfileHeader({
   actions: ReactNode;
   /** Set when the creator views their own profile: shows Edit Profil on the cover line. */
   editHref?: string;
-  /** Shown under the @slug line (follower count). */
+  /** `<li>` items of the stats row (photos, videos, followers). */
   stats?: ReactNode;
 }) {
   return (
     <>
       {creator.bannerUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- same-origin API image; next/image adds nothing here
-        <img src={creator.bannerUrl} alt="" className="h-32 w-full object-cover sm:h-48" />
+        <img src={creator.bannerUrl} alt="" className="h-34 w-full object-cover" />
       ) : (
-        <div aria-hidden className="h-32 bg-linear-to-r from-primary/30 to-primary/5 sm:h-48" />
+        <div aria-hidden className="h-34 bg-linear-to-r from-primary/30 to-primary/5" />
       )}
 
-      <div className="flex flex-col gap-3 px-5">
-        <div className="-mt-10 flex items-end justify-between gap-2">
+      <div className="relative flex flex-col gap-3 bg-card px-4 pb-4">
+        <div className="-mt-10.5 flex items-end justify-between gap-2">
           {creator.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- same-origin API image; next/image adds nothing here
             <img
               src={creator.avatarUrl}
               alt=""
-              className="size-20 rounded-full border-4 border-background bg-background object-cover ring-2 ring-brand"
+              className="size-21 rounded-full border-4 border-card bg-card object-cover"
             />
           ) : (
             <div
               aria-hidden
-              className="flex size-20 items-center justify-center rounded-full border-4 border-background bg-primary text-2xl font-extrabold text-primary-foreground ring-2 ring-brand"
+              className="flex size-21 items-center justify-center rounded-full border-4 border-card bg-primary text-[26px] font-extrabold text-primary-foreground"
             >
               {initials(creator.displayName)}
             </div>
           )}
           {editHref && (
-            <Button asChild size="sm" variant="outline">
+            <Button asChild variant="outline" className="mt-5 self-start shadow-sm">
               <Link href={editHref}>Edit Profil</Link>
             </Button>
           )}
         </div>
 
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight wrap-break-word">
-            {creator.displayName}
-          </h1>
-          <div className="flex items-center gap-2">
-            <p className="min-w-0 truncate text-sm text-muted-foreground">@{creator.slug}</p>
-            {share}
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <h1 className="text-[21px] leading-tight font-extrabold tracking-tight wrap-break-word">
+              {creator.displayName}
+            </h1>
+            <p className="truncate text-sm text-muted-foreground">@{creator.slug}</p>
           </div>
-          {stats}
+          <div className="-mr-3 flex shrink-0 items-center">{share}</div>
         </div>
+        {stats && (
+          <ul aria-label="Statistik profil" className="-mt-1 flex items-center gap-5">
+            {stats}
+          </ul>
+        )}
         {creator.category && (
           <p className="w-fit rounded-full bg-muted px-3 py-1 text-xs font-medium">
             {creator.category}
           </p>
         )}
-        {creator.bio && <ExpandableText text={creator.bio} className="text-sm leading-relaxed" />}
+        {creator.bio && (
+          <ExpandableText
+            text={creator.bio}
+            className="text-[14.5px] leading-normal text-[#45464D]"
+          />
+        )}
         {actions}
       </div>
     </>

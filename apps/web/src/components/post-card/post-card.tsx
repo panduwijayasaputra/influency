@@ -1,6 +1,16 @@
 'use client';
 
-import { Bookmark, Coins, Flag, MessageCircle, MoreHorizontal, Pencil, Share2 } from 'lucide-react';
+import {
+  Bookmark,
+  Coins,
+  Flag,
+  Lock,
+  LockOpen,
+  MessageCircle,
+  MoreHorizontal,
+  Pencil,
+  Share2,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { DropdownMenu } from 'radix-ui';
@@ -18,7 +28,7 @@ import { fetchPublicPost } from '@/lib/api/purchases';
 import { loginHref } from '@/lib/login-href';
 import { formatRelativeTime } from '@/lib/relative-time';
 import { initials } from '@/lib/utils';
-import { PostMedia } from './post-media';
+import { PostMedia, UnlockCta } from './post-media';
 
 /** A feed post or a post-page post (whose `publishedAt` is null for a never-published post). */
 export type PostCardPost = Omit<PublicPost, 'publishedAt'> & { publishedAt: string | null };
@@ -104,18 +114,18 @@ export function PostCard({
     <>
       {creator.avatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- same-origin API image
-        <img src={creator.avatarUrl} alt="" className="size-9 rounded-full object-cover" />
+        <img src={creator.avatarUrl} alt="" className="size-10 rounded-full object-cover" />
       ) : (
         <span
           aria-hidden
-          className="flex size-9 items-center justify-center rounded-full bg-primary text-xs font-extrabold text-primary-foreground"
+          className="flex size-10 items-center justify-center rounded-full bg-primary text-sm font-extrabold text-primary-foreground"
         >
           {initials(creator.displayName)}
         </span>
       )}
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-bold">{creator.displayName}</p>
-        <p className="truncate text-xs text-muted-foreground">
+        <p className="truncate text-[15px] leading-tight font-extrabold">{creator.displayName}</p>
+        <p className="truncate text-[12.5px] text-muted-foreground">
           @{creator.slug}
           {post.publishedAt && (
             <>
@@ -131,8 +141,11 @@ export function PostCard({
   );
 
   return (
-    <article aria-label={`Post oleh ${creator.displayName}`} className="flex flex-col gap-2 py-4">
-      <header className="flex items-center gap-3 px-4">
+    <article
+      aria-label={`Post oleh ${creator.displayName}`}
+      className="flex flex-col gap-3 border-y bg-card pt-3 pb-1.5"
+    >
+      <header className="flex items-center gap-2 pr-1.5 pl-4">
         {linkCreator ? (
           <Link
             href={path}
@@ -142,6 +155,18 @@ export function PostCard({
           </Link>
         ) : (
           <div className="flex min-w-0 flex-1 items-center gap-3">{creatorBlock}</div>
+        )}
+        {post.visibility === 'PREMIUM' && (
+          <span
+            className={`flex h-6 shrink-0 items-center gap-1 rounded-xl px-2 text-[11.5px] font-extrabold ${post.access === 'locked' ? 'bg-accent text-accent-foreground' : 'bg-success-surface text-success'}`}
+          >
+            {post.access === 'locked' ? (
+              <Lock aria-hidden className="size-3" />
+            ) : (
+              <LockOpen aria-hidden className="size-3" />
+            )}
+            {post.access === 'locked' ? 'Premium' : 'Terbuka'}
+          </span>
         )}
         <DropdownMenu.Root>
           <DropdownMenu.Trigger aria-label="Lainnya" className={ICON}>
@@ -193,6 +218,18 @@ export function PostCard({
           open={reporting}
           onOpenChange={setReporting}
         />
+      )}
+
+      {post.caption ? (
+        <div className="px-4 text-[15px] leading-normal">
+          <ExpandableText
+            text={post.caption}
+            href={detail ? undefined : postHref}
+            expanded={detail}
+          />
+        </div>
+      ) : (
+        detail && <p className="px-4 text-[15px] text-muted-foreground">Tanpa caption</p>
       )}
 
       <PostMedia
@@ -266,7 +303,7 @@ export function PostCard({
             trigger={
               <button
                 type="button"
-                className="flex h-11 items-center gap-1.5 rounded-full px-3 text-sm font-bold text-koin-foreground hover:bg-koin-surface focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                className="mr-1.5 flex h-11 items-center gap-1.5 rounded-full border border-koin-border bg-koin-surface px-3.5 text-sm font-extrabold text-koin-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
                 <Coins aria-hidden className="size-5" />
                 Kirim Tip
@@ -276,16 +313,15 @@ export function PostCard({
         )}
       </div>
 
-      {post.caption ? (
-        <div className="px-4 text-sm">
-          <ExpandableText
-            text={post.caption}
-            href={detail ? undefined : postHref}
-            expanded={detail}
-          />
-        </div>
-      ) : (
-        detail && <p className="px-4 text-sm text-muted-foreground">Tanpa caption</p>
+      {post.access === 'locked' && (
+        <UnlockCta
+          post={post}
+          creatorName={creator.displayName}
+          postHref={postHref}
+          loginUrl={login}
+          detail={detail}
+          onUnlocked={() => void refreshPost()}
+        />
       )}
       {comments.opened && (
         <CommentsSheet

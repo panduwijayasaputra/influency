@@ -39,25 +39,32 @@ export function GridTile({
       {locked ? (
         <>
           <PremiumCover previewUrl={post.previewUrl} className={`${ratio} rounded-none`} />
-          <span className="absolute top-1.5 right-1.5 rounded-full bg-black/50 p-1 text-white">
-            <Lock aria-hidden className="size-3.5" />
+          <span className="absolute inset-0 flex items-center justify-center bg-black/28">
+            <span className="flex size-8 items-center justify-center rounded-full bg-card text-primary-ink">
+              <Lock aria-hidden className="size-4" />
+            </span>
           </span>
         </>
       ) : (
         <AccessibleThumb post={post} />
       )}
       {first?.kind === 'VIDEO' && (
-        <span
-          className={`absolute ${tag ? 'top-1.5' : 'bottom-1.5'} left-1.5 flex items-center gap-1 rounded bg-black/60 px-1.5 text-[11px] font-semibold text-white`}
-        >
-          <Play aria-hidden className="size-3 fill-current" />
-          {first.durationSeconds !== null && formatDuration(first.durationSeconds)}
+        <span className="absolute top-1.5 right-1.5 flex h-5 items-center gap-0.5 rounded-md bg-black/60 px-1.5 text-[11px] font-bold text-white">
+          <Play aria-hidden className="size-2.5 fill-current" />
+          {!tag && first.durationSeconds !== null && formatDuration(first.durationSeconds)}
         </span>
       )}
-      {tag && (
+      {tag ? (
         <span className="absolute bottom-1.5 left-1.5 rounded-md bg-card/95 px-1.5 py-0.5 text-[10.5px] font-extrabold text-foreground">
           {tag}
         </span>
+      ) : (
+        !locked &&
+        post.visibility === 'PREMIUM' && (
+          <span className="absolute bottom-1.5 left-1.5 flex h-5 items-center rounded-md bg-card/90 px-1.5 text-[11px] font-bold text-accent-foreground">
+            Premium
+          </span>
+        )
       )}
     </>
   );

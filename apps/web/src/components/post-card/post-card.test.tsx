@@ -135,10 +135,10 @@ describe('PostCard', () => {
 
   it('sends a guest to login from Buka, and opens the purchase sheet for a signed-in user', () => {
     const { unmount } = renderCard(lockedPost(null));
-    expect(screen.getByRole('link', { name: /Buka · 8 Koin/ })).toHaveAttribute('href', LOGIN);
+    expect(screen.getByRole('link', { name: /Buka post · 8 Koin/ })).toHaveAttribute('href', LOGIN);
     unmount();
     renderCard(lockedPost(SIGNED_IN));
-    fireEvent.click(screen.getByRole('button', { name: /Buka · 8 Koin/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Buka post · 8 Koin/ }));
     expect(screen.getByRole('dialog', { name: 'Rahasia' })).toBeInTheDocument();
   });
 
@@ -163,7 +163,7 @@ describe('PostCard', () => {
       }),
     );
     renderCard(lockedPost(SIGNED_IN));
-    fireEvent.click(screen.getByRole('button', { name: /Buka · 8 Koin/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Buka post · 8 Koin/ }));
     const confirm = screen.getByRole('button', { name: 'Buka dengan 8 Koin' });
     await waitFor(() => expect(confirm).toBeEnabled());
     fireEvent.click(confirm);
@@ -439,7 +439,7 @@ describe('PostCard detail mode', () => {
 
   it('opens Buka without a detail link on a locked post, and loads no media', () => {
     renderDetail(lockedPost(SIGNED_IN));
-    fireEvent.click(screen.getByRole('button', { name: /Buka · 8 Koin/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Buka post · 8 Koin/ }));
     expect(screen.queryByRole('link', { name: 'Lihat detail post' })).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
   });

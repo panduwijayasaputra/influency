@@ -10,13 +10,21 @@ export const TABS = [
 ] as const;
 
 /** Beranda matches only `/`; other tabs match their path and sub-paths. */
-export function isTabActive(href: string, pathname: string): boolean {
+export function isTabActive(href: string, pathname: string, ownSlug?: string): boolean {
   if (href === '/') return pathname === '/';
+  // A creator's own public page (and its posts) belongs to the Profil tab.
+  if (
+    href === '/me' &&
+    ownSlug &&
+    (pathname === `/${ownSlug}` || pathname.startsWith(`/${ownSlug}/`))
+  ) {
+    return true;
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 /** App-style bottom tab bar, mounted once by AppChrome. */
-export function BottomNav({ pathname }: { pathname: string }) {
+export function BottomNav({ pathname, ownSlug }: { pathname: string; ownSlug?: string }) {
   return (
     <nav
       aria-label="Navigasi utama"
@@ -24,7 +32,7 @@ export function BottomNav({ pathname }: { pathname: string }) {
     >
       <ul className="mx-auto grid h-(--bottom-nav-height) max-w-feed grid-cols-4">
         {TABS.map(({ href, label, Icon }) => {
-          const active = isTabActive(href, pathname);
+          const active = isTabActive(href, pathname, ownSlug);
           return (
             <li key={href}>
               <Link

@@ -1,5 +1,6 @@
 'use client';
 
+import { UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import type { HomeFeedItem, RecommendedCreator } from '@influency/shared';
@@ -103,9 +104,14 @@ export function HomeFeed() {
 
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
+      <div className="flex flex-col items-center gap-3 px-8 py-16 text-center">
+        <span className="flex size-18 items-center justify-center rounded-3xl bg-accent text-primary-ink">
+          <UserPlus aria-hidden className="size-8" />
+        </span>
         <h2 className="text-lg font-extrabold">Belum ada postingan</h2>
-        <p className="text-sm text-muted-foreground">Postingan dari creator akan muncul di sini.</p>
+        <p className="max-w-70 text-[14.5px] leading-normal text-muted-foreground">
+          Postingan dari creator akan muncul di sini.
+        </p>
         <Button asChild>
           <Link href="/discover">Jelajahi</Link>
         </Button>
@@ -118,7 +124,7 @@ export function HomeFeed() {
 
   return (
     <>
-      <div className="flex flex-col divide-y">
+      <div className="flex flex-col gap-2 pt-2">
         {items.map((item, i) => (
           <Fragment key={item.id}>
             <PostCard post={item} creator={item.creator} linkCreator />

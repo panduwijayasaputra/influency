@@ -122,7 +122,7 @@ describe('PostDetail', () => {
     const previewUrl = '/api/v1/creators/ana/posts/p/preview/x';
     const { container } = await renderDetail(locked(previewUrl));
     expect(container.querySelector('img')).toHaveAttribute('src', previewUrl);
-    expect(screen.getByRole('link', { name: /Buka · 8 Koin/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Buka post · 8 Koin/ })).toHaveAttribute(
       'href',
       loginHref(`/ana/posts/${POST_ID}`),
     );
@@ -141,7 +141,7 @@ describe('PostDetail', () => {
         subscribed: false,
       },
     });
-    fireEvent.click(screen.getByRole('button', { name: /Buka · 8 Koin/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Buka post · 8 Koin/ }));
     expect(await screen.findByText('Permanen')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Lihat detail post' })).toBeNull();
   });

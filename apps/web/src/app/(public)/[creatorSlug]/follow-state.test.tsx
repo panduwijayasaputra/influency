@@ -14,7 +14,7 @@ describe('FollowProvider', () => {
       </FollowProvider>,
     );
     const count = screen.getByLabelText(/pengikut/);
-    expect(count).toHaveTextContent('1,2 rb pengikut');
+    expect(count).toHaveTextContent('1,2 rb');
     expect(count.getAttribute('aria-label')).toMatch(/^1\.200 pengikut$/);
   });
 
@@ -37,6 +37,6 @@ describe('FollowProvider', () => {
       { wrapper: Toaster },
     );
     fireEvent.click(screen.getByRole('button', { name: 'Ikuti' }));
-    expect(await screen.findByLabelText('1.201 pengikut')).toHaveTextContent('1,2 rb pengikut');
+    expect(await screen.findByLabelText('1.201 pengikut')).toHaveTextContent('1,2 rb');
   });
 });

@@ -95,7 +95,7 @@ export function CreatorUntukmu({ creators }: { creators: RecommendedCreator[] })
   };
 
   return (
-    <section aria-label="Creator untukmu" className="flex flex-col gap-3 bg-card py-4">
+    <section aria-label="Creator untukmu" className="flex flex-col gap-3 border-y bg-card py-4">
       <div className="flex items-center justify-between pr-2 pl-4">
         <h2 className="text-base font-extrabold">Creator untukmu</h2>
         <Link

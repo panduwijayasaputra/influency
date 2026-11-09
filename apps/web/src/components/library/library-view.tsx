@@ -115,7 +115,7 @@ export function LibraryView() {
         </div>
       )}
       {items.length > 0 && view === 'list' && (
-        <div className="flex flex-col divide-y pt-2">
+        <div className="flex flex-col gap-2 pt-2">
           {items.map((item) => (
             <PostCard key={item.id} post={item} creator={item.creator} linkCreator />
           ))}

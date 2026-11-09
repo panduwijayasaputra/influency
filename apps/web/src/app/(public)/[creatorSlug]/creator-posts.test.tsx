@@ -53,13 +53,9 @@ describe('CreatorPosts', () => {
   });
 
   describe('owner entry points (creator-studio US-054)', () => {
-    it('offers Post Baru and an Edit item on each card', async () => {
+    it('offers an Edit item on each card (Post Baru lives in the profile header)', async () => {
       const post = locked('Milikku');
       await renderFeed([post], true);
-      expect(screen.getByRole('link', { name: 'Post Baru' })).toHaveAttribute(
-        'href',
-        '/studio/posts/new',
-      );
       fireEvent.pointerDown(screen.getByRole('button', { name: 'Lainnya' }), { button: 0 });
       expect(await screen.findByRole('menuitem', { name: 'Edit' })).toHaveAttribute(
         'href',
@@ -67,9 +63,8 @@ describe('CreatorPosts', () => {
       );
     });
 
-    it('still offers Post Baru when there are no posts yet', async () => {
+    it('shows the empty note when there are no posts yet', async () => {
       await renderFeed([], true);
-      expect(screen.getByRole('link', { name: 'Post Baru' })).toBeInTheDocument();
       expect(screen.getByText('Belum ada konten yang dipublikasikan.')).toBeInTheDocument();
     });
 

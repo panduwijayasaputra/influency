@@ -36,13 +36,13 @@ export function PostGrid({ posts, creator }: { posts: PublicPost[]; creator: Pos
   const shown = filterPosts(posts, media, access);
   return (
     <div>
-      <div className="flex items-center justify-between gap-2 px-4 py-2">
+      <div className="flex items-center gap-2 border-b bg-card px-4 py-3">
         <label>
           <span className="sr-only">Media</span>
           <select
             value={media}
             onChange={(e) => setMedia(e.target.value as MediaFilter)}
-            className="h-11 rounded-md border border-input bg-card px-3 text-sm font-semibold"
+            className="h-11 w-26 shrink-0 rounded-xl border border-input bg-card px-2.5 text-[13px] font-bold"
           >
             {MEDIA_OPTIONS.map(([value, label]) => (
               <option key={value} value={value}>
@@ -51,7 +51,11 @@ export function PostGrid({ posts, creator }: { posts: PublicPost[]; creator: Pos
             ))}
           </select>
         </label>
-        <div role="radiogroup" aria-label="Akses" className="flex rounded-sm bg-muted p-1">
+        <div
+          role="radiogroup"
+          aria-label="Akses"
+          className="grid min-w-0 flex-1 grid-cols-3 gap-0.5 rounded-xl bg-muted p-[3px]"
+        >
           {ACCESS_OPTIONS.map(([value, label]) => (
             <button
               key={value}
@@ -60,8 +64,8 @@ export function PostGrid({ posts, creator }: { posts: PublicPost[]; creator: Pos
               aria-checked={access === value}
               onClick={() => setAccess(value)}
               className={cn(
-                'min-h-11 rounded-sm px-3 text-sm font-semibold focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
-                access === value ? 'bg-card shadow-sm' : 'text-muted-foreground',
+                'h-9.5 rounded-[9px] px-1 text-[13px] font-semibold whitespace-nowrap focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                access === value ? 'bg-card font-extrabold shadow-sm' : 'text-muted-foreground',
               )}
             >
               {label}
@@ -75,7 +79,7 @@ export function PostGrid({ posts, creator }: { posts: PublicPost[]; creator: Pos
           <p className="text-muted-foreground">Coba filter lain.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-0.5">
+        <div className="grid grid-cols-3 gap-0.5 bg-card">
           {shown.map((post) => (
             <GridTile
               key={post.id}

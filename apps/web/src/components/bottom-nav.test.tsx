@@ -2,8 +2,8 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { BottomNav } from './bottom-nav';
 
-const current = (pathname: string) => {
-  render(<BottomNav pathname={pathname} />);
+const current = (pathname: string, ownSlug?: string) => {
+  render(<BottomNav pathname={pathname} ownSlug={ownSlug} />);
   return screen
     .getAllByRole('link')
     .filter((a) => a.getAttribute('aria-current') === 'page')
@@ -32,5 +32,14 @@ describe('BottomNav', () => {
     ['/ana/posts/1', []],
   ])('marks the active tab for %s', (pathname, expected) => {
     expect(current(pathname)).toEqual(expected);
+  });
+
+  it.each([
+    ['/ana', ['Profil']],
+    ['/ana/posts/1', ['Profil']],
+    ['/anabel', []],
+    ['/other', []],
+  ])("marks Profil for the creator's own page %s", (pathname, expected) => {
+    expect(current(pathname, 'ana')).toEqual(expected);
   });
 });

@@ -179,7 +179,7 @@ describe('PostGrid', () => {
 describe('GridTile tag and aspect', () => {
   const creator = { slug: 'ana', displayName: 'Nama', avatarUrl: null };
 
-  it('shows the tag and the portrait ratio, moving the video badge up', () => {
+  it('shows the tag and the portrait ratio, with a play-only video badge', () => {
     render(
       <GridTile
         post={FREE_VIDEO}
@@ -193,12 +193,12 @@ describe('GridTile tag and aspect', () => {
     const tile = screen.getByRole('button', { name: /^Post ·/ });
     expect(tile).toHaveClass('aspect-[3/4]');
     expect(screen.getByText('Dibeli')).toBeInTheDocument();
-    expect(screen.getByText('1:05')).toHaveClass('top-1.5');
+    expect(screen.queryByText('1:05')).toBeNull();
   });
 
   it('keeps the square tile without a tag by default', () => {
     render(<GridTile post={FREE_VIDEO} href="/x" creator={creator} />, { wrapper: Toaster });
     expect(screen.getByRole('button', { name: /^Post ·/ })).toHaveClass('aspect-square');
-    expect(screen.getByText('1:05')).toHaveClass('bottom-1.5');
+    expect(screen.getByText('1:05')).toHaveClass('top-1.5', 'right-1.5');
   });
 });

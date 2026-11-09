@@ -12,7 +12,9 @@ import { getCurrentUser } from '@/lib/api/current-user';
 import { getMyCreatorProfile } from '@/lib/api/creator-profile';
 import { getPublicCreator } from '@/lib/api/public-creator';
 import { loginHref } from '@/lib/login-href';
+import { NewPostLink } from './creator-content';
 import { CreatorPosts } from './creator-posts';
+import { PostCounts } from './post-counts';
 import { FollowerCount, FollowProvider } from './follow-state';
 import { SHARE_BUTTON_CLASS, ShareButton } from './share-button';
 import { ProfileActions } from './profile-actions';
@@ -75,7 +77,14 @@ export async function CreatorView({ creator }: { creator: CreatorProfileResponse
         <FollowProvider initial={follow}>
           <ProfileHeader
             creator={creator}
-            stats={<FollowerCount />}
+            stats={
+              <>
+                <Suspense fallback={null}>
+                  <PostCounts slug={creator.slug} />
+                </Suspense>
+                <FollowerCount />
+              </>
+            }
             editHref={isOwner ? '/studio/profile' : undefined}
             share={
               signedIn ? (
@@ -87,7 +96,9 @@ export async function CreatorView({ creator }: { creator: CreatorProfileResponse
               )
             }
             actions={
-              isOwner ? null : (
+              isOwner ? (
+                <NewPostLink />
+              ) : (
                 <ProfileActions
                   slug={creator.slug}
                   creatorName={creator.displayName}
@@ -100,7 +111,7 @@ export async function CreatorView({ creator }: { creator: CreatorProfileResponse
           />
         </FollowProvider>
 
-        <div className="mt-4 px-5">
+        <div className="mt-0">
           {/* Uncached so hidden posts disappear immediately; the profile above stays cached. */}
           <Suspense fallback={<p className="text-sm text-muted-foreground">Memuat konten…</p>}>
             <CreatorPosts

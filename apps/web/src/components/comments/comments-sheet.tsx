@@ -1,5 +1,6 @@
 'use client';
 
+import { Lock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { API_PREFIX, type PostCommentList, postCommentListSchema } from '@influency/shared';
 import Link from 'next/link';
@@ -129,16 +130,19 @@ function LockedComments({
   const plan = creator.plan ?? null;
   const subscribe = plan && `Langganan · ${plan.priceCoins} Koin / ${plan.durationDays} hari`;
   return (
-    <div className="flex flex-col gap-3">
-      <div>
-        <p className="font-bold">Komentar khusus pendukung</p>
-        <p className="text-sm text-muted-foreground">
+    <div className="flex flex-col items-center gap-3 px-3 py-6 text-center [&>*]:w-full">
+      <span className="flex size-18 items-center justify-center self-center rounded-3xl bg-accent text-primary-ink">
+        <Lock aria-hidden className="size-8" />
+      </span>
+      <div className="flex flex-col items-center gap-3">
+        <p className="text-[19px] font-extrabold">Komentar khusus pendukung</p>
+        <p className="max-w-72 text-[14.5px] leading-normal text-muted-foreground">
           Hanya yang punya akses ke post premium ini yang bisa membaca dan ikut berkomentar.
         </p>
       </div>
       {guest ? (
         <>
-          <Button asChild className="h-12">
+          <Button asChild className="h-13">
             <Link href={loginHref(path)}>{unlock}</Link>
           </Button>
           {subscribe && (
