@@ -60,6 +60,8 @@ The API port can be changed with `API_PORT` in `.env`.
 
 The Prisma client is generated into `apps/api/src/generated/` on install. After changing `apps/api/prisma/schema.prisma`, regenerate it with `pnpm --filter @influency/api generate`.
 
+> Full setup for every external service (Telegram bot and login, Midtrans, R2, Stream) is in [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md).
+
 ### Telegram login (manual check)
 
 Login uses Telegram Login OIDC. Tests use a fake Telegram provider, so this setup is only needed to log in with a real account:

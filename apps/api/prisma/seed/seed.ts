@@ -1,5 +1,6 @@
 import type { PrismaClient } from '../../src/generated/prisma/client.js';
 import { seedCoinPackages } from './coin-packages.js';
+import { seedContent } from './content.js';
 import { seedRoles } from './roles.js';
 import { seedSubscriptionPlans } from './subscription-plans.js';
 import { seedUsers } from './users.js';
@@ -13,6 +14,7 @@ export const seedSteps: SeedStep[] = [
   { name: 'roles and creator profiles', run: seedRoles },
   { name: 'coin packages', run: seedCoinPackages },
   { name: 'subscription plans', run: seedSubscriptionPlans },
+  { name: 'demo content', run: seedContent },
 ];
 
 export async function seed(prisma: PrismaClient): Promise<void> {
