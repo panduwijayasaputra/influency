@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Influency design system</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1200px; height: 1400px; box-sizing: border-box; padding: 56px; background: #FAFAFA; color: #25262B; font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 40px">
+  <header style="display: flex; align-items: flex-end; justify-content: space-between">
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #B4463B">Light Social · proposed tokens</span>
+      <h1 style="margin: 0; font-size: 44px; font-weight: 800; letter-spacing: -0.03em">Influency design system</h1>
+    </div>
+    <span style="font-size: 14px; color: #6B6B75; max-width: 380px; text-align: right; line-height: 1.5">Tokens are PROPOSAL, not locked. Two were tuned for WCAG AA; see the notes on primary and muted.</span>
+  </header>
+
+  <section style="display: flex; flex-direction: column; gap: 16px">
+    <h2 style="margin: 0; font-size: 20px; font-weight: 800">Color</h2>
+    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px">
+      <sc-for list="{{colors}}" as="c" hint-placeholder-count="10">
+        <div style="background: #FFFFFF; border: 1px solid #ECE8E7; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column">
+          <span style="height: 72px; background: {{c.hex}}; border-bottom: 1px solid #ECE8E7"></span>
+          <span style="padding: 12px 14px; display: flex; flex-direction: column; gap: 3px">
+            <span style="font-size: 13px; font-weight: 800">{{c.name}}</span>
+            <span style="font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: #45464D">{{c.hex}}</span>
+            <span style="font-size: 12px; color: #6B6B75; line-height: 1.4">{{c.use}}</span>
+          </span>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px">
+    <section style="display: flex; flex-direction: column; gap: 16px">
+      <h2 style="margin: 0; font-size: 20px; font-weight: 800">Type · Plus Jakarta Sans</h2>
+      <div style="background: #FFFFFF; border: 1px solid #ECE8E7; border-radius: 16px; padding: 8px 20px">
+        <sc-for list="{{type}}" as="t" hint-placeholder-count="6">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid #F1EEED">
+            <span style="font-size: {{t.size}}; font-weight: {{t.weight}}; letter-spacing: {{t.ls}}">{{t.sample}}</span>
+            <span style="font-size: 12px; color: #6B6B75; white-space: nowrap; font-family: ui-monospace, Menlo, monospace">{{t.spec}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+    <section style="display: flex; flex-direction: column; gap: 16px">
+      <h2 style="margin: 0; font-size: 20px; font-weight: 800">Shape, spacing, touch</h2>
+      <div style="background: #FFFFFF; border: 1px solid #ECE8E7; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 18px">
+        <div style="display: flex; gap: 14px; align-items: flex-end">
+          <span style="display: flex; flex-direction: column; gap: 6px; align-items: center"><span style="width: 64px; height: 64px; border-radius: 9px; background: #FFE8E2"></span><span style="font-size: 12px; color: #6B6B75">9 · segment</span></span>
+          <span style="display: flex; flex-direction: column; gap: 6px; align-items: center"><span style="width: 64px; height: 64px; border-radius: 14px; background: #FFE8E2"></span><span style="font-size: 12px; color: #6B6B75">14 · button</span></span>
+          <span style="display: flex; flex-direction: column; gap: 6px; align-items: center"><span style="width: 64px; height: 64px; border-radius: 16px; background: #FFE8E2"></span><span style="font-size: 12px; color: #6B6B75">16 · media</span></span>
+          <span style="display: flex; flex-direction: column; gap: 6px; align-items: center"><span style="width: 64px; height: 64px; border-radius: 22px 22px 0 0; background: #FFE8E2"></span><span style="font-size: 12px; color: #6B6B75">22 · sheet</span></span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; line-height: 1.5; color: #45464D">
+          <span><b style="color: #25262B">Spacing</b> 4 · 8 · 12 · 16 · 24 · 32 — 16px side gutter on mobile</span>
+          <span><b style="color: #25262B">Touch</b> every control ≥ 44×44, primary actions 48–52 tall</span>
+          <span><b style="color: #25262B">Shell</b> top bar 56 · bottom nav 64 + safe-area-inset-bottom</span>
+          <span><b style="color: #25262B">Desktop</b> keep a 480–560px feed column centred</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section style="display: flex; flex-direction: column; gap: 16px">
+    <h2 style="margin: 0; font-size: 20px; font-weight: 800">Controls</h2>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px">
+      <div style="background: #FFFFFF; border: 1px solid #ECE8E7; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+        <span style="font-size: 12px; font-weight: 800; color: #6B6B75; text-transform: uppercase; letter-spacing: .06em">Buttons</span>
+        <button type="button" style="height: 52px; border-radius: 14px; border: 0; background: #D9584C; color: #FFFFFF; font: inherit; font-size: 15px; font-weight: 700">Unlock post · 25 Koin</button>
+        <button type="button" style="height: 48px; border-radius: 14px; border: 1px solid #DCD6D5; background: #FFFFFF; color: #25262B; font: inherit; font-size: 15px; font-weight: 700">Edit Profile</button>
+        <div style="display: flex; gap: 8px">
+          <button type="button" style="flex: 1; height: 44px; border-radius: 12px; border: 0; background: #25262B; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 700">Follow</button>
+          <button type="button" style="flex: 1; height: 44px; border-radius: 22px; border: 1px solid #F1DDB3; background: #FFF6E5; color: #6B4A0E; font: inherit; font-size: 14px; font-weight: 800">Send Tip</button>
+        </div>
+      </div>
+      <div style="background: #FFFFFF; border: 1px solid #ECE8E7; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+        <span style="font-size: 12px; font-weight: 800; color: #6B6B75; text-transform: uppercase; letter-spacing: .06em">Segmented filters</span>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; padding: 3px; border-radius: 12px; background: #F1EEED">
+          <span style="height: 38px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #6B6B75">All</span>
+          <span style="height: 38px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; background: #FFFFFF; box-shadow: 0 1px 3px rgba(20,20,24,.12)">Video</span>
+          <span style="height: 38px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #6B6B75">Image</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; padding: 3px; border-radius: 12px; background: #F1EEED">
+          <span style="height: 38px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #6B6B75">All Media</span>
+          <span style="height: 38px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #6B6B75">Free</span>
+          <span style="height: 38px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; background: #FFFFFF; box-shadow: 0 1px 3px rgba(20,20,24,.12)">Premium</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid #ECE8E7">
+          <span style="position: relative; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800">For You<span style="position: absolute; bottom: 0; width: 36px; height: 3px; border-radius: 3px; background: #EF8176"></span></span>
+          <span style="height: 44px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; color: #6B6B75">Following</span>
+        </div>
+      </div>
+      <div style="background: #FFFFFF; border: 1px solid #ECE8E7; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+        <span style="font-size: 12px; font-weight: 800; color: #6B6B75; text-transform: uppercase; letter-spacing: .06em">Badges &amp; labels</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <span style="height: 24px; padding: 0 8px; border-radius: 12px; background: #FFE8E2; color: #8F3A31; font-size: 11.5px; font-weight: 800; display: flex; align-items: center">Premium</span>
+          <span style="height: 24px; padding: 0 8px; border-radius: 12px; background: #E6F4EA; color: #1E6B3A; font-size: 11.5px; font-weight: 800; display: flex; align-items: center">Unlocked</span>
+          <span style="height: 18px; padding: 0 6px; border-radius: 5px; background: #FFE8E2; color: #8F3A31; font-size: 10.5px; font-weight: 800; display: flex; align-items: center">Creator</span>
+          <span style="height: 24px; padding: 0 9px; border-radius: 12px; background: rgba(20,20,24,.7); color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center">2 / 3</span>
+          <span style="height: 24px; padding: 0 9px; border-radius: 12px; background: rgba(20,20,24,.7); color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center">Playing · muted</span>
+        </div>
+        <span style="align-self: flex-start; display: inline-flex; padding: 6px 10px; border-radius: 8px; border: 1px dashed #D8C3BF; background: #FFF7F5; color: #8F3A31; font-size: 12px; font-weight: 700">Design proposal · needs confirmation</span>
+        <span style="font-size: 12.5px; color: #6B6B75; line-height: 1.5">The dashed label marks every OPEN surface in the prototype.</span>
+      </div>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 16px">
+    <h2 style="margin: 0; font-size: 20px; font-weight: 800">Component map</h2>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+      <sc-for list="{{components}}" as="k" hint-placeholder-count="12">
+        <div style="background: #FFFFFF; border: 1px solid #ECE8E7; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 13.5px; font-weight: 800; font-family: ui-monospace, Menlo, monospace">{{k.name}}</span>
+          <span style="font-size: 12.5px; color: #6B6B75; line-height: 1.45">{{k.note}}</span>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1200,"height":1400}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      colors: [
+        { name: 'primary', hex: '#EF8176', use: 'Brand coral: logo, tab bars, liked heart, selection rings. Not for white text.' },
+        { name: 'primary.strong', hex: '#D9584C', use: 'Filled buttons with white text (4.8:1). Added for AA.' },
+        { name: 'primary.ink', hex: '#B4463B', use: 'Coral text links and lock icons on white.' },
+        { name: 'primary.soft', hex: '#FFE8E2', use: 'Chips, Premium badge, empty-state tiles.' },
+        { name: 'koin', hex: '#D6A443', use: 'Koin coin mark only. Surfaces use #FFF6E5 with #6B4A0E text.' },
+        { name: 'canvas', hex: '#FAFAFA', use: 'App background behind cards.' },
+        { name: 'surface', hex: '#FFFFFF', use: 'Cards, bars, sheets, drawer.' },
+        { name: 'text', hex: '#25262B', use: 'Primary text and icons.' },
+        { name: 'muted', hex: '#6B6B75', use: 'Metadata. Darkened from #85858F, which fails 4.5:1.' },
+        { name: 'border', hex: '#ECE8E7', use: 'Hairline dividers and card outlines.' }
+      ],
+      type: [
+        { sample: 'Profile name', size: '21px', weight: 800, ls: '-0.01em', spec: '21 / 800' },
+        { sample: 'Screen title', size: '22px', weight: 800, ls: '-0.01em', spec: '22 / 800' },
+        { sample: 'Sheet title', size: '17px', weight: 800, ls: '0', spec: '17 / 800' },
+        { sample: 'Caption and body text', size: '15px', weight: 400, ls: '0', spec: '15 / 400 / 1.5' },
+        { sample: 'Comment text', size: '14.5px', weight: 400, ls: '0', spec: '14.5 / 400 / 1.45' },
+        { sample: '@handle · Today · 07:12', size: '12.5px', weight: 500, ls: '0', spec: '12.5 / 500 muted' }
+      ],
+      components: [
+        { name: 'AppShell', note: 'Top bar + scroller + always-visible bottom nav; overlays layer above.' },
+        { name: 'TopNavbar', note: 'Logo left; Search and avatar right. Hides on scroll DOWN, shows on UP.' },
+        { name: 'BottomNavigation', note: 'Home · Notification · Discover · Wallet · Profile. Fixed order.' },
+        { name: 'AccountDrawer', note: 'Right slide-in, backdrop, close. Become a Creator only for non-creators.' },
+        { name: 'FeedTabs', note: 'For You / Following. Resets to For You on every Home entry.' },
+        { name: 'PostCard', note: 'One component for Home, Profile Posts and Collection Vertical.' },
+        { name: 'MediaCarousel', note: 'Scroll-snap, 86% slides + right peek only when 2+ media.' },
+        { name: 'VideoMedia', note: 'Muted autoplay if entitled + active + visible; one at a time.' },
+        { name: 'PremiumPreview', note: 'Server-blurred preview, lock, media summary. No original media.' },
+        { name: 'CreatorProfileHeader', note: 'Cover, avatar, name, @handle; role-aware actions.' },
+        { name: 'MediaGrid', note: '3-col squares, no captions, play + lock badges.' },
+        { name: 'FilterSegmentedControl', note: 'Media type and Access type compose independently.' },
+        { name: 'CommentsBottomSheet', note: 'Top default each open; locked variant shows no thread data.' },
+        { name: 'CommentThread', note: 'Pinned first, one reply level, deleted-parent placeholder.' },
+        { name: 'CommentComposer', note: 'Sticky above safe area; reply chip; login gate for guests.' },
+        { name: 'CreatorCard / WalletSummary', note: 'Following directory cards; Koin balance + Buy Koin.' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

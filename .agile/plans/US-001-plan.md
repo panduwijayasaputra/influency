@@ -1,259 +1,203 @@
-# Technical Plan: US-001 — Monorepo Workspace & Tooling
+# Technical Plan: US-001 — Light Social Design Tokens
 
 ## Architecture Overview
 
-A pnpm workspace with four packages, all TypeScript `strict`:
+We re-skin the existing shadcn + Tailwind v4 theme in place and do not add a parallel token system.
 
-```text
-influency/
-  .nvmrc                       # 24 (Node 24 LTS)
-  package.json                 # private root, scripts fan out with `pnpm -r`
-  pnpm-workspace.yaml          # apps/*, packages/*
-  .gitignore  .editorconfig  .prettierrc.json  .prettierignore
-  README.md
-  apps/
-    web/                       # @influency/web  — Next.js App Router + Tailwind + shadcn/ui
-    api/                       # @influency/api  — NestJS on Fastify
-  packages/
-    shared/                    # @influency/shared — shared constants/types/schemas (Zod-ready)
-    config/                    # @influency/config — tsconfig bases + ESLint flat configs
-```
+- Every colour is defined once, as a hex CSS variable in `:root` of `apps/web/src/app/globals.css`.
+- These variables are mapped onto the shadcn variables that components already use (`bg-primary`, `bg-background`, `text-foreground`, `border-border`, …). Existing class names therefore keep working.
+- A few semantic tokens are added for things shadcn has no slot for, and exposed via `@theme inline`.
 
-Decisions agreed with the user:
-- **Lint/format:** ESLint (flat config) + typescript-eslint + Prettier.
-- **Task running:** plain `pnpm -r` (topological order). No Turborepo; revisit via ADR if CI gets slow.
-- **Node:** Node 24 LTS pinned in `.nvmrc`; `engines.node` `>=24` and `packageManager` pinned in root `package.json`.
-- **Tests:** Vitest everywhere. API uses `unplugin-swc` so Vitest handles NestJS decorators/metadata.
+The theme is light only: the `dark` class and `color-scheme: dark` are removed.
 
-**Shared package consumption.** `@influency/shared` is built with `tsup` to `dist/` (ESM + CJS + d.ts) so both Next.js (ESM) and NestJS (CommonJS) can import it at runtime. Its `exports` map points the `types` condition at `src/index.ts`, so `typecheck` and editors work without building first. Root `dev`/`build`/`test` build shared before the apps (`pnpm -r` handles order because apps depend on `workspace:*`).
+Decisions agreed with the user (2026-11-07):
+- **Filled button colour is `#D9584C` exactly as in the design**, with white text. This pair measures **3.85:1**, not the 4.8:1 the design claims. It passes only the 3:1 large-text threshold. The user accepted it as a documented AA exception, and the story AC was updated. Every other text/background pair must still meet 4.5:1, and the test guards that.
+- Shape follows the design. Buttons and inputs use a 14 px radius instead of pills; segments 9 px, cards/media 16 px, recommended cards 20 px, sheets 22 px. Primary buttons are 48 px tall by default and 52 px at `lg`.
+- Coral `#EF8176` (`brand`) is used only for the logo, active indicators, the liked heart and focus/selection rings. It never carries text: white on it is 2.6:1.
 
-**Out of scope here** (later stories): Docker Compose and env validation (US-002), health endpoint, request ID and error format (US-003), Prisma (US-004), CI (US-005). The API in this story has no product routes; it only boots with the `/api/v1` global prefix.
+### Token mapping (hex, in `:root`)
 
-**Versions:** use the current stable release of each tool that is at least two weeks old, pin exact versions (no `^`/`~`) in every `package.json`, and record the chosen major versions in `.agile/guidelines/tech-stack.md`.
+| Variable | Value | Design token / use |
+|---|---|---|
+| `--background` | `#FAFAFA` | canvas |
+| `--foreground`, `--card-foreground`, `--popover-foreground` | `#25262B` | text |
+| `--card`, `--popover` | `#FFFFFF` | surface |
+| `--primary` | `#D9584C` | primary.strong — filled buttons |
+| `--primary-foreground` | `#FFFFFF` | white on filled buttons (AA exception) |
+| `--primary-ink` (new) | `#B4463B` | coral text links and lock icons on white or soft |
+| `--brand` (new) | `#EF8176` | logo, active indicator, liked heart |
+| `--ring` | `#EF8176` | selection/focus ring |
+| `--accent` | `#FFE8E2` | primary.soft — chips, Premium badge, hover |
+| `--accent-foreground` | `#8F3A31` | text on soft (6.35:1) |
+| `--secondary` | `#25262B` | dark "Ikuti" button / active chip |
+| `--secondary-foreground` | `#FFFFFF` | |
+| `--muted` | `#F1EEED` | segment track, neutral fill |
+| `--muted-foreground` | `#6B6B75` | metadata |
+| `--border` | `#ECE8E7` | hairlines |
+| `--input` | `#DCD6D5` | input / outline-button border |
+| `--destructive` | `#B42318` | danger |
+| `--koin` | `#D6A443` | Koin coin mark only (never behind text) |
+| `--koin-surface` (new) | `#FFF6E5` | Koin surfaces (balance card, tip button) |
+| `--koin-foreground` | `#6B4A0E` | text on `koin-surface` (7.49:1) |
+| `--koin-border` (new) | `#F1DDB3` | tip button border |
+| `--success` | `#1E6B3A` | Active / Unlocked text |
+| `--success-surface` (new) | `#E6F4EA` | badge background |
+| `--feed-max-width` | `34rem` | unchanged (544 px, inside 480–560) |
+
+Measured contrast: `#6B6B75` on `#FFE8E2` is 4.49:1, below AA. Muted text must **not** sit on `accent`; use `accent-foreground` there. The test documents this.
+
+The `--sidebar-*` and `--chart-*` variables are unused, so delete them and their `@theme` mappings.
 
 ## Dependencies
 
-- Node 24 LTS, pnpm (via Corepack, version pinned in `packageManager`)
-- Dev tooling: `typescript`, `eslint`, `typescript-eslint`, `@eslint/js`, `eslint-config-prettier`, `prettier`, `prettier-plugin-tailwindcss`, `vitest`
-- API: `@nestjs/core`, `@nestjs/common`, `@nestjs/platform-fastify`, `reflect-metadata`, `rxjs`, `@nestjs/cli`, `@nestjs/testing`, `unplugin-swc`, `@swc/core`
-- Web: `next`, `react`, `react-dom`, `tailwindcss` (+ its PostCSS plugin), shadcn/ui CLI deps (`class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react`), `eslint-config-next` / `@next/eslint-plugin-next`, `@vitejs/plugin-react`, `@testing-library/react`, `@testing-library/jest-dom`, `jsdom`
-- Shared: `tsup`, `zod` (dependency only; schemas arrive in later stories)
+None new. Plus Jakarta Sans is already loaded via `next/font` in `apps/web/src/app/fonts.ts`. It is a variable font, so weights 400–800 are already available.
 
 ## Risks
 
-- **ESM/CJS mismatch between Next.js and NestJS** → dual-format `tsup` build of shared; covered by both apps' smoke tests importing from `@influency/shared`.
-- **Vitest + NestJS decorators** → `unplugin-swc` with `decoratorMetadata: true`; smoke test boots the real `AppModule`.
-- **Next.js ESLint flat-config support varies by version** → follow the current `eslint-config-next` docs for flat config; if it needs `FlatCompat`, isolate that inside `packages/config/eslint/next.mjs`.
-- **Tool version drift** → exact pins + `pnpm-lock.yaml` committed.
+- **Existing pages were styled against a dark palette.** Some spots assume light text on dark, for example:
+  - the active chip in `post-grid.tsx` (now charcoal `secondary`, which is fine)
+  - `KoinIcon` text on `bg-koin` (white-ish on gold fails)
+
+  Mitigation: TASK-002 does a sweep plus a visual check of every route.
+- **Radius changes affect shadcn defaults.** `rounded-md`/`rounded-lg` change meaning when the radius scale is remapped. Mitigation: map the scale explicitly (below) and check the sweep visually.
+- **Uncommitted Dark Social components** (`bottom-nav`, `account-menu`, `site-header`, `purchase-sheet`, `koin`, placeholders) will be structurally replaced in US-002–US-005. Here they only need to render legibly in the new tokens; don't redesign them.
 
 ## Tasks
 
-### TASK-001: Root Workspace & Shared Config Package
+### TASK-001: Light Social tokens, radius scale and theme test
 
-Create the workspace skeleton and the reusable config package.
+**What to build**
 
-1. `.nvmrc` containing `24`.
-2. Root `package.json`:
-   - `"name": "influency"`, `"private": true`, `"packageManager": "pnpm@<exact>"`, `"engines": { "node": ">=24" }`
-   - Scripts (fill in fully in TASK-005; create now with at least `format` and `format:check`):
-     - `"format": "prettier --write ."`, `"format:check": "prettier --check ."`
-   - devDependencies: `prettier`, `prettier-plugin-tailwindcss`, `typescript`
-3. `pnpm-workspace.yaml`: `packages: ["apps/*", "packages/*"]`.
-4. `.gitignore`: `node_modules/`, `dist/`, `.next/`, `coverage/`, `*.tsbuildinfo`, `.env`, `.env.*` with `!.env.example`, `.turbo/`, OS/editor files.
-5. `.editorconfig` (utf-8, lf, 2 spaces, final newline) and `.prettierrc.json` (`singleQuote: true`, `trailingComma: "all"`, `printWidth: 100`, plugin `prettier-plugin-tailwindcss`). `.prettierignore`: `pnpm-lock.yaml`, `dist`, `.next`, `coverage`, `.agile/.docs`.
-6. `packages/config` (`@influency/config`, private, no build):
-   - `tsconfig/base.json`: `strict: true`, `noUncheckedIndexedAccess: true`, `noImplicitOverride: true`, `exactOptionalPropertyTypes: false`, `forceConsistentCasingInFileNames: true`, `skipLibCheck: true`, `esModuleInterop: true`, `isolatedModules: true`, `resolveJsonModule: true`, `target: "ES2023"`.
-   - `tsconfig/nest.json` extends base: `module: "CommonJS"`, `moduleResolution: "Node10"` (or `Node16` if exports resolution requires it), `experimentalDecorators: true`, `emitDecoratorMetadata: true`, `outDir: "dist"`.
-   - `tsconfig/next.json` extends base: `module: "ESNext"`, `moduleResolution: "Bundler"`, `jsx: "preserve"`, `lib: ["dom","dom.iterable","ES2023"]`, `noEmit: true`, `allowJs: false`, `incremental: true`, Next plugin entry.
-   - `tsconfig/library.json` extends base: `module: "ESNext"`, `moduleResolution: "Bundler"`, `declaration: true`.
-   - `eslint/base.mjs`: exports a flat-config array — `@eslint/js` recommended + `typescript-eslint` `recommendedTypeChecked` (with `parserOptions.projectService: true`) + `eslint-config-prettier` last; rules: `@typescript-eslint/no-explicit-any: error`, `@typescript-eslint/no-floating-promises: error`, `@typescript-eslint/consistent-type-imports: error`; ignores `dist/**`, `.next/**`, `coverage/**`.
-   - `eslint/nest.mjs`: base + Node globals; allow empty decorated classes (`@typescript-eslint/no-extraneous-class` off).
-   - `eslint/next.mjs`: base + Next.js core-web-vitals rules + react-hooks + browser globals.
-   - `package.json` `exports` for `./tsconfig/*` and `./eslint/*`; devDependencies hold the ESLint plugins so apps only depend on `@influency/config`.
+1. In `apps/web/src/app/globals.css`, make these changes.
+   - Replace the Dark Social `:root` block with the mapping table above, written as lowercase hex. Head the block with this comment:
+
+     ```
+     /* Light Social palette (design/HANDOFF.md, 2026-11-07). Tokens are PROPOSAL values; change them here only. */
+     ```
+
+     Inline comments name the design token. Add a one-line comment on `--primary-foreground` that records the accepted AA exception (3.85:1).
+   - Set `color-scheme: light`.
+   - Remove `@custom-variant dark (...)`. Nothing in app code uses `dark:`, and the stray `dark:` variants in `components/ui/*` become inert; TASK-002 deletes them.
+   - In `@theme inline`, keep the existing mappings and add the following:
+     - `--color-brand: var(--brand)`
+     - `--color-primary-ink: var(--primary-ink)`
+     - `--color-koin-surface: var(--koin-surface)`
+     - `--color-koin-border: var(--koin-border)`
+     - `--color-success-surface: var(--success-surface)`
+   - Delete the sidebar and chart mappings and their variables.
+   - Replace the computed radius scale with explicit design radii. Remove `--radius` from `:root` if nothing else reads it:
+     - `--radius-sm: 9px` (segments)
+     - `--radius-md: 12px` (inputs, small buttons, segment track)
+     - `--radius-lg: 14px` (buttons)
+     - `--radius-xl: 16px` (cards, media)
+     - `--radius-2xl: 20px` (recommended cards)
+     - `--radius-3xl: 22px` (sheets)
+2. In `apps/web/src/app/layout.tsx`, remove `dark` from the `<html>` className. Keep `${jakarta.variable} font-sans antialiased`, the safe-area padding and `min-h-dvh`.
+3. Rewrite `apps/web/src/app/theme.test.ts`. Keep the existing hex parser and `contrast()` helpers.
+   - Rename the suite to `describe('Light Social theme tokens')`.
+   - `it('match the design tokens')` asserts with `toMatchObject` on `primary`, `brand`, `primary-ink`, `accent`, `koin`, `koin-surface`, `koin-foreground`, `background`, `card`, `foreground`, `muted-foreground`, `border`, `destructive`, `success`, `success-surface`.
+   - Add an `it.each` that checks these pairs reach ≥ 4.5:1:
+
+     | Text | On |
+     |---|---|
+     | `foreground` | `background`, `card`, `muted`, `accent` |
+     | `muted-foreground` | `background`, `card`, `muted` |
+     | `accent-foreground` | `accent` |
+     | `primary-ink` | `card`, `background`, `accent` |
+     | `secondary-foreground` | `secondary` |
+     | `koin-foreground` | `koin-surface` |
+     | `success` | `success-surface`, `card` |
+     | `destructive` | `card`, `background` |
+
+   - `it('documents the accepted AA exception for filled buttons')` asserts `contrast(primary-foreground, primary)` is ≥ 3 and < 4.5.
+   - `it('documents why muted text never sits on accent')` asserts `contrast(muted-foreground, accent)` is < 4.5.
+   - `it('documents why brand coral never carries white text')` asserts `contrast('#ffffff', brand)` is < 3.
+   - `it('has no dark theme')`: the CSS does not contain `color-scheme: dark` or `@custom-variant dark`.
+4. Update the theme bullet in `.agile/guidelines/codebase-map.md` (the "Theme (US-053)" bullet) to describe the Light Social tokens above, the new utilities and the AA exception. Also update the theme/colour lines in `.agile/guidelines/frontend.md` "Styling and UX" if they mention Dark Social.
 
 **Files:**
 | Action | File Path | Purpose |
 |--------|-----------|---------|
-| CREATE | `.nvmrc` | Pin Node 24 |
-| CREATE | `package.json` | Root workspace manifest |
-| CREATE | `pnpm-workspace.yaml` | Workspace globs |
-| CREATE | `.gitignore`, `.editorconfig`, `.prettierrc.json`, `.prettierignore` | Repo hygiene + formatting |
-| CREATE | `packages/config/package.json` | Config package manifest |
-| CREATE | `packages/config/tsconfig/{base,nest,next,library}.json` | Shared TS configs |
-| CREATE | `packages/config/eslint/{base,nest,next}.mjs` | Shared ESLint flat configs |
+| MODIFY | `apps/web/src/app/globals.css` | Light Social `:root`, new `@theme` tokens, radius scale, light only |
+| MODIFY | `apps/web/src/app/layout.tsx` | Drop the `dark` class |
+| MODIFY | `apps/web/src/app/theme.test.ts` | New token values + AA pairs + documented exceptions |
+| MODIFY | `.agile/guidelines/codebase-map.md` | Theme bullet |
+| MODIFY | `.agile/guidelines/frontend.md` | Styling notes (only if they reference the old palette) |
 
 **Testing:**
-- `pnpm install` succeeds on a clean clone with Node 24.
-- `pnpm format:check` passes.
-- Running `node -v` against `.nvmrc` via `nvm use` / `fnm use` selects Node 24.
+- `pnpm --filter @influency/web exec vitest run src/app/theme.test.ts` passes with the cases above.
+- `pnpm check` passes.
 
 ---
 
-### TASK-002: Shared Package (`@influency/shared`)
+### TASK-002: Restyle UI primitives and sweep existing pages
 
-Create the package both apps import. Content is a placeholder for later stories but must be real code with a test.
+**What to build**
 
-- `packages/shared/src/index.ts` re-exports from `./constants`.
-- `packages/shared/src/constants.ts`:
-  ```ts
-  export const APP_NAME = 'Influency';
-  export const API_PREFIX = 'api/v1';
-  ```
-- `package.json`:
-  - `"name": "@influency/shared"`, `"private": true`, `"type": "module"`, `"sideEffects": false`
-  - `"exports": { ".": { "types": "./src/index.ts", "import": "./dist/index.js", "require": "./dist/index.cjs" } }`, `"main": "./dist/index.cjs"`, `"module": "./dist/index.js"`
-  - scripts: `build` (`tsup`), `dev` (`tsup --watch`), `lint` (`eslint .`), `typecheck` (`tsc --noEmit`), `test` (`vitest run`)
-  - dependencies: `zod`; devDependencies: `@influency/config` (`workspace:*`), `tsup`, `vitest`, `typescript`, `eslint`
-- `tsup.config.ts`: entry `src/index.ts`, formats `esm` + `cjs`, `dts: true`, `clean: true`, `outExtension` so CJS is `.cjs`.
-- `tsconfig.json` extends `@influency/config/tsconfig/library.json`, `include: ["src", "tsup.config.ts", "vitest.config.ts"]`.
-- `eslint.config.mjs` re-exports `@influency/config/eslint/base.mjs` with `tsconfigRootDir: import.meta.dirname`.
-- `src/constants.test.ts`: asserts `API_PREFIX === 'api/v1'` and `APP_NAME === 'Influency'`.
+1. Update `apps/web/src/components/ui/button.tsx` (`buttonVariants`).
+   - Base: replace `rounded-full` with `rounded-lg` (14 px). Change `font-medium` to `font-bold`. Keep the focus ring (`ring-ring/50`). Remove every `dark:` class.
+   - Variants:
+     | Variant | Classes |
+     |---|---|
+     | `default` | `bg-primary text-primary-foreground hover:bg-primary/90` (unchanged classes; now coral strong with white) |
+     | `secondary` | `bg-secondary text-secondary-foreground hover:bg-secondary/90` (dark charcoal) |
+     | `outline` | `border border-input bg-card text-foreground hover:bg-muted` |
+     | `ghost` | `hover:bg-muted` |
+     | `destructive` | `bg-destructive text-white hover:bg-destructive/90` |
+     | `link` | `text-primary-ink underline-offset-4 hover:underline` |
+   - Sizes:
+     | Size | Classes |
+     |---|---|
+     | `default` | `h-12 px-5` (48 px) |
+     | `lg` | `h-13 px-6` (52 px) |
+     | `sm`, `xs` | stay `h-11`, with `rounded-md` (12 px) |
+     | `icon`, `icon-xs`, `icon-sm` | stay `size-11` |
+     | `icon-lg` | stays `size-12` |
+   - Delete the per-size `rounded-full` overrides except on icon sizes, which stay `rounded-full` (round icon buttons are in the design).
+2. Update `apps/web/src/components/ui/button.test.tsx`.
+   - Extend the height regex to accept `11|12|13`.
+   - Add a test that `default` is `h-12` and `lg` is `h-13`.
+   - Add a test that non-icon sizes don't contain `rounded-full`.
+3. In `apps/web/src/components/ui/input.tsx` and `textarea.tsx`, apply these changes.
+   - Use `rounded-md` (12 px), `bg-card`, `border-input` and placeholder `text-muted-foreground`.
+   - Inputs stay `h-11`.
+   - Remove all `dark:` classes.
+   - Change the selection colour to `selection:bg-accent selection:text-accent-foreground`.
+4. Sweep existing pages for Dark Social assumptions (`grep -rn "rounded-full\|bg-koin\|text-koin\|secondary" apps/web/src`).
+   - `components/koin.tsx`:
+     - `KoinIcon` becomes a gold disc `bg-koin` with a **white** "K". It is decorative and `aria-hidden`, so no text-contrast rule applies; add a comment saying so.
+     - `KoinBalance` becomes `bg-koin-surface text-koin-foreground border border-koin-border`.
+   - `app/(public)/[creatorSlug]/post-grid.tsx` filter chips:
+     - Active chip: white chip on the muted track (`bg-card shadow-sm text-foreground`, `rounded-sm`). Inactive: `text-muted-foreground`.
+     - Track: `bg-muted rounded-md p-[3px]`.
+     - This mirrors the design's segmented control. Keep `aria-pressed`.
+   - Links styled `text-primary` on body text become `text-primary-ink`. Coral `#D9584C` text on white is only 3.85:1.
+   - Any remaining `rounded-full` on non-avatar, non-icon controls changes to the design radius.
+   - Do **not** restructure `bottom-nav`, `site-header`, `account-menu` or `purchase-sheet` (US-002–US-005 replace them). Only make sure they render legibly on the light theme.
+5. Visual check with `pnpm dev`. Open each route at 320, 375, 390 and 430 px in devtools and confirm there is no horizontal scroll and nothing is unreadable:
+   - `/login`
+   - `/claudiandreya`
+   - a post detail under `/claudiandreya`
+   - `/studio`, `/studio/posts`, `/studio/profile`
+   - `/admin/creators`
+   - `/become-creator`
+   - `/discover`, `/wallet`, `/library`, `/subscriptions`
 
-**Files:**
-| Action | File Path | Purpose |
-|--------|-----------|---------|
-| CREATE | `packages/shared/package.json` | Manifest + dual exports |
-| CREATE | `packages/shared/tsup.config.ts` | ESM + CJS build |
-| CREATE | `packages/shared/tsconfig.json` | Strict TS config |
-| CREATE | `packages/shared/eslint.config.mjs` | Lint config |
-| CREATE | `packages/shared/vitest.config.ts` | Test config |
-| CREATE | `packages/shared/src/index.ts`, `src/constants.ts` | Public API |
-| CREATE | `packages/shared/src/constants.test.ts` | Unit test |
-
-**Testing:**
-- `pnpm --filter @influency/shared build` emits `dist/index.js`, `dist/index.cjs`, `dist/index.d.ts`.
-- `lint`, `typecheck`, `test` pass for the package.
-
----
-
-### TASK-003: API App Scaffold (`@influency/api`)
-
-NestJS on the Fastify adapter, no product routes yet.
-
-- `src/main.ts`:
-  ```ts
-  import 'reflect-metadata';
-  import { NestFactory } from '@nestjs/core';
-  import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
-  import { API_PREFIX } from '@influency/shared';
-  import { AppModule } from './app.module';
-
-  export async function createApp(): Promise<NestFastifyApplication> {
-    const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
-    app.setGlobalPrefix(API_PREFIX);
-    return app;
-  }
-
-  async function bootstrap(): Promise<void> {
-    const app = await createApp();
-    await app.listen({ port: Number(process.env.API_PORT ?? 4000), host: '0.0.0.0' });
-  }
-  ```
-  Only call `bootstrap()` when run directly (`if (require.main === module)`), so tests can import `createApp` without listening. Put `createApp` in `src/app.factory.ts` if that keeps `main.ts` cleaner. Env validation is US-002 — `API_PORT` default `4000` is fine here.
-- `src/app.module.ts`: empty `@Module({})` named `AppModule`. Create `src/modules/` and `src/common/` directories (with `.gitkeep`) to match backend.md.
-- `nest-cli.json` (`sourceRoot: "src"`, `compilerOptions.deleteOutDir: true`, builder `tsc` or `swc`).
-- `tsconfig.json` extends `@influency/config/tsconfig/nest.json`; `tsconfig.build.json` excludes `**/*.spec.ts`, `**/*.test.ts`.
-- `vitest.config.ts`: `plugins: [swc.vite({ module: { type: 'es6' }, jsc: { transform: { decoratorMetadata: true, legacyDecorator: true } } })]`, `test.environment: 'node'`, `test.include: ['src/**/*.spec.ts']`.
-- `eslint.config.mjs` uses `@influency/config/eslint/nest.mjs`.
-- `package.json`: `"name": "@influency/api"`, `"private": true`; scripts `dev` (`nest start --watch`), `build` (`nest build`), `start` (`node dist/main.js`), `lint`, `typecheck` (`tsc --noEmit`), `test` (`vitest run`); dependency `@influency/shared: workspace:*`.
-- `src/app.spec.ts`: boots `createApp()`, `await app.init()`, `await app.getHttpAdapter().getInstance().ready()`, then `app.inject({ method: 'GET', url: '/api/v1/does-not-exist' })` returns 404 (proves Fastify adapter + global prefix + shared import work); closes the app in `afterAll`.
+   Fix anything that still assumes dark colours. Record the checklist result in the QA report.
 
 **Files:**
 | Action | File Path | Purpose |
 |--------|-----------|---------|
-| CREATE | `apps/api/package.json` | Manifest + scripts |
-| CREATE | `apps/api/nest-cli.json` | Nest CLI config |
-| CREATE | `apps/api/tsconfig.json`, `apps/api/tsconfig.build.json` | TS configs |
-| CREATE | `apps/api/vitest.config.ts` | Vitest + SWC |
-| CREATE | `apps/api/eslint.config.mjs` | Lint config |
-| CREATE | `apps/api/src/main.ts` (+ optional `src/app.factory.ts`) | Bootstrap with Fastify + `/api/v1` prefix |
-| CREATE | `apps/api/src/app.module.ts` | Root module |
-| CREATE | `apps/api/src/modules/.gitkeep`, `apps/api/src/common/.gitkeep` | Folder layout per backend.md |
-| CREATE | `apps/api/src/app.spec.ts` | Boot smoke test |
+| MODIFY | `apps/web/src/components/ui/button.tsx` | Design radius, heights, variants, no `dark:` |
+| MODIFY | `apps/web/src/components/ui/button.test.tsx` | Height/radius guards |
+| MODIFY | `apps/web/src/components/ui/input.tsx` | Radius 12, surface, no `dark:` |
+| MODIFY | `apps/web/src/components/ui/textarea.tsx` | Same as input |
+| MODIFY | `apps/web/src/components/koin.tsx` | Koin mark + koin surface |
+| MODIFY | `apps/web/src/app/(public)/[creatorSlug]/post-grid.tsx` | Segmented filter look |
+| MODIFY | other `apps/web/src/**` found by the sweep | Light-theme fixes only |
 
 **Testing:**
-- `pnpm --filter @influency/api test` passes the boot smoke test.
-- `pnpm --filter @influency/api dev` starts and listens on port 4000; `GET http://localhost:4000/api/v1/x` returns 404 JSON.
-- `lint`, `typecheck`, `build` pass.
-
----
-
-### TASK-004: Web App Scaffold (`@influency/web`)
-
-Next.js App Router with Tailwind and shadcn/ui initialised, a placeholder home page.
-
-- Scaffold with the official Next.js setup (App Router, TypeScript, `src/` dir, Tailwind, import alias `@/*`), then align configs with `@influency/config`:
-  - `tsconfig.json` extends `@influency/config/tsconfig/next.json`, keeps `paths: { "@/*": ["./src/*"] }` and the Next plugin.
-  - `eslint.config.mjs` uses `@influency/config/eslint/next.mjs`.
-- Initialise shadcn/ui (`components.json`, `src/lib/utils.ts` with `cn()`, CSS variables in `src/app/globals.css`). Add the `button` component only.
-- Create route-group folders from frontend.md with `.gitkeep` only (no pages yet): `src/app/(public)/`, `src/app/(auth)/`, `src/app/(subscriber)/`, `src/app/studio/`, `src/app/admin/`, plus `src/lib/api/`, `src/components/`.
-- `src/app/layout.tsx`: `<html lang="id">`, metadata title from `APP_NAME`, mobile viewport.
-- `src/app/page.tsx` (server component): renders `APP_NAME` imported from `@influency/shared` and a short tagline; uses Tailwind classes, mobile-first.
-- `next.config.ts`: `reactStrictMode: true`. Do **not** add `transpilePackages` (shared ships built JS).
-- `vitest.config.ts`: `@vitejs/plugin-react`, `environment: 'jsdom'`, `setupFiles: ['./vitest.setup.ts']` (imports `@testing-library/jest-dom/vitest`), alias `@` → `./src`.
-- `package.json`: `"name": "@influency/web"`, `"private": true`; scripts `dev` (`next dev --port 3000`), `build` (`next build`), `start` (`next start`), `lint` (`eslint .`), `typecheck` (`tsc --noEmit`), `test` (`vitest run`); dependency `@influency/shared: workspace:*`.
-- `src/app/page.test.tsx`: renders `<Page />` and asserts the heading contains "Influency".
-
-**Files:**
-| Action | File Path | Purpose |
-|--------|-----------|---------|
-| CREATE | `apps/web/package.json` | Manifest + scripts |
-| CREATE | `apps/web/next.config.ts` | Next config |
-| CREATE | `apps/web/tsconfig.json` | Extends shared Next tsconfig |
-| CREATE | `apps/web/eslint.config.mjs` | Lint config |
-| CREATE | `apps/web/postcss.config.mjs`, `apps/web/src/app/globals.css` | Tailwind |
-| CREATE | `apps/web/components.json`, `apps/web/src/lib/utils.ts`, `apps/web/src/components/ui/button.tsx` | shadcn/ui init |
-| CREATE | `apps/web/src/app/layout.tsx`, `apps/web/src/app/page.tsx` | Root layout + placeholder home |
-| CREATE | `apps/web/src/app/(public)/.gitkeep` etc. | Route-group layout per frontend.md |
-| CREATE | `apps/web/vitest.config.ts`, `apps/web/vitest.setup.ts` | Test config |
-| CREATE | `apps/web/src/app/page.test.tsx` | Render smoke test |
-
-**Testing:**
-- `pnpm --filter @influency/web test` passes the render test.
-- `pnpm --filter @influency/web dev` serves `http://localhost:3000` showing "Influency".
-- `lint`, `typecheck`, `build` pass.
-
----
-
-### TASK-005: Root Scripts, README & Full Verification
-
-Wire the root scripts and document everything.
-
-- Root `package.json` scripts:
-  - `"build": "pnpm --filter @influency/shared build && pnpm -r --filter=!@influency/shared run build"`
-  - `"dev": "pnpm --filter @influency/shared build && pnpm -r --parallel --filter=!@influency/config run dev"`
-  - `"lint": "pnpm -r run lint"`
-  - `"typecheck": "pnpm -r run typecheck"`
-  - `"test": "pnpm --filter @influency/shared build && pnpm -r run test"`
-  - `"format"`, `"format:check"` (from TASK-001)
-  - `"check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"` — one command for CI (US-005) and pre-PR checks.
-- `README.md`: project one-liner and link to the handoff; prerequisites (Node 24 via `.nvmrc`, `corepack enable`); `pnpm install`; `pnpm dev` (web on :3000, api on :4000); script table (`build`, `dev`, `lint`, `typecheck`, `test`, `format`, `check`); running one package (`pnpm --filter @influency/api test`) and a single test file (`pnpm --filter @influency/api exec vitest run src/app.spec.ts`); repository layout; note that Docker/env/DB come in later stories.
-- Update `CLAUDE.md` "Project state" with the real commands (install, dev, check, single-package and single-test commands) and remove the "pre-code" wording.
-- Update `.agile/guidelines/tech-stack.md` with the exact major versions chosen.
-- Update `.agile/guidelines/codebase-map.md` Apps & Packages table (also done by `/dev-team` on completion).
-- Run `pnpm format` once, then `pnpm check` from a clean install and confirm it passes.
-
-**Files:**
-| Action | File Path | Purpose |
-|--------|-----------|---------|
-| MODIFY | `package.json` | Root scripts |
-| CREATE | `README.md` | Install / run / test docs |
-| MODIFY | `CLAUDE.md` | Real commands |
-| MODIFY | `.agile/guidelines/tech-stack.md` | Pinned versions |
-| MODIFY | `.agile/guidelines/codebase-map.md` | Apps & packages |
-| CREATE | `pnpm-lock.yaml` | Committed lockfile |
-
-**Testing:**
-- From a clean clone: `pnpm install && pnpm check` passes (format, lint, typecheck, tests in shared/api/web).
-- `pnpm build` succeeds.
-- `pnpm dev` starts both apps.
-
-## Acceptance Criteria Mapping
-
-| Acceptance criterion | Task(s) |
-|---|---|
-| Fresh clone `pnpm install` with Node from `.nvmrc` | TASK-001, TASK-005 |
-| Workspace contains web, api, shared; web and api start locally | TASK-002, TASK-003, TASK-004 |
-| Root `lint`, `typecheck`, `test`, `format` pass | TASK-001, TASK-005 |
-| TypeScript `strict` everywhere | TASK-001 (base tsconfig), all packages extend it |
-| README explains install, run, test | TASK-005 |
+- `button.test.tsx` guards heights (≥ 44 px, default 48, lg 52) and the non-pill radius.
+- Existing component and page tests still pass. Update only class-string assertions that hard-coded old classes, and never delete a behavioural test.
+- Run the manual 320/375/390/430 px checklist above.
+- `pnpm check` passes.

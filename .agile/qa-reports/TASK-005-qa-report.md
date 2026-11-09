@@ -1,42 +1,26 @@
-# QA Report: TASK-005 — Root Scripts, README & Full Verification
+# QA Report: TASK-005 — Move `purchase-sheet` onto BottomSheet
 
-**Story:** US-001
-**Result:** PASS
-**Tester:** qa-agent
+**Status:** PASS
+**Date:** 2026-11-07
 
 ## Code Review
 
 ### Guidelines Compliance
-- [x] Root scripts fan out with `pnpm -r` (no Turborepo), as agreed
-- [x] `test` and `dev` build `@influency/shared` first, because apps load it from `dist/` at runtime
-- [x] `check` = `format:check` + `lint` + `typecheck` + `test`, ready for CI in US-005
-- [x] CLAUDE.md, tech-stack.md (pinned versions) and README updated with real commands
+- [x] Props and exports are unchanged, so callers (`post-grid`, `subscribe-card`) are untouched. The hand-written Dialog markup is gone.
 
 ### Security
-- [x] `git status` shows no `node_modules`, `dist`, `.next`, `*.tsbuildinfo`, `next-env.d.ts` or `.env` files would be tracked
+- [x] No change. The client still decides no price. Buying is still a demo with no request.
+
+### Financial Integrity
+- [x] N/A. The `shortcut:` comment still points to US-025/US-027 for the real purchase with an Idempotency-Key.
 
 ## Acceptance Criteria Verification
-
-| # | Criterion | Result | Notes |
-|---|-----------|--------|-------|
-| 1 | Fresh clone runs `pnpm install` with Node from `.nvmrc` | PASS | All `node_modules`/build output deleted, then `pnpm install` succeeded (pnpm 12.14.0, Node 24.18.1) |
-| 2 | Workspace has web, api, shared; web and api start locally | PASS | `pnpm dev`: web `GET /` → 200, api `GET /api/v1/x` → 404 JSON |
-| 3 | Root `lint`, `typecheck`, `test`, `format` pass | PASS | `pnpm check` exit 0 after clean install |
-| 4 | TypeScript `strict` in every package | PASS | shared/api/web extend `@influency/config` bases with `strict: true` |
-| 5 | README explains install, run, test | PASS | Prerequisites, Windows Corepack fallback, scripts table, single-package/test commands, layout |
+- [x] The existing `purchase-sheet` uses the shared sheet. The demo buy closes the sheet and shows a toast.
 
 ## Tests Run
-
-- [x] Clean `pnpm install`: PASS
-- [x] `pnpm check`: PASS: shared 2, api 2, web 1 tests
-- [x] `pnpm build`: PASS (shared → api, web)
-- [x] README single-test commands: `vitest run src/app.spec.ts` (2 passed), `-t "boots on Fastify"` (1 passed, 1 skipped)
-- [x] `pnpm dev`: both apps reachable
-
-## Issues (resolved during QA)
-
-- `README.md` failed `prettier --check` (table alignment). Fixed with `prettier --write`; the re-run passed.
-
-## Notes
-
-- `CLAUDE.md` and `.agile/` are excluded from Prettier so agent/planning docs aren't reformatted.
+- `creator-posts.test.tsx` updated.
+  - Same dialog name, eyebrow, rows and link.
+  - Buying closes the dialog and shows the toast.
+  - The short-balance case is unchanged.
+- The creator `page.test.tsx` now renders inside `Toaster`.
+- Web suite green.

@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Post Card</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<article aria-label="Post by {{p.name}}" style="width: 100%; box-sizing: border-box; background: #FFFFFF; color: #25262B; font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 12px; padding: 12px 0 6px; border-top: 1px solid #ECE8E7; border-bottom: 1px solid #ECE8E7">
+
+  <!-- Creator header -->
+  <div style="display: flex; align-items: center; gap: 8px; padding: 0 6px 0 16px">
+    <button type="button" onClick="{{p.onCreator}}" aria-label="Open profile of {{p.name}}" style="flex: 1; min-width: 0; min-height: 44px; display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 0; text-align: left; font: inherit; color: inherit; cursor: pointer">
+      <span style="width: 40px; height: 40px; border-radius: 50%; background: {{p.avatarBg}}; color: {{p.avatarInk}}; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; flex: none">{{p.initials}}</span>
+      <span style="display: flex; flex-direction: column; min-width: 0">
+        <span style="font-size: 15px; font-weight: 800; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{p.name}}</span>
+        <span style="font-size: 12.5px; color: #6B6B75; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{p.handle}} · {{p.date}}</span>
+      </span>
+    </button>
+    <sc-if value="{{p.isPremium}}" hint-placeholder-val="{{false}}">
+      <span style="flex: none; height: 24px; padding: 0 8px; border-radius: 12px; background: {{chipBg}}; color: {{chipFg}}; font-size: 11.5px; font-weight: 800; display: flex; align-items: center; gap: 4px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><rect x="4.5" y="11" width="15" height="10" rx="2"/><path d="{{lockPath}}"/></svg>{{chipLabel}}
+      </span>
+    </sc-if>
+    <button type="button" onClick="{{p.onMore}}" aria-label="More options for this post" style="width: 44px; height: 44px; flex: none; border-radius: 22px; border: 0; background: none; color: #6B6B75; display: flex; align-items: center; justify-content: center; cursor: pointer">
+      <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="19" cy="12" r="1.8" fill="currentColor"/></svg>
+    </button>
+  </div>
+
+  <!-- Caption -->
+  <button type="button" onClick="{{openPost}}" style="display: block; width: 100%; margin: 0; padding: 0 16px; border: 0; background: none; text-align: left; font: inherit; font-size: 15px; line-height: 1.5; color: inherit; text-wrap: pretty; cursor: {{openCursor}}">{{p.caption}}</button>
+
+  <!-- Media: accessible (free or unlocked premium) -->
+  <sc-if value="{{showMedia}}" hint-placeholder-val="{{true}}">
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <div onScroll="{{onTrack}}" onPointerDown="{{onDragStart}}" onPointerMove="{{onDragMove}}" onPointerUp="{{onDragEnd}}" onPointerCancel="{{onDragEnd}}" onDragStart="{{noNativeDrag}}" aria-roledescription="carousel" aria-label="{{carouselLabel}}" style="display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-left: 16px; padding: 0 16px; scrollbar-width: none; -webkit-overflow-scrolling: touch; cursor: {{grabCursor}}; user-select: none; -webkit-user-select: none">
+        <sc-for list="{{slides}}" as="m" hint-placeholder-count="1">
+          <div role="group" aria-roledescription="slide" aria-label="{{m.label}}" style="position: relative; flex: 0 0 {{m.basis}}; aspect-ratio: {{m.ratio}}; scroll-snap-align: start; border-radius: 16px; overflow: hidden; background: {{m.sky}}">
+            <span aria-hidden="true" style="position: absolute; inset: 0; background: {{m.sky}}"></span>
+            <span aria-hidden="true" style="position: absolute; width: 28%; aspect-ratio: 1 / 1; border-radius: 50%; left: {{m.sunX}}; top: 16%; background: {{m.sun}}"></span>
+            <span aria-hidden="true" style="position: absolute; left: -12%; right: -12%; bottom: -34%; height: 68%; border-radius: 50%; background: {{m.hill}}"></span>
+            <span aria-hidden="true" style="position: absolute; left: 32%; right: -34%; bottom: -44%; height: 70%; border-radius: 50%; background: {{m.hill2}}"></span>
+            <button type="button" onClick="{{m.openMedia}}" aria-label="Open {{m.label}} full screen" style="position: absolute; inset: 0; width: 100%; border: 0; padding: 0; background: transparent; cursor: inherit"></button>
+            <sc-if value="{{m.multi}}" hint-placeholder-val="{{false}}">
+              <span style="position: absolute; top: 10px; right: 10px; height: 24px; padding: 0 9px; border-radius: 12px; background: rgba(20,20,24,.6); color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center">{{m.pos}}</span>
+            </sc-if>
+            <sc-if value="{{m.isVideo}}" hint-placeholder-val="{{false}}">
+              <span aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 40%; background: linear-gradient(180deg, rgba(20,20,24,0), rgba(20,20,24,.45))"></span>
+              <span style="position: absolute; top: 10px; left: 10px; height: 24px; padding: 0 9px; border-radius: 12px; background: rgba(20,20,24,.6); color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center">{{m.dur}}</span>
+              <sc-if value="{{m.playing}}" hint-placeholder-val="{{false}}">
+                <span style="position: absolute; left: 12px; bottom: 12px; height: 28px; padding: 0 10px; border-radius: 14px; background: rgba(20,20,24,.62); color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px">
+                  <span aria-hidden="true" style="display: flex; align-items: flex-end; gap: 2px; height: 10px"><span style="width: 2px; height: 10px; background: #FFFFFF; border-radius: 1px"></span><span style="width: 2px; height: 6px; background: #FFFFFF; border-radius: 1px"></span><span style="width: 2px; height: 8px; background: #FFFFFF; border-radius: 1px"></span></span>Playing · muted
+                </span>
+                <button type="button" onClick="{{m.unmute}}" aria-label="Unmute video" style="position: absolute; right: 8px; bottom: 6px; width: 44px; height: 44px; border-radius: 22px; border: 0; background: rgba(20,20,24,.62); color: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="m22 9-6 6M16 9l6 6"/></svg>
+                </button>
+              </sc-if>
+              <sc-if value="{{m.idle}}" hint-placeholder-val="{{false}}">
+                <button type="button" onClick="{{m.play}}" aria-label="Play video, {{m.dur}}" style="position: absolute; left: 50%; top: 50%; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 50%; border: 0; background: rgba(255,255,255,.94); color: #25262B; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(20,20,24,.2); cursor: pointer">
+                  <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
+                </button>
+                <span style="position: absolute; left: 12px; bottom: 12px; height: 28px; padding: 0 10px; border-radius: 14px; background: rgba(20,20,24,.62); color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center">{{m.idleLabel}}</span>
+              </sc-if>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+      <sc-if value="{{multi}}" hint-placeholder-val="{{false}}">
+        <div aria-hidden="true" style="display: flex; justify-content: center; gap: 5px">
+          <sc-for list="{{dots}}" as="d" hint-placeholder-count="3">
+            <span style="width: {{d.w}}; height: 6px; border-radius: 3px; background: {{d.bg}}; transition: width .2s ease"></span>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <!-- Media: premium locked — safe server-blurred preview only -->
+  <sc-if value="{{p.locked}}" hint-placeholder-val="{{false}}">
+    <div style="padding: 0 16px">
+      <div role="img" aria-label="Premium post, preview blurred. {{p.mediaSummary}}" style="position: relative; aspect-ratio: {{p.ratio}}; border-radius: 16px; overflow: hidden; background: {{lock.sky}}">
+        <span aria-hidden="true" style="position: absolute; inset: -30px; filter: blur(26px)">
+          <span style="position: absolute; inset: 0; background: {{lock.sky}}"></span>
+          <span style="position: absolute; width: 30%; aspect-ratio: 1 / 1; border-radius: 50%; left: 20%; top: 18%; background: {{lock.sun}}"></span>
+          <span style="position: absolute; left: -10%; right: -10%; bottom: -30%; height: 70%; border-radius: 50%; background: {{lock.hill}}"></span>
+        </span>
+        <span aria-hidden="true" style="position: absolute; inset: 0; background: rgba(20,20,24,.34)"></span>
+        <button type="button" onClick="{{openPost}}" tabindex="-1" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; border: 0; padding: 0; background: transparent; cursor: {{openCursor}}"></button>
+        <span style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #FFFFFF; text-align: center; padding: 20px; pointer-events: none">
+          <span style="width: 56px; height: 56px; border-radius: 50%; background: #FFFFFF; color: #B4463B; display: flex; align-items: center; justify-content: center">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="4.5" y="11" width="15" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></svg>
+          </span>
+          <span style="font-size: 17px; font-weight: 800">Premium post</span>
+          <span style="font-size: 13.5px; font-weight: 600">{{p.mediaSummary}}</span>
+        </span>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- Engagement row -->
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 8px">
+    <div style="display: flex; align-items: center">
+      <button type="button" onClick="{{toggleLike}}" aria-pressed="{{likedStr}}" aria-label="Like, {{likes}} likes" style="height: 44px; min-width: 44px; padding: 0 10px; display: flex; align-items: center; gap: 6px; background: none; border: 0; border-radius: 22px; font: inherit; font-size: 14px; font-weight: 700; color: {{likeFg}}; cursor: pointer">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="{{heartFill}}" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"/></svg>
+        <span>{{likeLabel}}</span>
+      </button>
+      <button type="button" onClick="{{p.onComment}}" aria-label="{{commentAria}}" style="height: 44px; min-width: 44px; padding: 0 10px; display: flex; align-items: center; gap: 6px; background: none; border: 0; border-radius: 22px; font: inherit; font-size: 14px; font-weight: 700; color: #45464D; cursor: pointer">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></svg>
+        <span>{{commentLabel}}</span>
+      </button>
+      <button type="button" onClick="{{p.onShare}}" aria-label="Share post" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: none; border: 0; border-radius: 22px; color: #45464D; cursor: pointer">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>
+      </button>
+      <button type="button" onClick="{{toggleSave}}" aria-pressed="{{savedStr}}" aria-label="{{saveAria}}" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: none; border: 0; border-radius: 22px; color: {{saveFg}}; cursor: pointer">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="{{saveFill}}" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      </button>
+    </div>
+    <div style="display: flex; align-items: center; gap: 2px">
+    <sc-if value="{{p.canTip}}" hint-placeholder-val="{{false}}">
+      <button type="button" onClick="{{p.onTip}}" style="height: 44px; padding: 0 14px 0 10px; margin-right: 6px; border-radius: 22px; border: 1px solid #F1DDB3; background: #FFF6E5; color: #6B4A0E; display: flex; align-items: center; gap: 6px; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A97A1E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M14.6 9.4c-.4-.9-1.4-1.4-2.6-1.4-1.5 0-2.5.8-2.5 2s1 1.7 2.5 2 2.5.8 2.5 2-1 2-2.5 2c-1.2 0-2.2-.5-2.6-1.4M12 6.5V8M12 16v1.5"/></svg>Send Tip
+      </button>
+    </sc-if>
+    </div>
+  </div>
+
+  <!-- Unlock CTA (premium locked only) -->
+  <sc-if value="{{p.locked}}" hint-placeholder-val="{{false}}">
+    <div style="display: flex; flex-direction: column; gap: 2px; padding: 0 16px 8px">
+      <button type="button" onClick="{{p.onUnlock}}" style="height: 50px; border-radius: 14px; border: 0; background: #D9584C; color: #FFFFFF; display: flex; align-items: center; justify-content: center; gap: 8px; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="4.5" y="11" width="15" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></svg>Unlock post · {{p.priceLabel}}
+      </button>
+      <sc-if value="{{p.showSub}}" hint-placeholder-val="{{true}}">
+        <button type="button" onClick="{{p.onSubscribe}}" style="min-height: 44px; border: 0; background: none; color: #B4463B; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer">{{p.subLabel}}</button>
+      </sc-if>
+    </div>
+  </sc-if>
+</article>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"post":{"editor":null},"$preview":{"width":390,"height":720}}'>
+var SAMPLE = {
+  id: 'sample', name: 'Nadia Kirana', handle: '@nadia.kirana', initials: 'NK', avatarBg: '#F3B6A6', avatarInk: '#5A2B25',
+  date: 'Today · 07:12', caption: 'Harbour at first light. Three frames from the same five minutes, before the ferries started.', ratio: '4 / 5',
+  media: [
+    { type: 'image', sky: 'linear-gradient(180deg,#D3E5EC 0%,#93B9C9 78%)', sun: '#FBF7EC', hill: '#567B8D', hill2: '#2F4F5F', sunX: '14%', alt: 'Harbour at dawn' },
+    { type: 'video', sky: 'linear-gradient(180deg,#FAD7BA 0%,#EE9A80 74%)', sun: '#FFF3DE', hill: '#A0606A', hill2: '#6E3E47', sunX: '56%', dur: '0:24', alt: 'Ferry leaving the pier' },
+    { type: 'image', sky: 'linear-gradient(180deg,#DFE2E7 0%,#A9AFBB 80%)', sun: '#F5F6F8', hill: '#6B7383', hill2: '#454C5A', sunX: '34%', alt: 'Grey water and moored boats' }
+  ],
+  isPremium: true, locked: false, priceLabel: '25 Koin', mediaSummary: '2 photos · 1 video', showSub: false, subLabel: '',
+  likes: 1284, liked: true, canLike: true, comments: 12, canTip: true, autoplay: true, overlayOpen: false
+};
+function compact(n) { if (n >= 1000) return (Math.round(n / 100) / 10).toString().replace(/\.0$/, '') + 'K'; return String(n); }
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { slide: 0, liked: null, likes: null, manual: -1 };
+  }
+  renderVals() {
+    var p = this.props.post || SAMPLE;
+    var noop = function () {};
+    var n = p.media.length;
+    var slide = Math.min(this.state.slide, n - 1);
+    var liked = this.state.liked === null ? !!p.liked : this.state.liked;
+    var likes = this.state.likes === null ? p.likes : this.state.likes;
+    var multi = n > 1;
+    var slides = p.media.map((m, i) => {
+      var isVideo = m.type === 'video';
+      var playing = isVideo && !p.locked && !p.overlayOpen && i === slide && (p.autoplay || this.state.manual === i);
+      return Object.assign({}, m, {
+        isVideo: isVideo, playing: playing, idle: isVideo && !playing,
+        idleLabel: p.overlayOpen ? 'Paused' : 'Tap to play',
+        play: () => { if (this.justDragged) return; this.setState({ manual: i, slide: i }); },
+        openMedia: () => { if (this.justDragged) return; if (p.onMedia) p.onMedia(i); else if (p.onOpen) p.onOpen(); },
+        unmute: () => (p.onShare ? noop() : noop()),
+        multi: multi, pos: (i + 1) + ' / ' + n, ratio: p.ratio, basis: multi ? '86%' : '100%',
+        label: (isVideo ? 'Video' : 'Photo') + ' ' + (i + 1) + ' of ' + n + (m.alt ? ': ' + m.alt : '')
+      });
+    });
+    var first = p.media[0] || {};
+    var hasComments = p.comments !== null && p.comments !== undefined;
+    return {
+      p: Object.assign({ onCreator: noop, onMore: noop, onComment: noop, onShare: noop, onTip: noop, onUnlock: noop, onSubscribe: noop }, p),
+      showMedia: !p.locked, multi: multi && !p.locked, slides: slides,
+      carouselLabel: multi ? 'Post media, ' + n + ' items. Swipe for more.' : 'Post media',
+      dots: p.media.map(function (m, i) { return { w: i === slide ? '18px' : '6px', bg: i === slide ? '#D9584C' : '#D8D3D2' }; }),
+      onTrack: (e) => {
+        var el = e.currentTarget; var c = el.children[0];
+        var w = c ? c.offsetWidth + 8 : el.clientWidth;
+        var i = Math.max(0, Math.min(n - 1, Math.round(el.scrollLeft / w)));
+        if (i !== this.state.slide) this.setState({ slide: i, manual: -1 });
+      },
+      grabCursor: multi && !p.locked ? 'grab' : 'auto',
+      noNativeDrag: (e) => e.preventDefault(),
+      onDragStart: (e) => {
+        if (!multi || e.pointerType === 'touch') return;
+        var el = e.currentTarget;
+        this.drag = { x: e.clientX, left: el.scrollLeft, el: el, moved: false, id: e.pointerId };
+        el.style.scrollSnapType = 'none';
+        el.style.scrollBehavior = 'auto';
+        el.style.cursor = 'grabbing';
+      },
+      onDragMove: (e) => {
+        var d = this.drag; if (!d) return;
+        var dx = e.clientX - d.x;
+        if (!d.moved && Math.abs(dx) > 4) { d.moved = true; if (d.el.setPointerCapture) d.el.setPointerCapture(d.id); }
+        if (d.moved) d.el.scrollLeft = d.left - dx;
+      },
+      onDragEnd: (e) => {
+        var d = this.drag; if (!d) return;
+        this.drag = null;
+        var el = d.el; var c = el.children[0];
+        var w = c ? c.offsetWidth + 8 : el.clientWidth;
+        var dx = e.clientX - d.x;
+        var start = Math.round(d.left / w);
+        var i = start;
+        if (dx < -40) i = start + 1; else if (dx > 40) i = start - 1;
+        i = Math.max(0, Math.min(n - 1, i));
+        el.style.cursor = '';
+        el.scrollTo({ left: i * w, behavior: 'smooth' });
+        setTimeout(function () { el.style.scrollSnapType = ''; }, 380);
+        this.justDragged = d.moved;
+        setTimeout(() => { this.justDragged = false; }, 60);
+        if (i !== this.state.slide) this.setState({ slide: i, manual: -1 });
+      },
+      openPost: () => { if (this.justDragged) return; if (p.onOpen) p.onOpen(); },
+      openCursor: p.onOpen ? 'pointer' : 'auto',
+      lock: { sky: first.sky, sun: first.sun, hill: first.hill },
+      chipLabel: p.locked ? 'Premium' : 'Unlocked', chipBg: p.locked ? '#FFE8E2' : '#E6F4EA', chipFg: p.locked ? '#8F3A31' : '#1E6B3A',
+      lockPath: p.locked ? 'M8 11V7.5a4 4 0 0 1 8 0V11' : 'M8 11V7.5a4 4 0 0 1 7.6-1.7',
+      likedStr: liked ? 'true' : 'false', likes: likes, likeLabel: compact(likes),
+      likeFg: liked ? '#C64B40' : '#45464D', heartFill: liked ? '#EF8176' : 'none',
+      toggleLike: () => {
+        if (!p.canLike) { (p.onNeedLogin || noop)(); return; }
+        this.setState({ liked: !liked, likes: likes + (liked ? -1 : 1) });
+      },
+      commentLabel: hasComments ? compact(p.comments) : '',
+      commentAria: hasComments ? 'Comments, ' + p.comments : 'Comments, available to supporters',
+      savedStr: p.saved ? 'true' : 'false', saveAria: p.saved ? 'Saved to My Collection' : 'Save to My Collection',
+      saveFill: p.saved ? '#25262B' : 'none', saveFg: p.saved ? '#25262B' : '#45464D',
+      toggleSave: () => { if (p.onSave) p.onSave(); }
+    };
+  }
+}
+</script>
+</body>
+</html>

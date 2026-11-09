@@ -1,4 +1,8 @@
-// Models, conventions and migrations arrive in US-004.
+// Conventions (enforced by src/common/schema-conventions.integration.spec.ts):
+// - Models PascalCase / fields camelCase, mapped to snake_case with @@map / @map (enums too).
+// - Primary key: id String @id @default(dbgenerated("uuidv7()")) @db.Uuid (PostgreSQL 18 native, time-ordered).
+// - Timestamps: DateTime @db.Timestamptz(3); createdAt @default(now()), updatedAt @updatedAt.
+// - Koin and IDR are integers (BigInt/Int), commission is integer basis points. Never Float/Decimal.
 
 generator client {
   provider            = "prisma-client"
@@ -9,4 +13,998 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+
+  @@map("user_status")
+}
+
+model User {
+  id                    String     @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  displayName           String     @map("display_name")
+  /// user-area US-043: nullable, empty until Edit Profil exists. CHECK users_bio_length (migration): at most 500 characters.
+  bio                   String?
+  /// onboarding US-051: set once when the welcome stepper is finished or skipped (or a creator applies). Users that existed when this was added are backfilled.
+  onboardingCompletedAt DateTime?  @map("onboarding_completed_at") @db.Timestamptz(3)
+  status                UserStatus @default(ACTIVE)
+  createdAt             DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  authIdentities            AuthIdentity[]
+  sessions                  Session[]
+  roles                     UserRole[]
+  creatorProfile            CreatorProfile?
+  creatorApplicationReviews CreatorApplicationReview[]  @relation("CreatorApplicationReviewer")
+  postLikes                 PostLike[]
+  postSaves                 PostSave[]
+  creatorFollows            CreatorFollow[]
+  coinWallet                CoinWallet?
+  topupOrders               TopupOrder[]
+  idempotencyKeys           IdempotencyKey[]
+  postPurchases             PostPurchase[]
+  subscriptionPeriods       SubscriptionPeriod[]
+  tips                      Tip[]
+  commentLikes              CommentLike[]               @relation("CommentLiker")
+  postComments              PostComment[]               @relation("PostCommentAuthor")
+  deletedPostComments       PostComment[]               @relation("PostCommentDeleter")
+  postReports               PostReport[]
+  moderationActionsTaken    ModerationAction[]          @relation("ModerationActionAdmin")
+  commentModerationActions  CommentModerationAction[]   @relation("CommentModerationActor")
+  moderationActionsReceived ModerationAction[]          @relation("ModerationActionTarget")
+  payoutsRequested          CreatorPayout[]             @relation("PayoutRequester")
+  notifications             Notification[]              @relation("NotificationRecipient")
+  notificationsActed        Notification[]              @relation("NotificationActor")
+  notificationPreference    NotificationPreference?
+  payoutStatusChanges       CreatorPayoutStatusChange[] @relation("PayoutStatusActor")
+
+  @@map("users")
+}
+
+enum AuthProvider {
+  TELEGRAM
+
+  @@map("auth_provider")
+}
+
+/// Stable external identity (handoff §5.1). Matched by (provider, providerSub), never by username.
+model AuthIdentity {
+  id          String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId      String       @map("user_id") @db.Uuid
+  provider    AuthProvider
+  providerSub String       @map("provider_sub")
+  /// Telegram preferred_username: display only, refreshed on each login; never used to match identities.
+  username    String?
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([provider, providerSub])
+  @@index([userId])
+  @@map("auth_identities")
+}
+
+/// Server-side session. Only the SHA-256 hex of the cookie token is stored.
+model Session {
+  id        String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+/// One OIDC login attempt (state + nonce + PKCE verifier), single use, bound to the browser
+/// by the SHA-256 hex of the influency_oidc cookie.
+model OidcLoginAttempt {
+  id                 String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  state              String    @unique
+  nonce              String
+  codeVerifier       String    @map("code_verifier")
+  browserBindingHash String    @map("browser_binding_hash")
+  expiresAt          DateTime  @map("expires_at") @db.Timestamptz(3)
+  consumedAt         DateTime? @map("consumed_at") @db.Timestamptz(3)
+  returnTo           String    @default("/") @map("return_to") // safeReturnTo() output; never raw input
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@map("oidc_login_attempts")
+}
+
+/// Roles granted explicitly in the DB/seed (handoff §5.3). USER is implicit; CREATOR is derived from
+/// an APPROVED creator profile and never stored here.
+enum GrantedRole {
+  ADMIN
+
+  @@map("granted_role")
+}
+
+model UserRole {
+  id        String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId    String      @map("user_id") @db.Uuid
+  role      GrantedRole
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, role])
+  @@map("user_roles")
+}
+
+enum CreatorProfileStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+
+  @@map("creator_profile_status")
+}
+
+/// Creator identity + application (US-010): one row per user. `slug` is stored normalized; CHECKs
+/// (migration SQL) enforce lowercase + allowed characters, so UNIQUE(slug) is case-insensitive.
+/// US-012 adds avatar/banner keys: private R2 object keys ("profile-images/<uuid>"), null = none.
+model CreatorProfile {
+  id                      String                     @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId                  String                     @unique @map("user_id") @db.Uuid
+  slug                    String                     @unique
+  status                  CreatorProfileStatus       @default(PENDING_REVIEW)
+  displayName             String                     @map("display_name")
+  bio                     String?
+  category                String?
+  avatarKey               String?                    @map("avatar_key")
+  bannerKey               String?                    @map("banner_key")
+  agreementVersion        String                     @map("agreement_version")
+  agreementAcceptedAt     DateTime                   @map("agreement_accepted_at") @db.Timestamptz(3)
+  /// onboarding US-053: price (Koin, 10-5000, CHECK in the migration) the applicant chose; becomes plan version 1 on approval.
+  requestedPlanPriceCoins BigInt?                    @map("requested_plan_price_coins")
+  createdAt               DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user                    User                       @relation(fields: [userId], references: [id], onDelete: Restrict)
+  reviews                 CreatorApplicationReview[]
+  posts                   Post[]
+  follows                 CreatorFollow[]
+  subscriptionPlans       CreatorSubscriptionPlan[]
+  revenueEntries          RevenueLedgerEntry[]
+  subscriptionPeriods     SubscriptionPeriod[]
+  tips                    Tip[]
+  payoutAccounts          CreatorPayoutAccount[]
+  payouts                 CreatorPayout[]
+  notifications           Notification[]
+
+  @@map("creator_profiles")
+}
+
+enum CreatorReviewDecision {
+  APPROVED
+  REJECTED
+
+  @@map("creator_review_decision")
+}
+
+/// Append-only decision log for creator applications (US-011). Never updated or deleted by the app.
+/// CHECK (migration): reason is set exactly when decision = REJECTED.
+model CreatorApplicationReview {
+  id               String                @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  creatorProfileId String                @map("creator_profile_id") @db.Uuid
+  reviewerId       String                @map("reviewer_id") @db.Uuid
+  decision         CreatorReviewDecision
+  reason           String?
+  createdAt        DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  creatorProfile   CreatorProfile        @relation(fields: [creatorProfileId], references: [id], onDelete: Restrict)
+  reviewer         User                  @relation("CreatorApplicationReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
+
+  @@index([creatorProfileId, createdAt])
+  @@map("creator_application_reviews")
+}
+
+enum PostVisibility {
+  FREE
+  PREMIUM
+
+  @@map("post_visibility")
+}
+
+/// Handoff §6.1 lifecycle. US-015 only creates DRAFT; transitions arrive with US-019.
+enum PostStatus {
+  DRAFT
+  PROCESSING
+  PENDING_REVIEW
+  PUBLISHED
+  ARCHIVED
+  REMOVED
+
+  @@map("post_status")
+}
+
+/// A creator's post (US-015). Owned by the creator profile; never deleted by the app.
+/// CHECK (migration): char_length(caption) <= 2000 (POST_CAPTION_MAX_LENGTH).
+model Post {
+  id                       String                    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  creatorProfileId         String                    @map("creator_profile_id") @db.Uuid
+  visibility               PostVisibility
+  status                   PostStatus                @default(DRAFT)
+  caption                  String                    @default("")
+  publishedAt              DateTime?                 @map("published_at") @db.Timestamptz(3)
+  /// US-048: cover source when it is one of this post's media (null for a dedicated upload or no cover).
+  coverMediaId             String?                   @map("cover_media_id") @db.Uuid
+  /// US-048: generated public-safe preview `post-previews/<uuid>`, new key on every change; never the source's key.
+  /// CHECK posts_cover_has_preview (migration): a media cover always has a preview.
+  previewKey               String?                   @unique @map("preview_key")
+  createdAt                DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  creatorProfile           CreatorProfile            @relation(fields: [creatorProfileId], references: [id], onDelete: Restrict)
+  media                    MediaAsset[]              @relation("PostMedia")
+  coverMedia               MediaAsset?               @relation("PostCover", fields: [coverMediaId], references: [id], onDelete: Restrict)
+  offers                   PostOffer[]
+  purchases                PostPurchase[]
+  tips                     Tip[]
+  archiveEpisodes          PostArchiveEpisode[]
+  likes                    PostLike[]
+  saves                    PostSave[]
+  comments                 PostComment[]
+  reports                  PostReport[]
+  moderationActions        ModerationAction[]
+  commentModerationActions CommentModerationAction[]
+  notifications            Notification[]
+
+  @@index([creatorProfileId, createdAt])
+  @@index([coverMediaId])
+  @@map("posts")
+}
+
+/// US-018/US-046 per-post unlock price; access is permanent and price_coins is CHECKed to 5–1,000 (LOCKED).
+/// Append-only: a change inserts version + 1; the current offer is the highest
+/// version. Purchases reference a row and snapshot its terms, so existing buyers keep what they paid for.
+model PostOffer {
+  id         String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  postId     String         @map("post_id") @db.Uuid
+  version    Int
+  priceCoins BigInt         @map("price_coins")
+  createdAt  DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  post       Post           @relation(fields: [postId], references: [id], onDelete: Restrict)
+  purchases  PostPurchase[]
+
+  @@unique([postId, version])
+  @@map("post_offers")
+}
+
+/// US-016 images; US-017 video (Cloudflare Stream or the stub driver).
+enum MediaKind {
+  IMAGE
+  VIDEO
+
+  @@map("media_kind")
+}
+
+enum MediaStatus {
+  PENDING_UPLOAD
+  /// Video uploaded, provider still transcoding (US-017).
+  PROCESSING
+  READY
+  REJECTED
+
+  @@map("media_status")
+}
+
+/// US-049: why a media row is REJECTED (shown in the studio). Null on rows rejected before US-049.
+enum MediaRejectionReason {
+  UPLOAD_EXPIRED
+  PROCESSING_TIMEOUT
+  PROCESSING_FAILED
+  TOO_LARGE
+  TOO_LONG
+  UNSUPPORTED_TYPE
+
+  @@map("media_rejection_reason")
+}
+
+/// Media attached to a post (US-016 images, US-017 video). Bytes live in private storage / the video provider; the API decides access.
+/// CHECK (migration): media_assets_storage_ref — IMAGE has object_key only, VIDEO has video_uid only;
+/// media_assets_rejection_reason_status — a rejection reason only on REJECTED rows (US-049).
+model MediaAsset {
+  id              String                @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  postId          String                @map("post_id") @db.Uuid
+  kind            MediaKind
+  status          MediaStatus           @default(PENDING_UPLOAD)
+  /// IMAGE only: server-generated `post-media/<uuid>`; never from the client.
+  objectKey       String?               @unique @map("object_key")
+  /// VIDEO only: provider video id (Stream uid / stub uuid). Never returned to clients.
+  videoUid        String?               @unique @map("video_uid")
+  /// VIDEO only, once READY and the provider knows it.
+  durationSeconds Int?                  @map("duration_seconds")
+  /// Declared at upload request; replaced by the magic-byte type on READY.
+  contentType     String                @map("content_type")
+  /// Declared at upload request; replaced by the stored size on READY.
+  byteSize        Int                   @map("byte_size")
+  uploadExpiresAt DateTime              @map("upload_expires_at") @db.Timestamptz(3)
+  /// creator-studio US-059: the creator's order within the post (0 = the first item, the cover of a premium post).
+  /// Default 0 only so direct inserts keep working; every API path sets it, and ties fall back to created_at, id.
+  position        Int                   @default(0)
+  rejectionReason MediaRejectionReason? @map("rejection_reason")
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  post            Post                  @relation("PostMedia", fields: [postId], references: [id], onDelete: Restrict)
+  coverOf         Post[]                @relation("PostCover")
+
+  @@index([postId, createdAt])
+  @@index([postId, position])
+  /// Stale-upload sweep (US-049).
+  @@index([status, uploadExpiresAt])
+  @@map("media_assets")
+}
+
+/// US-047 archive history. Archive inserts an open episode; restore sets restored_at once; rows are never otherwise
+/// updated or deleted. Partial unique index (migration): one open episode per post. US-050 reads archived_at for grants.
+model PostArchiveEpisode {
+  id         String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  postId     String    @map("post_id") @db.Uuid
+  archivedAt DateTime  @default(now()) @map("archived_at") @db.Timestamptz(3)
+  restoredAt DateTime? @map("restored_at") @db.Timestamptz(3)
+  post       Post      @relation(fields: [postId], references: [id], onDelete: Restrict)
+
+  @@index([postId, archivedAt])
+  @@map("post_archive_episodes")
+}
+
+/// US-024: a user follows a creator. Social only: never grants or revokes an entitlement or subscription.
+model CreatorFollow {
+  id               String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId           String         @map("user_id") @db.Uuid
+  creatorProfileId String         @map("creator_profile_id") @db.Uuid
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  user             User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  creatorProfile   CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, creatorProfileId])
+  @@index([creatorProfileId])
+  @@map("creator_follows")
+}
+
+/// US-051: one like per (post, user); like = insert ON CONFLICT DO NOTHING, unlike = delete.
+model PostLike {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  postId    String   @map("post_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Restrict)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([postId, userId])
+  @@index([userId])
+  @@map("post_likes")
+}
+
+/// user-area US-044: private bookmark. One row per (post, user). Grants no access and is never counted publicly.
+model PostSave {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  postId    String   @map("post_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Restrict)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([postId, userId])
+  @@index([userId, createdAt])
+  @@map("post_saves")
+}
+
+/// US-052: plain-text comment. Soft-deleted only (deleted_at); every read filters deleted_at IS NULL.
+/// CHECK post_comments_body_length (migration): char_length(body) BETWEEN 1 AND 500 (POST_COMMENT_MAX_LENGTH).
+/// CHECK post_comments_deleted_consistent (migration): deleted_at and deleted_by_user_id are set together.
+model PostComment {
+  id               String                   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  postId           String                   @map("post_id") @db.Uuid
+  userId           String                   @map("user_id") @db.Uuid
+  body             String
+  createdAt        DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  deletedAt        DateTime?                @map("deleted_at") @db.Timestamptz(3)
+  deletedByUserId  String?                  @map("deleted_by_user_id") @db.Uuid
+  /// US-017: null = top-level; a reply points at its top-level parent (one level, enforced in the service).
+  parentId         String?                  @map("parent_id") @db.Uuid
+  /// US-017: cached like count for Top order; US-018 keeps it in sync inside the like transaction.
+  likeCount        Int                      @default(0) @map("like_count")
+  /// US-019: set only by a real edit; null = never edited.
+  editedAt         DateTime?                @map("edited_at") @db.Timestamptz(3)
+  /// US-020: set while the comment is the post's pinned comment. At most one per post (partial unique index
+  /// post_comments_one_pinned_per_post) and top-level only (CHECK post_comments_pinned_top_level): raw SQL in the migration.
+  pinnedAt         DateTime?                @map("pinned_at") @db.Timestamptz(3)
+  parent           PostComment?             @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Restrict)
+  replies          PostComment[]            @relation("CommentReplies")
+  likes            CommentLike[]
+  notifications    Notification[]
+  moderationAction CommentModerationAction?
+  post             Post                     @relation(fields: [postId], references: [id], onDelete: Restrict)
+  user             User                     @relation("PostCommentAuthor", fields: [userId], references: [id], onDelete: Restrict)
+  deletedBy        User?                    @relation("PostCommentDeleter", fields: [deletedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([postId, id])
+  @@index([userId, createdAt])
+  @@index([deletedByUserId])
+  @@index([parentId, id])
+  @@index([postId, likeCount(sort: Desc), id(sort: Desc)])
+  @@map("post_comments")
+}
+
+/// US-018: one like per (comment, user). Rows survive a soft delete of the comment and are never edited.
+/// post_comments.like_count is kept in sync in the same transaction (CommentLikesService).
+model CommentLike {
+  id        String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  commentId String      @map("comment_id") @db.Uuid
+  userId    String      @map("user_id") @db.Uuid
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  comment   PostComment @relation(fields: [commentId], references: [id], onDelete: Restrict)
+  user      User        @relation("CommentLiker", fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([commentId, userId])
+  @@index([userId])
+  @@map("comment_likes")
+}
+
+enum PostReportReason {
+  SPAM
+  SEXUAL_CONTENT
+  VIOLENCE
+  HARASSMENT
+  ILLEGAL
+  COPYRIGHT
+  OTHER
+
+  @@map("post_report_reason")
+}
+
+enum ModerationActionType {
+  DISMISS
+  HIDE
+  UNHIDE
+  REMOVE
+  SUSPEND_USER
+  UNSUSPEND_USER
+
+  @@map("moderation_action_type")
+}
+
+/// US-042: append-only log of admin moderation decisions; never updated or deleted.
+/// CHECK moderation_actions_target (migration): post actions set post_id only, user actions target_user_id only.
+/// CHECK moderation_actions_note_length (migration): note ≤ 500 (MODERATION_NOTE_MAX_LENGTH).
+model ModerationAction {
+  id              String               @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  adminId         String               @map("admin_id") @db.Uuid
+  action          ModerationActionType
+  postId          String?              @map("post_id") @db.Uuid
+  targetUserId    String?              @map("target_user_id") @db.Uuid
+  note            String?
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  admin           User                 @relation("ModerationActionAdmin", fields: [adminId], references: [id], onDelete: Restrict)
+  post            Post?                @relation(fields: [postId], references: [id], onDelete: Restrict)
+  targetUser      User?                @relation("ModerationActionTarget", fields: [targetUserId], references: [id], onDelete: Restrict)
+  resolvedReports PostReport[]
+
+  @@index([adminId])
+  @@index([postId, createdAt])
+  @@index([targetUserId, createdAt])
+  @@map("moderation_actions")
+}
+
+enum CommentModerationActor {
+  CREATOR
+  ADMIN
+
+  @@map("comment_moderation_actor")
+}
+
+/// US-021: append-only audit of a comment deleted by someone other than its author (the post's creator or an
+/// admin). One row per comment (UNIQUE). Never updated or deleted. The author's own delete writes nothing.
+model CommentModerationAction {
+  id        String                 @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  commentId String                 @unique @map("comment_id") @db.Uuid
+  postId    String                 @map("post_id") @db.Uuid
+  actorId   String                 @map("actor_id") @db.Uuid
+  actorRole CommentModerationActor @map("actor_role")
+  createdAt DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  comment   PostComment            @relation(fields: [commentId], references: [id], onDelete: Restrict)
+  post      Post                   @relation(fields: [postId], references: [id], onDelete: Restrict)
+  actor     User                   @relation("CommentModerationActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([postId, createdAt])
+  @@index([actorId, createdAt])
+  @@map("comment_moderation_actions")
+}
+
+/// US-042: a user's report on a post. Open while resolved_by_action_id is null; resolved once, never deleted.
+/// Partial UNIQUE post_reports_one_open (migration): one open report per (post, reporter).
+/// CHECKs (migration): note ≤ 500; reason OTHER has a note.
+model PostReport {
+  id                 String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  postId             String            @map("post_id") @db.Uuid
+  reporterId         String            @map("reporter_id") @db.Uuid
+  reason             PostReportReason
+  note               String?
+  resolvedByActionId String?           @map("resolved_by_action_id") @db.Uuid
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  post               Post              @relation(fields: [postId], references: [id], onDelete: Restrict)
+  reporter           User              @relation(fields: [reporterId], references: [id], onDelete: Restrict)
+  resolvedByAction   ModerationAction? @relation(fields: [resolvedByActionId], references: [id], onDelete: Restrict)
+
+  @@index([postId, createdAt])
+  @@index([reporterId])
+  @@index([resolvedByActionId])
+  @@map("post_reports")
+}
+
+/// koin-wallet US-029: the five LOCKED top-up packages (Monetization Spec v1 §2). Orders snapshot coins + price, so edits never touch history.
+model CoinPackage {
+  id          String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  coins       Int          @unique
+  priceIdr    Int          @map("price_idr")
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  topupOrders TopupOrder[]
+
+  @@map("coin_packages")
+}
+
+/// One wallet per user. `balance_coins` is a projection of `coin_ledger_entries`, written only by WalletsService in the same transaction as the ledger row.
+model CoinWallet {
+  id           String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId       String            @unique @map("user_id") @db.Uuid
+  balanceCoins BigInt            @default(0) @map("balance_coins")
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user         User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  ledger       CoinLedgerEntry[]
+  lots         CoinLot[]
+
+  @@map("coin_wallets")
+}
+
+/// Purchases (feature 6) adds the debit types; subscription and tip types come with US-037 to US-039.
+enum CoinEntryType {
+  TOPUP_CREDIT
+  POST_PURCHASE_DEBIT
+  SUBSCRIPTION_DEBIT
+  SUBSCRIPTION_REFUND_CREDIT
+  TIP_DEBIT
+
+  @@map("coin_entry_type")
+}
+
+/// What a ledger entry or lot came from; `source_id` is that row's id (no FK: the source tables differ).
+enum CoinSourceType {
+  TOPUP_ORDER
+  POST_PURCHASE
+  SUBSCRIPTION_PERIOD
+  TIP
+
+  @@map("coin_source_type")
+}
+
+/// Append-only Koin ledger (a DB trigger rejects UPDATE and DELETE). A source posts once per entry type.
+model CoinLedgerEntry {
+  id                String                @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  walletId          String                @map("wallet_id") @db.Uuid
+  entryType         CoinEntryType         @map("entry_type")
+  amountCoins       BigInt                @map("amount_coins")
+  balanceAfterCoins BigInt                @map("balance_after_coins")
+  sourceType        CoinSourceType        @map("source_type")
+  sourceId          String                @map("source_id") @db.Uuid
+  createdAt         DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  wallet            CoinWallet            @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  allocations       CoinSpendAllocation[]
+
+  @@unique([sourceType, sourceId, entryType])
+  @@index([walletId, createdAt(sort: Desc), id(sort: Desc)])
+  @@map("coin_ledger_entries")
+}
+
+/// Koin issued by one source (a top-up) with its IDR basis and what is still unspent; purchases consume lots FIFO.
+model CoinLot {
+  id           String                @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  walletId     String                @map("wallet_id") @db.Uuid
+  sourceType   CoinSourceType        @map("source_type")
+  sourceId     String                @map("source_id") @db.Uuid
+  issuedCoins  BigInt                @map("issued_coins")
+  unspentCoins BigInt                @map("unspent_coins")
+  basisIdr     BigInt                @map("basis_idr")
+  createdAt    DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  wallet       CoinWallet            @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  allocations  CoinSpendAllocation[]
+
+  @@unique([sourceType, sourceId])
+  @@index([walletId, createdAt])
+  @@map("coin_lots")
+}
+
+enum TopupStatus {
+  CREATED
+  PENDING
+  CREDITED
+  FAILED
+  EXPIRED
+  CANCELED
+
+  @@map("topup_status")
+}
+
+/// A Koin top-up (koin-wallet US-030). Coins and price are a snapshot of the package at creation and never change.
+/// `order_number` is the Midtrans order_id. There is no PAID state: paid and credited happen in one transaction.
+model TopupOrder {
+  id               String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId           String      @map("user_id") @db.Uuid
+  packageId        String      @map("package_id") @db.Uuid
+  orderNumber      String      @unique @map("order_number")
+  coins            BigInt
+  priceIdr         BigInt      @map("price_idr")
+  feeIdr           BigInt      @default(0) @map("fee_idr")
+  totalIdr         BigInt      @map("total_idr")
+  currency         String      @default("IDR")
+  status           TopupStatus @default(CREATED)
+  providerStatus   String?     @map("provider_status")
+  providerTxRef    String?     @unique @map("provider_tx_ref")
+  paymentType      String?     @map("payment_type")
+  redirectUrl      String?     @map("redirect_url")
+  expiresAt        DateTime?   @map("expires_at") @db.Timestamptz(3)
+  paidAt           DateTime?   @map("paid_at") @db.Timestamptz(3)
+  creditedAt       DateTime?   @map("credited_at") @db.Timestamptz(3)
+  failureReason    String?     @map("failure_reason")
+  quarantinedAt    DateTime?   @map("quarantined_at") @db.Timestamptz(3)
+  quarantineReason String?     @map("quarantine_reason")
+  checkAttempts    Int         @default(0) @map("check_attempts")
+  nextCheckAt      DateTime?   @map("next_check_at") @db.Timestamptz(3)
+  lastCheckedAt    DateTime?   @map("last_checked_at") @db.Timestamptz(3)
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user             User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  package          CoinPackage @relation(fields: [packageId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status, nextCheckAt])
+  @@map("topup_orders")
+}
+
+/// Generic Idempotency-Key store (top-ups now, purchases later): same (user, scope, key) + same request hash replays the result.
+model IdempotencyKey {
+  id          String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  scope       String
+  key         String
+  requestHash String   @map("request_hash")
+  resultId    String?  @map("result_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, scope, key])
+  @@map("idempotency_keys")
+}
+
+/// Every Midtrans payment notification / status answer, stored before it is processed (koin-wallet US-031).
+/// `fingerprint` dedupes identical deliveries; processing is idempotent either way. The payload holds no secret (`signature_key` is a hash).
+model PaymentWebhookEvent {
+  id             String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  /// 'midtrans' (notification) or 'midtrans_status' (status API answer, US-032).
+  provider       String
+  orderNumber    String    @map("order_number")
+  fingerprint    String    @unique
+  signatureValid Boolean   @map("signature_valid")
+  payload        Json
+  outcome        String?
+  receivedAt     DateTime  @default(now()) @map("received_at") @db.Timestamptz(3)
+  processedAt    DateTime? @map("processed_at") @db.Timestamptz(3)
+
+  @@index([orderNumber])
+  @@map("payment_webhook_events")
+}
+
+/// purchases US-035: a creator's subscription plan. Append-only versions (like post_offers): a price or active change
+/// inserts version + 1 and the current plan is the highest version. Periods (US-037) snapshot the version they bought.
+/// CHECKs (migration): price 10–5,000 Koin (LOCKED), duration exactly 30 days (LOCKED), version >= 1.
+model CreatorSubscriptionPlan {
+  id               String               @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  creatorProfileId String               @map("creator_profile_id") @db.Uuid
+  version          Int
+  priceCoins       BigInt               @map("price_coins")
+  durationDays     Int                  @default(30) @map("duration_days")
+  active           Boolean
+  createdAt        DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  creatorProfile   CreatorProfile       @relation(fields: [creatorProfileId], references: [id], onDelete: Restrict)
+  periods          SubscriptionPeriod[]
+
+  @@unique([creatorProfileId, version])
+  @@map("creator_subscription_plans")
+}
+
+/// purchases US-036: which Koin lots a debit consumed (FIFO). Append-only. A refund (US-038) restores exactly these amounts.
+model CoinSpendAllocation {
+  id            String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  ledgerEntryId String          @map("ledger_entry_id") @db.Uuid
+  lotId         String          @map("lot_id") @db.Uuid
+  coins         BigInt
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  ledgerEntry   CoinLedgerEntry @relation(fields: [ledgerEntryId], references: [id], onDelete: Restrict)
+  lot           CoinLot         @relation(fields: [lotId], references: [id], onDelete: Restrict)
+
+  @@unique([ledgerEntryId, lotId])
+  @@index([lotId])
+  @@map("coin_spend_allocations")
+}
+
+enum RevenueAccount {
+  CREATOR
+  PLATFORM
+
+  @@map("revenue_account")
+}
+
+/// What a revenue row came from.
+enum RevenueSourceType {
+  POST_PURCHASE
+  SUBSCRIPTION_PERIOD
+  TIP
+
+  @@map("revenue_source_type")
+}
+
+enum RevenueEntryKind {
+  SALE
+  REVERSAL
+
+  @@map("revenue_entry_kind")
+}
+
+/// purchases US-036: the creator/platform split of every Koin spend, in integer IDR. Append-only (trigger).
+/// Top-ups never post here: revenue is allocated only when Koin is spent. Earnings maturity and payouts: creator-studio.
+/// CHECKs (migration): SALE > 0 and REVERSAL < 0, fee_bps 0–10,000, gross > 0.
+model RevenueLedgerEntry {
+  id               String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  /// Set on PLATFORM rows too, so a sale can be traced to its creator.
+  creatorProfileId String            @map("creator_profile_id") @db.Uuid
+  account          RevenueAccount
+  kind             RevenueEntryKind
+  amountIdr        BigInt            @map("amount_idr")
+  /// Snapshot of the whole transaction.
+  grossIdr         BigInt            @map("gross_idr")
+  feeBps           Int               @map("fee_bps")
+  sourceType       RevenueSourceType @map("source_type")
+  sourceId         String            @map("source_id") @db.Uuid
+  /// When the earning starts to accrue: the spend time, or a scheduled period's starts_at (US-037).
+  accruesAt        DateTime          @map("accrues_at") @db.Timestamptz(3)
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  creatorProfile   CreatorProfile    @relation(fields: [creatorProfileId], references: [id], onDelete: Restrict)
+
+  @@unique([sourceType, sourceId, account, kind])
+  @@index([creatorProfileId, accruesAt])
+  @@map("revenue_ledger_entries")
+}
+
+/// purchases US-036: a permanent unlock. The row itself is the entitlement: it never expires, and a later offer change
+/// or an archive does not touch it. Snapshot of the offer bought. Append-only (trigger).
+/// CHECKs (migration): price 5–1,000 Koin (LOCKED), fee 2,000 bps (LOCKED).
+model PostPurchase {
+  id          String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  postId      String    @map("post_id") @db.Uuid
+  postOfferId String    @map("post_offer_id") @db.Uuid
+  priceCoins  BigInt    @map("price_coins")
+  feeBps      Int       @map("fee_bps")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  post        Post      @relation(fields: [postId], references: [id], onDelete: Restrict)
+  offer       PostOffer @relation(fields: [postOfferId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, postId])
+  @@index([postId])
+  @@map("post_purchases")
+}
+
+/// purchases US-037: one paid 30-day period [starts_at, ends_at) in UTC. Its state comes from the timestamps and server
+/// time, never from a stored status: active = starts_at <= now < ends_at, scheduled = starts_at > now. The only column
+/// that ever changes is canceled_at (US-038, a scheduled renewal cancelled before it starts); the trigger enforces it.
+/// Snapshot of the plan version, price and fee bought. CHECKs (migration): price 10–5,000, fee 1,500 bps, 30 days,
+/// ends_at = starts_at + 720 hours. Partial unique index: one non-cancelled period per (user, creator, starts_at).
+model SubscriptionPeriod {
+  id               String                  @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId           String                  @map("user_id") @db.Uuid
+  creatorProfileId String                  @map("creator_profile_id") @db.Uuid
+  planId           String                  @map("plan_id") @db.Uuid
+  priceCoins       BigInt                  @map("price_coins")
+  feeBps           Int                     @map("fee_bps")
+  durationDays     Int                     @map("duration_days")
+  startsAt         DateTime                @map("starts_at") @db.Timestamptz(3)
+  endsAt           DateTime                @map("ends_at") @db.Timestamptz(3)
+  canceledAt       DateTime?               @map("canceled_at") @db.Timestamptz(3)
+  createdAt        DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  user             User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  creatorProfile   CreatorProfile          @relation(fields: [creatorProfileId], references: [id], onDelete: Restrict)
+  plan             CreatorSubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([userId, creatorProfileId, endsAt])
+  @@index([creatorProfileId, startsAt])
+  @@map("subscription_periods")
+}
+
+/// purchases US-039: a thank-you in Koin, 100% to the creator (fee 0). It grants no access and extends no period.
+/// post_id is set for a post tip. CHECK (migration): 1–1,000 Koin (LOCKED). Append-only (trigger).
+model Tip {
+  id               String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId           String         @map("user_id") @db.Uuid
+  creatorProfileId String         @map("creator_profile_id") @db.Uuid
+  postId           String?        @map("post_id") @db.Uuid
+  amountCoins      BigInt         @map("amount_coins")
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  user             User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  creatorProfile   CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Restrict)
+  post             Post?          @relation(fields: [postId], references: [id], onDelete: Restrict)
+
+  @@index([creatorProfileId, createdAt])
+  @@index([userId, createdAt])
+  @@map("tips")
+}
+
+/// creator-studio US-060: a payout is requested, then (admin feature) paid or rejected, or cancelled by the creator.
+/// REQUESTED reserves the amount; CANCELED / REJECTED release it; PAID_OUT is final.
+enum PayoutStatus {
+  REQUESTED
+  CANCELED
+  REJECTED
+  PAID_OUT
+
+  @@map("payout_status")
+}
+
+/// creator-studio US-060: where a creator's payouts go, at most 3 per creator (US-062 enforces it), exactly one active.
+/// account_number_enc is AES-256-GCM (v1:iv:tag:ciphertext, US-062): write-only, never returned; last4 is for display.
+/// Soft delete only (deleted_at), because payouts reference the account. Partial UNIQUE index (migration):
+/// one active, non-deleted account per creator. A trigger allows only active and deleted_at to change.
+model CreatorPayoutAccount {
+  id               String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  creatorProfileId String          @map("creator_profile_id") @db.Uuid
+  bankCode         String          @map("bank_code")
+  accountNumberEnc String          @map("account_number_enc")
+  last4            String          @map("last4")
+  holderName       String          @map("holder_name")
+  active           Boolean         @default(false)
+  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  deletedAt        DateTime?       @map("deleted_at") @db.Timestamptz(3)
+  creatorProfile   CreatorProfile  @relation(fields: [creatorProfileId], references: [id], onDelete: Restrict)
+  payouts          CreatorPayout[]
+
+  @@index([creatorProfileId])
+  @@map("creator_payout_accounts")
+}
+
+/// creator-studio US-060: a payout request. Snapshots the amount, fee and the destination at request time. A REQUESTED
+/// row is the reservation: the earnings balance subtracts it. Never deleted; the only update is REQUESTED -> a final
+/// status (trigger). CHECKs (migration): amount >= Rp100.000 (LOCKED), fee >= 0, net = amount - fee, net > 0.
+model CreatorPayout {
+  id                String                      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  creatorProfileId  String                      @map("creator_profile_id") @db.Uuid
+  payoutAccountId   String                      @map("payout_account_id") @db.Uuid
+  bankCode          String                      @map("bank_code")
+  accountLast4      String                      @map("account_last4")
+  holderName        String                      @map("holder_name")
+  amountIdr         BigInt                      @map("amount_idr")
+  feeIdr            BigInt                      @map("fee_idr")
+  netIdr            BigInt                      @map("net_idr")
+  /// True while the transfer fee is a labelled [TBD] example ("Perlu konfirmasi").
+  feeIsPlaceholder  Boolean                     @map("fee_is_placeholder")
+  status            PayoutStatus                @default(REQUESTED)
+  requestedByUserId String                      @map("requested_by_user_id") @db.Uuid
+  createdAt         DateTime                    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(3)
+  creatorProfile    CreatorProfile              @relation(fields: [creatorProfileId], references: [id], onDelete: Restrict)
+  payoutAccount     CreatorPayoutAccount        @relation(fields: [payoutAccountId], references: [id], onDelete: Restrict)
+  requestedBy       User                        @relation("PayoutRequester", fields: [requestedByUserId], references: [id], onDelete: Restrict)
+  statusChanges     CreatorPayoutStatusChange[]
+
+  @@index([creatorProfileId, createdAt])
+  @@map("creator_payouts")
+}
+
+/// creator-studio US-060: the audit trail of a payout, one row per status. Append-only (trigger).
+model CreatorPayoutStatusChange {
+  id          String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  payoutId    String        @map("payout_id") @db.Uuid
+  fromStatus  PayoutStatus? @map("from_status")
+  toStatus    PayoutStatus  @map("to_status")
+  actorUserId String        @map("actor_user_id") @db.Uuid
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  payout      CreatorPayout @relation(fields: [payoutId], references: [id], onDelete: Restrict)
+  actor       User          @relation("PayoutStatusActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([payoutId, createdAt])
+  @@map("creator_payout_status_changes")
+}
+
+/// discover-notifications-settings US-071: in-app notification events. The list is a configurable default, not final.
+enum NotificationType {
+  NEW_POST
+  COMMENT_REPLY
+  COMMENT_LIKE
+  TOPUP_CREDITED
+  SUBSCRIPTION_ENDING
+  NEW_SUBSCRIBER
+  POST_UNLOCKED
+  TIP_RECEIVED
+  PAYOUT_STATUS
+
+  @@map("notification_type")
+}
+
+/// US-071: a user's inbox row. It is also the outbox: producers insert it in the same transaction as the business
+/// change (US-072). Text and link are built at read time; no comment bodies or media are stored. Derived, disposable
+/// data, so every FK cascades (a deleted post/comment/user just drops its notifications).
+/// UNIQUE (user_id, dedupe_key) makes every trigger idempotent. CHECK (migration): coins IS NULL OR coins > 0.
+model Notification {
+  id               String           @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId           String           @map("user_id") @db.Uuid
+  type             NotificationType
+  actorUserId      String?          @map("actor_user_id") @db.Uuid
+  creatorProfileId String?          @map("creator_profile_id") @db.Uuid
+  postId           String?          @map("post_id") @db.Uuid
+  commentId        String?          @map("comment_id") @db.Uuid
+  /// Top-up order / purchase / subscription period / tip / payout id. No FK (several tables).
+  sourceId         String?          @map("source_id") @db.Uuid
+  /// Amount snapshot for the text (top-up, unlock, tip, subscription).
+  coins            BigInt?
+  dedupeKey        String           @map("dedupe_key")
+  readAt           DateTime?        @map("read_at") @db.Timestamptz(3)
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  user             User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor            User?            @relation("NotificationActor", fields: [actorUserId], references: [id], onDelete: Cascade)
+  creatorProfile   CreatorProfile?  @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+  post             Post?            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment          PostComment?     @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  job              NotificationJob?
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, createdAt(sort: Desc), id(sort: Desc)])
+  @@map("notifications")
+}
+
+/// US-071/US-073/US-074: per-user opt-outs and the Telegram link. No row = defaults (COMMENT_LIKE opted out).
+model NotificationPreference {
+  id                 String             @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId             String             @unique @map("user_id") @db.Uuid
+  optOutTypes        NotificationType[] @default([COMMENT_LIKE]) @map("opt_out_types")
+  telegramAllowed    Boolean            @default(false) @map("telegram_allowed")
+  /// Telegram private chat id (US-074). Not named *_id: those columns are uuids by convention.
+  telegramChat       BigInt?            @unique @map("telegram_chat")
+  telegramLinkedAt   DateTime?          @map("telegram_linked_at") @db.Timestamptz(3)
+  /// US-074 /start link token, sha256hex; single use.
+  linkTokenHash      String?            @unique @map("link_token_hash")
+  linkTokenExpiresAt DateTime?          @map("link_token_expires_at") @db.Timestamptz(3)
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+enum NotificationJobStatus {
+  PENDING
+  SENT
+  SKIPPED
+  FAILED
+
+  @@map("notification_job_status")
+}
+
+/// US-074: Telegram delivery of one notification. UNIQUE notification_id = the idempotency key.
+/// CHECK (migration): attempts >= 0.
+model NotificationJob {
+  id             String                @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  notificationId String                @unique @map("notification_id") @db.Uuid
+  status         NotificationJobStatus @default(PENDING)
+  attempts       Int                   @default(0)
+  nextAttemptAt  DateTime              @default(now()) @map("next_attempt_at") @db.Timestamptz(3)
+  /// Error code/description only; never the bot token or message text.
+  lastError      String?               @map("last_error")
+  sentAt         DateTime?             @map("sent_at") @db.Timestamptz(3)
+  createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  notification   Notification          @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+  @@map("notification_jobs")
 }

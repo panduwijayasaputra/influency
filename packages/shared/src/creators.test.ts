@@ -1,0 +1,190 @@
+import { describe, expect, it } from 'vitest';
+import {
+  creatorApplicationResponseSchema,
+  creatorApplicationSchema,
+  creatorProfileResponseSchema,
+  followStateSchema,
+  recommendedCreatorListSchema,
+  rejectCreatorApplicationSchema,
+  RESERVED_SLUGS,
+  slugSchema,
+  updateCreatorProfileSchema,
+} from './index.js';
+
+const RESERVED_MESSAGE = 'Alamat ini dipakai oleh sistem. Pilih alamat lain.';
+
+describe('slugSchema', () => {
+  it('trims and lowercases', () => {
+    expect(slugSchema.parse('  ClaudiAndreya ')).toBe('claudiandreya');
+  });
+
+  it.each(['abc', 'a_b-c', 'user123', '123', 'a'.repeat(30)])('accepts %j', (slug) => {
+    expect(slugSchema.parse(slug)).toBe(slug);
+  });
+
+  it.each(['ab', 'a'.repeat(31), '-abc', 'abc_', 'a.b', 'a b', 'ab!c', 'éclair', 'robots.txt', ''])(
+    'rejects %j',
+    (slug) => {
+      expect(slugSchema.safeParse(slug).success).toBe(false);
+    },
+  );
+
+  it.each([...RESERVED_SLUGS, 'ADMIN', 'Become-Creator'])(
+    'rejects reserved %j with a clear message',
+    (slug) => {
+      const result = slugSchema.safeParse(slug);
+      expect(result.success).toBe(false);
+      expect(result.error?.issues.map((issue) => issue.message)).toContain(RESERVED_MESSAGE);
+    },
+  );
+});
+
+describe('creatorApplicationSchema', () => {
+  const valid = { displayName: 'Claudia', slug: 'claudia', acceptAgreement: true };
+
+  it('accepts a minimal application', () => {
+    expect(creatorApplicationSchema.parse(valid)).toEqual(valid);
+  });
+
+  it.each([
+    ['missing agreement', { ...valid, acceptAgreement: undefined }],
+    ['declined agreement', { ...valid, acceptAgreement: false }],
+    ['empty display name', { ...valid, displayName: '   ' }],
+    ['long display name', { ...valid, displayName: 'x'.repeat(61) }],
+    ['long bio', { ...valid, bio: 'x'.repeat(501) }],
+    ['long category', { ...valid, category: 'x'.repeat(51) }],
+  ])('rejects %s', (_, input) => {
+    expect(creatorApplicationSchema.safeParse(input).success).toBe(false);
+  });
+
+  it.each([10, 5000])('accepts a subscription price of %i', (price) => {
+    expect(
+      creatorApplicationSchema.parse({ ...valid, subscriptionPriceCoins: price }),
+    ).toMatchObject({
+      subscriptionPriceCoins: price,
+    });
+  });
+
+  it.each([9, 5001, 10.5, '50', 0, -10])('rejects a subscription price of %j', (price) => {
+    expect(
+      creatorApplicationSchema.safeParse({ ...valid, subscriptionPriceCoins: price }).success,
+    ).toBe(false);
+  });
+
+  it('explains a missing agreement', () => {
+    const result = creatorApplicationSchema.safeParse({ ...valid, acceptAgreement: false });
+    expect(result.error?.issues[0]).toMatchObject({
+      path: ['acceptAgreement'],
+      message: 'Anda harus menyetujui Perjanjian Kreator dan Kebijakan Konten.',
+    });
+  });
+});
+
+describe('rejectCreatorApplicationSchema', () => {
+  it('trims the reason', () => {
+    expect(rejectCreatorApplicationSchema.parse({ reason: '  Foto tidak jelas ' })).toEqual({
+      reason: 'Foto tidak jelas',
+    });
+  });
+
+  it.each([{}, { reason: '' }, { reason: '   ' }, { reason: 'a'.repeat(501) }])(
+    'rejects %j',
+    (body) => {
+      expect(rejectCreatorApplicationSchema.safeParse(body).success).toBe(false);
+    },
+  );
+
+  it('accepts 500 chars', () => {
+    expect(rejectCreatorApplicationSchema.safeParse({ reason: 'a'.repeat(500) }).success).toBe(
+      true,
+    );
+  });
+});
+
+describe('creatorApplicationResponseSchema', () => {
+  it('accepts a null rejection reason', () => {
+    const body = {
+      status: 'PENDING_REVIEW',
+      displayName: 'A',
+      slug: 'abc',
+      bio: null,
+      category: null,
+      subscriptionPriceCoins: null,
+      submittedAt: '2026-11-03T00:00:00.000Z',
+      rejectionReason: null,
+    };
+    expect(creatorApplicationResponseSchema.parse(body)).toEqual(body);
+  });
+});
+
+describe('updateCreatorProfileSchema', () => {
+  it('rejects an empty update', () => {
+    expect(updateCreatorProfileSchema.safeParse({}).success).toBe(false);
+  });
+
+  it('trims the display name and rejects an empty one', () => {
+    expect(updateCreatorProfileSchema.parse({ displayName: '  Nama  ' })).toEqual({
+      displayName: 'Nama',
+    });
+    expect(updateCreatorProfileSchema.safeParse({ displayName: '   ' }).success).toBe(false);
+  });
+
+  it('accepts an empty bio (cleared by the service) and rejects a too long one', () => {
+    expect(updateCreatorProfileSchema.parse({ bio: '' })).toEqual({ bio: '' });
+    expect(updateCreatorProfileSchema.safeParse({ bio: 'a'.repeat(501) }).success).toBe(false);
+  });
+
+  it('strips fields that are not editable', () => {
+    const parsed = updateCreatorProfileSchema.parse({
+      displayName: 'A',
+      slug: 'other',
+      status: 'APPROVED',
+      avatarKey: 'x',
+    });
+    expect(parsed).toEqual({ displayName: 'A' });
+  });
+});
+
+describe('creatorProfileResponseSchema', () => {
+  it('accepts null image URLs', () => {
+    const body = {
+      slug: 'abc',
+      displayName: 'A',
+      bio: null,
+      category: null,
+      avatarUrl: null,
+      bannerUrl: null,
+    };
+    expect(creatorProfileResponseSchema.parse(body)).toEqual(body);
+  });
+});
+
+describe('recommendedCreatorListSchema', () => {
+  const creator = {
+    slug: 'nadia',
+    displayName: 'Nadia',
+    avatarUrl: null,
+    bannerUrl: null,
+    followerCount: 12,
+  };
+
+  it('parses public creator fields', () => {
+    expect(recommendedCreatorListSchema.parse({ creators: [creator] }).creators[0]!.slug).toBe(
+      'nadia',
+    );
+  });
+
+  it('rejects a creator without a follower count', () => {
+    const bare = { ...creator, followerCount: undefined };
+    expect(recommendedCreatorListSchema.safeParse({ creators: [bare] }).success).toBe(false);
+  });
+});
+
+describe('followStateSchema', () => {
+  it('parses a follow state and rejects a fractional count', () => {
+    expect(followStateSchema.parse({ following: true, followerCount: 3 }).followerCount).toBe(3);
+    expect(followStateSchema.safeParse({ following: true, followerCount: 1.5 }).success).toBe(
+      false,
+    );
+  });
+});

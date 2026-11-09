@@ -1,0 +1,16 @@
+# QA Report: TASK-216 — Payout list + cancel endpoints, remove the studio dummies
+
+**Result:** PASS (2026-11-09)
+
+## Checked
+- `GET /api/v1/me/payouts?cursor=` (approved creator, `no-store`): my payouts only, newest first, 20 per page (`WALLET_PAGE_SIZE`), keyset `(created_at, id)` with the wallet cursor format; 25 payouts → pages of 20 and 5 with no gaps or repeats; each item carries amount, fee, net, status, the destination snapshot (bank, last 4, holder) and the request / update times. Bad, empty or malformed cursor → 400 `VALIDATION_FAILED`.
+- `POST /api/v1/me/payouts/:id/cancel` (200, no body, 5/min [TBD], `no-store`): one transaction — lock the creator row (the same lock a request takes) → find my payout (another creator's or an unknown one is the same 404) → only `REQUESTED` (else 409 `PAYOUT_NOT_CANCELABLE`) → conditional update `WHERE status = 'REQUESTED'` (count must be 1) → status change `REQUESTED → CANCELED` with the actor. The reservation is released simply because the balance no longer counts a CANCELED payout: available returns to the matured amount and reserved to 0.
+- Exactly once: a second cancel → 409 and still exactly two status-change rows; 5 concurrent cancels → exactly one succeeds, four get `PAYOUT_NOT_CANCELABLE`, one CANCELED change row, balance unchanged by the extra attempts; a payout already PAID_OUT or REJECTED (set the way an admin would) cannot be cancelled and keeps its status.
+- A cancel racing a new request for the same money is consistent: either order is fine, never reserved twice (available + reserved always equals the matured amount); the released amount can be requested again.
+- HTTP: the payout is returned; foreign / unknown id → 404 and the other creator's payout untouched; malformed id → 400; guest 401; non-creator 403 `CREATOR_NOT_APPROVED`; cross-site and origin-less cancel → 403.
+- Web: `fetchPayouts(cursor?)` and `cancelPayout` are real calls; `lib/api/studio-dummy-store.ts` is deleted and no `dummy until` remains in the web app: creator-studio has no dummy data left. The Pencairan list gets "Muat lagi" (older pages appended, shown only when there is a next page, failure keeps the loaded rows and toasts, dropped on reload).
+- Last full `pnpm check` with this story: shared 308, API 1328 (105 files), web 904 (118 files) all passed once; see the notes for the later runs.
+
+## Notes
+- **Not caused by this work:** after that clean run, further runs failed in web on tests unrelated to creator-studio. The deterministic one is `src/app/page.test.tsx` ("shows the top bar, drawer and feed…"): it expects the Cari link `href="/discover"`, but the top bar now links to `/discover?tab=cari`. Files of the Discover feature (`components/discover/*`, `home-top-bar.tsx`, `lib/api/discover.ts`, `lib/recent-creators.ts`, `shared/discover.ts`) were being edited concurrently by someone else during these runs; their own `home-top-bar.test.tsx` already expects the new link, so `page.test.tsx` needs the same update from whoever owns that change. It was deliberately left untouched.
+- Earlier intermittent web failures (`post-media-viewer`, `is fetched once…`) were never reproduced in isolation and are unrelated async-timing tests.

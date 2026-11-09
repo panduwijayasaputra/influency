@@ -13,5 +13,5 @@ try {
   process.exit(1);
 }
 
-const app = await createApp({ logger: new ConsoleLogger({ json: true }) });
+const app = await createApp({ logger: new ConsoleLogger({ json: true }) }, env.TRUST_PROXY);
 await app.listen({ port: env.API_PORT, host: '0.0.0.0' });

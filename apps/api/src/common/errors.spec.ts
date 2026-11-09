@@ -2,7 +2,7 @@ import { PassThrough } from 'node:stream';
 import { Body, Controller, ForbiddenException, Get, HttpCode, Post } from '@nestjs/common';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
-import { ERRORS, errorResponseSchema } from '@influency/shared';
+import { ERRORS, errorResponseSchema, POST_IMAGE_MAX_BYTES } from '@influency/shared';
 import { z } from 'zod';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { configureApp, createFastifyAdapter } from '../app.factory.js';
@@ -130,6 +130,30 @@ describe('error format', () => {
 
     expect(res.statusCode).toBe(400);
     expect(errorOf(res)).toMatchObject({ code: 'VALIDATION_FAILED', details: null });
+  });
+
+  it('returns 413 FILE_TOO_LARGE for an image body over the upload limit', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/test-errors/validate',
+      headers: { 'content-type': 'image/png' },
+      payload: Buffer.alloc(POST_IMAGE_MAX_BYTES + 1),
+    });
+
+    expect(res.statusCode).toBe(413);
+    expect(errorOf(res)).toMatchObject({ code: 'FILE_TOO_LARGE', details: null });
+  });
+
+  it('returns 415 UNSUPPORTED_FILE_TYPE for a body type without a parser', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/test-errors/validate',
+      headers: { 'content-type': 'application/pdf' },
+      payload: '%PDF-1.7',
+    });
+
+    expect(res.statusCode).toBe(415);
+    expect(errorOf(res)).toMatchObject({ code: 'UNSUPPORTED_FILE_TYPE', details: null });
   });
 
   it('logs unexpected errors server-side with the request ID', async () => {

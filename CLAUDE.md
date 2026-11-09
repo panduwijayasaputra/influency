@@ -16,6 +16,9 @@ Node 24 (`.nvmrc`) and pnpm via Corepack (version pinned in `packageManager`). R
 pnpm install
 pnpm dev          # builds shared, then web :3000 + api :4000 (/api/v1) + shared watch
 pnpm check        # format:check + lint + typecheck + test — run before declaring a task done
+pnpm db:migrate   # prisma migrate dev (new migration from schema changes)
+pnpm db:reset     # drop local DB, re-migrate, re-seed (Prisma blocks this for agents without user consent)
+pnpm db:seed      # idempotent demo seed (apps/api/prisma/seed/)
 pnpm build | lint | typecheck | test | format
 pnpm --filter @influency/api test                                # one package
 pnpm --filter @influency/api exec vitest run src/app.spec.ts     # one test file
@@ -24,6 +27,7 @@ pnpm --filter @influency/api exec vitest run -t "test name"      # one test by n
 
 Gotchas:
 - The API needs a local PostgreSQL 18 and a root `.env` (copy `.env.example`); it exits at startup listing missing/invalid variables.
+- `pnpm test` needs PostgreSQL running and `TEST_DATABASE_URL` (a `*_test` DB) in `.env`: api `test/global-setup.ts` wipes and re-migrates it once per run.
 - Prisma client is generated (gitignored) into `apps/api/src/generated/` by the api `postinstall`; an up-to-date `pnpm install` skips it, so run `pnpm --filter @influency/api generate` after schema changes.
 - Apps load `@influency/shared` from `dist/` at runtime (its `types` point at `src/`, so typecheck/lint work without a build). After changing shared, rebuild it (`pnpm --filter @influency/shared build`) before running app tests directly; root `test`/`dev` do this for you.
 - Everything is ESM (NestJS 12 default): relative imports in `apps/api` and `packages/shared` need `.js` suffixes.
@@ -49,7 +53,7 @@ pnpm monorepo, TypeScript strict, Node LTS pinned in `.nvmrc`, modular monolith 
 
 Boundaries: PostgreSQL is authoritative for balances/ledger/entitlements; Redis is delivery only; Midtrans browser redirects never mean "paid"; Telegram is identity + outbound notifications only; R2/Stream hold bytes but the API decides access and mints short-lived URLs.
 
-Reserved top-level route segments (cannot be creator slugs): `login, wallet, studio, admin, auth, api, discover, subscriptions, library, terms, privacy, help`. Slugs are lowercase-normalized and unique case-insensitively.
+Reserved top-level route segments (cannot be creator slugs): `login, wallet, studio, admin, auth, api, discover, subscriptions, library, terms, privacy, help, become-creator, account, me, notifications, following, welcome`. Slugs are lowercase-normalized and unique case-insensitively.
 
 ## Non-negotiable invariants
 

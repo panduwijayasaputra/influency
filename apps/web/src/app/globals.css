@@ -2,16 +2,14 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 
-@custom-variant dark (&:is(.dark *));
-
 @theme inline {
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  /* Design radius scale (design/HANDOFF.md). */
+  --radius-sm: 9px; /* segments */
+  --radius-md: 12px; /* inputs, small buttons, segment track */
+  --radius-lg: 14px; /* buttons */
+  --radius-xl: 16px; /* cards, media */
+  --radius-2xl: 20px; /* recommended cards */
+  --radius-3xl: 22px; /* sheets */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -20,6 +18,8 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-ink: var(--primary-ink);
+  --color-brand: var(--brand);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -30,88 +30,52 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  --color-koin: var(--koin);
+  --color-koin-surface: var(--koin-surface);
+  --color-koin-foreground: var(--koin-foreground);
+  --color-koin-border: var(--koin-border);
+  --color-success: var(--success);
+  --color-success-surface: var(--success-surface);
+  --color-telegram: var(--telegram);
+  --color-telegram-foreground: var(--telegram-foreground);
+  --container-feed: var(--feed-max-width);
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Light Social palette (design/HANDOFF.md, 2026-11-07). Tokens are PROPOSAL values; change them here only. */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  color-scheme: light;
+  --background: #fafafa; /* canvas */
+  --foreground: #25262b; /* text */
+  --card: #ffffff; /* surface */
+  --card-foreground: #25262b;
+  --popover: #ffffff;
+  --popover-foreground: #25262b;
+  --primary: #d9584c; /* primary.strong: filled buttons */
+  /* Accepted AA exception (user decision 2026-11-07): white on #d9584c is 3.85:1, kept as designed. */
+  --primary-foreground: #ffffff;
+  --primary-ink: #b4463b; /* primary.ink: coral text links, lock icons */
+  --brand: #ef8176; /* primary: logo, active indicators, liked heart; never carries text */
+  --secondary: #25262b; /* dark button ("Ikuti") / active chip */
+  --secondary-foreground: #ffffff;
+  --muted: #f1eeed; /* segment track, neutral fill */
+  --muted-foreground: #6b6b75; /* muted: metadata; not on accent (4.49:1) */
+  --accent: #ffe8e2; /* primary.soft: chips, Premium badge, hover */
+  --accent-foreground: #8f3a31;
+  --destructive: #b42318; /* danger */
+  --border: #ece8e7; /* hairlines */
+  --input: #dcd6d5; /* input / outline button border */
+  --ring: #ef8176;
+  --koin: #d6a443; /* Koin coin mark only */
+  --koin-surface: #fff6e5;
+  --koin-foreground: #6b4a0e; /* text on koin-surface */
+  --koin-border: #f1ddb3;
+  --success: #1e6b3a;
+  --success-surface: #e6f4ea;
+  --telegram: #1a7db0; /* "Masuk dengan Telegram" button only; white text 4.56:1 */
+  --telegram-foreground: #ffffff;
+  --feed-max-width: 34rem;
+  --bottom-nav-height: 4rem; /* BottomNav height (AppChrome spacer) and toast offset */
 }
 
 @layer base {

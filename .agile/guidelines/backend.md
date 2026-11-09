@@ -45,12 +45,12 @@ All errors use one shape (handoff §11.5):
 
 ## Database (Prisma)
 
-- UUID primary keys; `timestamptz` in UTC; snake_case table/column names via `@@map`/`@map`.
+- UUID primary keys `id String @id @default(dbgenerated("uuidv7()")) @db.Uuid`; timestamps `DateTime @db.Timestamptz(3)`; snake_case table/column/enum names via `@@map`/`@map`. `src/common/schema-conventions.integration.spec.ts` enforces these (and no float/numeric columns) on every migration.
 - Koin as `BigInt`/`Int` (integer), IDR as integer rupiah, commission as integer basis points. **Never** `Float`/`Decimal` math in JS for money.
 - Every schema change ships with a migration in the same task. Never edit an applied migration.
 - Unique constraints from handoff §10.1 are part of the spec, not optional (provider subject, slug, order number, provider transaction ID, ledger idempotency key, purchase idempotency key, credit source).
 - Add `CHECK` constraints (e.g. `balance_coins >= 0`, `price_coins > 0`) via SQL in migrations — but never rely on them alone for race safety.
-- Seed script creates demo data from handoff §15.5 (creators `claudiandreya`, `creatorb`, subscribers A/B, admin, free + premium posts, one active plan, example coin packages labeled `EXAMPLE`).
+- Seed (`apps/api/prisma/seed/`): add an idempotent step to `seedSteps` in `seed.ts` (upsert by fixed id from `demo-ids.ts`), in FK order. It creates demo data from handoff §15.5 (creators `claudiandreya`, `creatorb`, subscribers A/B, admin, free + premium posts, one active plan, example coin packages labeled `EXAMPLE`).
 
 ## Financial transactions (blocker rules)
 
@@ -82,9 +82,10 @@ Applies to wallet, top-up, payment, purchase, subscription, revenue, refund and 
 ## Auth and authorization
 
 - Telegram OIDC: Authorization Code + PKCE (S256), `state` and `nonce` bound to the login attempt, code exchange server-side, ID token verified against JWKS (issuer `https://oauth.telegram.org`, audience = client ID, exp/iat/nonce). Identity = `auth_identities (provider, provider_sub)`; never the username.
-- Sessions are server-side (`sessions` table storing a token hash); cookie is HttpOnly, Secure on HTTPS, SameSite=Lax; logout revokes the row. Provider tokens never reach the browser.
+- Sessions are server-side (`sessions` table storing a token hash); cookie is HttpOnly, Secure on HTTPS, SameSite=Lax; logout revokes the row. Provider tokens never reach the browser. Sessions have an absolute lifetime (`SESSION_TTL_DAYS`); `SessionGuard` (`common/session.guard.ts`) sets `req.authSession = { sessionId, userId }`.
+- CSRF: the global `CsrfGuard` rejects POST/PUT/PATCH/DELETE carrying the session cookie unless `Origin` equals `WEB_ORIGIN` (403 `FORBIDDEN`); requests without the cookie (webhooks) are not checked.
 - `returnTo` accepts only same-origin relative paths.
-- Guards: `SessionGuard` (authenticated), `RolesGuard` (`ADMIN`), `ApprovedCreatorGuard` (approved `creator_profiles` row). Roles come from the DB, never from token claims.
+- Guards (`common/`): `SessionGuard` (authenticated), `AdminGuard` (`user_roles` ADMIN row → else 403 `FORBIDDEN`), `ApprovedCreatorGuard` (APPROVED `creator_profiles` row → else 403 `CREATOR_NOT_APPROVED`, sets `req.creatorProfileId`). Both role guards extend `SessionGuard`: use one of them alone, not together with `SessionGuard`. Roles come from the DB on every request, never from token claims or the session row.
 - **Ownership on every query:** studio endpoints filter by the session's creator id; user endpoints by the session's user id. A wrong-owner id returns 404, not someone else's data. Public ids are identifiers, not access tokens.
 - Rate-limit auth, top-up, purchase, upload, payout and webhook endpoints.
 

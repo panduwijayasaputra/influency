@@ -8,6 +8,9 @@ const HTTP_STATUS_CODES: Partial<Record<number, ErrorCode>> = {
   401: 'AUTH_REQUIRED',
   403: 'FORBIDDEN',
   404: 'NOT_FOUND',
+  // Nest's Fastify adapter turns body-limit / missing-parser errors into these HttpExceptions.
+  413: 'FILE_TOO_LARGE',
+  415: 'UNSUPPORTED_FILE_TYPE',
 };
 
 /** Maps every error to `{ error: { code, message, requestId, details } }`; unknown errors become a generic 500. */
@@ -17,7 +20,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const http = host.switchToHttp();
     const request = http.getRequest<FastifyRequest>();
     const reply = http.getResponse<FastifyReply>();
-
     const { code, details, message } = toError(exception);
     const { status } = ERRORS[code];
     if (status >= 500) request.log.error({ err: exception }, 'Unhandled error');

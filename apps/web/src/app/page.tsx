@@ -1,10 +1,33 @@
-import { APP_NAME } from '@influency/shared';
+import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
+import { AccountDrawer } from '@/components/account-drawer';
+import { HomeFeed } from '@/components/home-feed/home-feed';
+import { HomeTopBar } from '@/components/home-top-bar';
+import { getCurrentUser } from '@/lib/api/current-user';
+import { getUnreadCount } from '@/lib/api/notifications.server';
+import { loginHref } from '@/lib/login-href';
+
+export const metadata = { title: 'Beranda' };
 
 export default function HomePage() {
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-3 px-6 py-16">
-      <h1 className="text-3xl font-bold tracking-tight">{APP_NAME}</h1>
-      <p className="text-base text-muted-foreground">Konten eksklusif dari creator favoritmu.</p>
-    </main>
+    <Suspense fallback={null}>
+      <Home />
+    </Suspense>
+  );
+}
+
+// A guest never sees the top bar or drawer: the proxy redirects cookie-less visitors; this catches revoked sessions.
+export async function Home() {
+  const [user, unread] = await Promise.all([getCurrentUser().catch(() => null), getUnreadCount()]);
+  if (!user) redirect(loginHref('/'));
+  return (
+    <>
+      <HomeTopBar hasUnread={unread > 0} account={<AccountDrawer user={user} />} />
+      <main className="mx-auto w-full max-w-feed flex-1 pb-6">
+        <h1 className="sr-only">Beranda</h1>
+        <HomeFeed />
+      </main>
+    </>
   );
 }

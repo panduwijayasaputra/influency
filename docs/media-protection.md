@@ -1,0 +1,25 @@
+# Media protection (US-021)
+
+What Influency does to keep premium media to entitled viewers, and what it can't do.
+
+## What is enforced
+
+- **Server-side access check.** Viewable media URLs come only from `GET /api/v1/posts/:id/media-access`. It runs `PostAccessService.check` with the session user and server time on every request: `full` mints URLs, `locked` returns 403, `hidden` returns 404. The client never decides access.
+- **Short-lived, signed URLs.** Images are R2 presigned GETs (HMAC-signed dev-storage URLs locally). Videos use Cloudflare Stream playback tokens on videos uploaded with `requireSignedURLs`, minted with `downloadable: false`, and play as HLS (`/manifest/video.m3u8`) in our own `<video>`. Each video's poster is the Stream thumbnail on the same token, so it passes the same access check and is never public; the dev stub stores a generated poster privately and signs it like the video. Lifetime: `MEDIA_ACCESS_TTL_SECONDS` (placeholder 10–30 min; default 30, longer than the 10-minute max video). Each refresh is a new request through the check, so a revoked or removed post stops new URLs immediately.
+- **Never in public HTML, logs or analytics.** URLs are fetched by the browser after the page loads (never server-rendered), returned with `no-store`, and never logged. The authorization log line holds only post id, user id, decision and count; request logs drop query strings.
+- **Rate limit.** 60 requests per minute per user (per IP when anonymous); placeholder.
+
+## The watermark
+
+The player overlays `influency · <tag>`, where the tag is the first 8 hex characters of `sha256(session id)`. It holds no name, Telegram id or other personal data. It lets an operator tell which session a leaked capture came from, and it discourages casual sharing.
+
+## Limits (not claimed as protection)
+
+- Screen recording, screenshots and phone cameras can't be prevented. The watermark can be cropped or blurred out.
+- A minted URL works for anyone who has it until it expires (up to the TTL), and after access is lost (for example a subscription ending mid-session) until then.
+- There is no DRM. Stream's `downloadable: false` blocks the download endpoint, not capture of the stream.
+- The viewer refreshes URLs a minute before expiry; the player reattaches the new source at the current position (US-009).
+- The in-memory rate limit is per API process.
+- Anonymous callers behind the web proxy share one IP bucket unless `TRUST_PROXY` is set (US-008). With it, `req.ip` comes from `X-Forwarded-For`, so each guest gets their own bucket.
+  - Set it only where the deploy edge (load balancer or CDN) **overwrites** `X-Forwarded-For`. The Next proxy keeps a client-sent value (`??=`), so without such an edge a client could pick its own key and dodge the limit.
+  - Access checks don't depend on it; the limit is only anti-scraping.

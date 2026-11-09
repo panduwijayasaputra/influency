@@ -1,41 +1,38 @@
-# QA Report: TASK-006 — Environment Example & Local PostgreSQL Setup Docs
+# QA Report: TASK-006 — Report form and comment-delete confirm as sheets, share toast, guidelines
 
-**Story:** US-002
-**Result:** PASS
-**Tester:** qa-agent
+**Status:** PASS
+**Date:** 2026-11-07
 
 ## Code Review
 
 ### Guidelines Compliance
-- [x] One root `.env.example`, grouped and commented; "required now" vs "not used yet" marked as planned
-- [x] Story criterion 1 replaced per user decision (native PostgreSQL, no Docker), Redis deferral noted
-- [x] README "Local database" section + CLAUDE.md gotcha added
+- [x] No `window.confirm`/`alert` remains outside `/admin` (grep clean).
+- [x] `frontend.md` has the BottomSheet/useToast rule. `codebase-map.md` lists the new components and the `--bottom-nav-height` contract.
 
 ### Security
-- [x] Placeholders only (`SET_LOCALLY`, `SANDBOX_KEY_ONLY`, `CHANGE_ME`, …)
-- [x] `MIDTRANS_IS_PRODUCTION=false`
-- [x] No Midtrans keys, Telegram bot tokens or private keys in tracked/untracked files (regex scan)
-
-### Financial Integrity
-- N/A (config only)
+- [x] The API still enforces reporting and comment deletion. The UI only changed its container. Comment bodies are still plain text.
 
 ### Code Quality
-- [x] Prettier check passes
+- [x] Laporkan, focus: after success the trigger unmounts. `onCloseAutoFocus` therefore moves focus to the "Laporan terkirim." paragraph instead of dropping it on `<body>`.
+- [x] Laporkan, closing: it clears the error but keeps the reason and note, so an accidental swipe loses no input.
 
 ## Acceptance Criteria Verification
-
-| # | Criterion | Result | Notes |
-|---|-----------|--------|-------|
-| 1 | Local PostgreSQL setup documented; `DATABASE_URL` format connects | PASS (docs) | Connection **not verified**: PostgreSQL not installed on this machine yet |
-| 2 | `.env.example` lists every §8.7 variable with placeholders | PASS | Scripted diff against the handoff block: 0 missing; plus `API_PORT` |
-| 3 | `.env` gitignored, no real credentials | PASS | `git check-ignore .env` matches; `.env.example` not ignored; secret scan clean |
+- [x] The ad-hoc sheets and dialogs on user-facing pages (report form, delete confirm) use `BottomSheet`. The copy-link confirmation is a toast.
 
 ## Tests Run
+- `report-post-button.test.tsx`: 6 tests.
+  - login link
+  - hidden when the viewer can't report
+  - validation
+  - success → sheet closes, toast shows, focus moves to the status paragraph
+  - API error shown inside the sheet
+  - Batal → focus back on Laporkan
+- `post-comments.test.tsx`: delete now goes through the sheet. New case: Batal sends no DELETE.
+- New `share-button.test.tsx`: clipboard → toast; native share → no toast.
+- Full `pnpm test` green (shared, api, web).
 
-- [x] `git check-ignore` checks: PASS
-- [x] §8.7 variable coverage script: PASS
-- [x] `pnpm format:check`: PASS
-
-## Issues
-
-None.
+## Notes
+- Known, pre-existing: after a comment is deleted, its Hapus button unmounts and focus falls to `<body>`. It behaved the same with `window.confirm`.
+- Environment: twice during `pnpm check`, api integration files failed under parallel load ("Failed to resolve entry for @influency/shared" / import errors), with a different set of files each time.
+  - The api suite passes on its own and on a full `pnpm test` rerun.
+  - It is unrelated to US-002, which has no api or shared changes.

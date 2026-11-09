@@ -1,48 +1,33 @@
-# QA Report: TASK-009 — Standard Error Format, DomainError & Zod Validation Pipe
+# QA Report: TASK-009 — PageHeader on existing pages, standalone headers and guidelines
 
-**Story:** US-003
-**Result:** PASS
-**Tester:** qa-agent
+**Status:** PASS
+**Date:** 2026-11-07
 
 ## Code Review
 
 ### Guidelines Compliance
-- [x] Error codes, statuses and Bahasa Indonesia messages in `packages/shared` (`ERRORS`, `ErrorCode`, `errorResponseSchema`)
-- [x] `DomainError`, global `AllExceptionsFilter`, `ZodValidationPipe` in `apps/api/src/common/`
-- [x] Filter registered in `configureApp`, so `createApp` and test apps share it
-- [x] `backend.md` documents pipe + `DomainError` usage
+- [x] Creator profile: `PageHeader` with the display name as plain text; the profile `<h1>` is unchanged.
+- [x] Post detail: `PageHeader "Postingan"` with `fallbackHref` to the creator replaces the inline back link; `ArrowLeft` import removed (`Link` still used by the login CTA). `py-6 pb-12` → `py-4`.
+- [x] `/become-creator`: `PageHeader "Jadi Kreator"` (`asHeading`, fallback `/me`); the page's own `<h1>` is removed.
+- [x] Studio and Admin layouts: `PageHeader "Studio"`/`"Admin"` with fallback `/`, placed before the gate's `Suspense`. Page `<h1>`s are unchanged.
+- [x] `frontend.md` has an "App shell" section, and its reserved list includes `me`. `codebase-map.md` covers the shell components, `/me`, the reserved `me` and the backlog status; SiteHeader mentions are replaced. The `CLAUDE.md` reserved-route list now includes `me`.
 
 ### Security
-- [x] Unknown errors → generic 500; message/stack only in the server log (`request.log.error`, carries `requestId`)
-- [x] Nest `HttpException` and Fastify messages never exposed; default shared messages only
-- [x] Validation details = path + message, never submitted values
-
-### Financial Integrity
-- N/A (no money code). `INSUFFICIENT_COINS` → 402 with `details` ready for wallet stories.
+- [x] No access, data or financial logic touched. Studio/admin gating is unchanged (the header is rendered outside the gate, and it carries only a static title).
 
 ### Code Quality
-- [x] Small pure mapping helpers; no duplication
+- [x] Known: `/studio/earnings` uses `ComingSoon`, so it shows the layout's "Studio" bar plus a "Penghasilan" bar. Both are sticky `top-0`, but the placeholder doesn't scroll, so they don't overlap in practice. Accepted for a placeholder; revisit when earnings is built.
 
 ## Acceptance Criteria Verification
-
-| # | Criterion | Result | Notes |
-|---|-----------|--------|-------|
-| 3 | Domain errors return `{ error: { code, message, requestId, details } }`, codes in shared | PASS | 402 `INSUFFICIENT_COINS` with details; `requestId` = `x-request-id` header; every body parses with `errorResponseSchema` |
-| 4 | Unexpected errors → generic 500 without stack/internals | PASS | Body has no `secret`/`stack`/`.ts`; log line has stack + `requestId` |
-| 5 | Validation failures → 400 same format | PASS | Zod pipe (both fields listed) and malformed JSON (Fastify `FST_ERR_CTP_INVALID_JSON`) |
+- [x] Pages other than Home use the simple page header. The back button appears only after in-app navigation (or via an explicit fallback). A guest opening a bio link sees no back button.
+- [x] The old Dark Social bottom nav and `SiteHeader` are replaced (grep clean in `apps/web/src`).
 
 ## Tests Run
-
-- [x] `pnpm --filter @influency/shared test`: PASS (18; new `errors.test.ts`)
-- [x] `apps/api` vitest: PASS (37; new `src/common/errors.spec.ts`, updated `app.spec.ts` 404 body)
-- [x] Typecheck / lint (all packages), Prettier: PASS
-- [x] Edge cases: HttpException message hidden, unknown route 404, malformed JSON 400, valid body passes with unknown keys stripped, Zod paths containing symbols (`map(String)` — `join` would throw)
-
-## Issues (resolved during dev/QA)
-
-- Zod issue paths are `PropertyKey[]`; `Array.join` throws on symbols → `path.map(String).join('.')`.
-- Added a test that the unexpected error is actually logged with `requestId` and stack (plan only tested the response).
+- Post detail `page.test.tsx`: "Kembali" links to `/ana` on a direct visit; the "Postingan" title is shown.
+- Creator page `page.test.tsx`: the banner contains the display name, the `h1` is still the name, and there is no "Kembali" on a direct visit.
+- `become-creator.test.tsx` and the studio/admin gate tests pass unchanged.
+- `pnpm check` green: shared 203, web 308, api 617 tests; format, lint and typecheck clean. `pnpm --filter @influency/web build` prerenders 22 routes.
 
 ## Notes
-
-- Other `HttpException` statuses (e.g. 405, 429) map to 500 for now; add codes (e.g. `RATE_LIMITED`) when throttling lands.
+- The manual 320/375/390/430 px check was not done here (no browser in this session); it moves to UAT.
+- Environment: `apps/api/node_modules` was missing `sharp` and `@fastify/rate-limit`, which made api lint fail. `corepack pnpm install` fixed it with no lockfile change.

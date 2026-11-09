@@ -1,0 +1,1 @@
+`sample.mp4` — 1 s, 160×90 test pattern for video upload tests (US-017). Uploaded through the private storage path in tests; never served statically. Made with `ffmpeg -f lavfi -i testsrc=duration=1:size=160x90:rate=10 -pix_fmt yuv420p -movflags +faststart sample.mp4`.

@@ -1,46 +1,35 @@
-# QA Report: TASK-007 — API Environment Validation (Fail Fast)
+# QA Report: TASK-007 — Bottom nav, AppChrome shell and `me` reserved slug
 
-**Story:** US-002
-**Result:** PASS
-**Tester:** qa-agent
+**Status:** PASS
+**Date:** 2026-11-07
 
 ## Code Review
 
 ### Guidelines Compliance
-- [x] Cross-cutting config lives in `apps/api/src/common/env.ts`; ESM `.js` imports
-- [x] No `dotenv` dependency: Node 24 `process.loadEnvFile`; `zod` pinned exactly (4.6.7, same as shared)
-- [x] `createApp()` stays env-free, so existing app tests are unaffected
+- [x] `AppChrome` is the only client piece; `BottomNav` stays a server-safe presentational component taking `pathname` as a prop.
+- [x] `AppChrome` is mounted once in the root layout inside `<Suspense fallback={null}>` (`usePathname` suspends on unknown dynamic params under `cacheComponents`). `pnpm --filter @influency/web build` prerenders all 22 routes.
+- [x] `me` added to `RESERVED_SLUGS` in `packages/shared`.
 
 ### Security
-- [x] Error output lists variable paths + messages only, never values (tested with a password in `DATABASE_URL`)
-- [x] `MIDTRANS_IS_PRODUCTION=true` (and any non-`false` value, e.g. `TRUE`, `1`) rejected → sandbox lock in code
-- [x] Real environment variables take precedence over the `.env` file (tested)
-
-### Financial Integrity
-- [x] Production gateway mode cannot be enabled through config
+- [x] No data, secrets or access logic touched. Web-only shell change.
 
 ### Code Quality
-- [x] Small, single-purpose functions; one error listing every issue
+- [x] Standalone matching is exact or `prefix/` only, so `/login-help`-style paths keep the nav.
+- [x] The spacer sits after `{children}` in `<body>`'s flex column, so pages need no bottom padding. The ad-hoc `BottomNav` mounts and `pb-28` on the creator page and `ComingSoon` are gone (grep clean).
+- [x] Active tab: `aria-current="page"`, `text-brand` label/icon and a 2 px `bg-brand` top bar. Tap target is the full 4rem cell.
+- [x] The one-way history flag carries the planned `shortcut:` comment.
 
 ## Acceptance Criteria Verification
-
-| # | Criterion | Result | Notes |
-|---|-----------|--------|-------|
-| 4 | Apps fail fast with a clear message on missing env | PASS | `node dist/main.js` without `.env` → exit 1, lists `DATABASE_URL`, points to `.env.example`. Web reads no env yet (per plan). |
-| 5 | `MIDTRANS_IS_PRODUCTION` defaults to `false` | PASS | Default `false`; `true` → exit 1 with sandbox-only message |
+- [x] Four tabs in order with icon + label: Beranda `/`, Jelajahi `/discover`, Dompet `/wallet`, Profil `/me`. Fixed with `pb-[env(safe-area-inset-bottom)]`.
+- [x] Visible on regular pages, including a directly opened creator profile; hidden on `/login`, `/studio`, `/admin`, `/become-creator` (onboarding has no route yet; comment marks where it goes).
+- [x] `me` is reserved.
 
 ## Tests Run
-
-- [x] `pnpm check`: PASS (format, lint, typecheck; tests: shared 2, api 21, web 1)
-- [x] New tests: `apps/api/src/common/env.spec.ts` (19 cases)
-- [x] Edge cases: defaults, missing/invalid `DATABASE_URL` (mysql, non-URL), `postgres://` accepted, `API_PORT` `abc`/`0`/`70000`/`1.5`, prod flag `true`/`TRUE`/`1`/`yes`, multiple errors at once, no secret leak, missing `.env` file, env precedence
-- [x] Manual: built API with no `.env` → exit 1; `MIDTRANS_IS_PRODUCTION=true` → exit 1; valid root `.env` with `API_PORT=4123` → listening, `GET /api/v1/x` → 404 JSON (confirms `../../../.env` resolves to repo root from `dist/`)
-- [ ] `psql "<DATABASE_URL>" -c "select 1"`: **not verified** — PostgreSQL is not installed on this machine yet
-
-## Issues (resolved during dev)
-
-- The first `loadEnvFile` test restored env by reassigning `process.env`, which detaches it from the real environment that `process.loadEnvFile` writes. Fixed by deleting the test keys instead.
+- New `bottom-nav.test.tsx`: tab order/labels/hrefs; active tab for `/`, `/wallet`, `/wallet/topups/x`, `/me`; none for `/meow`, `/ana`, `/ana/posts/1`.
+- New `app-chrome.test.tsx`: nav + spacer on 6 paths (incl. `/login-help`); empty on 5 standalone paths; tracker flips only on a pathname change.
+- New `in-app-history.test.ts`: flips once, notifies once, unsubscribe works.
+- `creators.test.ts`: `me` is shorter than `SLUG_PATTERN`'s 3-char minimum, so its first issue is the pattern message. The assertion now checks the issues *contain* the reserved message (Zod runs the refine too), which still covers every reserved slug.
+- Web: 45 files / 304 tests green. Shared: 203 green. Web typecheck, lint and build green.
 
 ## Notes
-
-- `pnpm dev` now requires a root `.env`; intended (fail fast).
+- The global `pnpm` shim fails to switch to v12.14.0 on this machine (ENOEXEC); commands were run via `corepack pnpm`.

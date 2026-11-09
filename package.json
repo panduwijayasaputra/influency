@@ -13,7 +13,10 @@
     "test": "pnpm --filter @influency/shared build && pnpm -r run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "db:migrate": "pnpm --filter @influency/api db:migrate",
+    "db:seed": "pnpm --filter @influency/api db:seed",
+    "db:reset": "pnpm --filter @influency/api db:reset"
   },
   "devDependencies": {
     "prettier": "3.9.10",

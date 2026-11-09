@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "coin_entry_type" ADD VALUE 'SUBSCRIPTION_REFUND_CREDIT';

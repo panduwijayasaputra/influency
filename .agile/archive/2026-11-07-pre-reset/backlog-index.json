@@ -1,0 +1,604 @@
+{
+  "stories": [
+    {
+      "id": "US-001",
+      "feature": "project-foundation",
+      "file": "features/project-foundation/US-001-monorepo-workspace-and-tooling.md",
+      "title": "Monorepo Workspace & Tooling",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-002",
+      "feature": "project-foundation",
+      "file": "features/project-foundation/US-002-local-infrastructure-and-environment-config.md",
+      "title": "Local Infrastructure & Environment Config",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-003",
+      "feature": "project-foundation",
+      "file": "features/project-foundation/US-003-api-skeleton-health-request-id-and-error-format.md",
+      "title": "API Skeleton: Health, Request ID & Error Format",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-004",
+      "feature": "project-foundation",
+      "file": "features/project-foundation/US-004-database-baseline-and-demo-seed.md",
+      "title": "Database Baseline & Demo Seed",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-005",
+      "feature": "project-foundation",
+      "file": "features/project-foundation/US-005-continuous-integration-pipeline.md",
+      "title": "Continuous Integration Pipeline",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-006",
+      "feature": "telegram-auth",
+      "file": "features/telegram-auth/US-006-log-in-with-telegram.md",
+      "title": "Log In with Telegram",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-007",
+      "feature": "telegram-auth",
+      "file": "features/telegram-auth/US-007-secure-session-and-logout.md",
+      "title": "Secure Session & Logout",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-008",
+      "feature": "telegram-auth",
+      "file": "features/telegram-auth/US-008-return-to-original-page-after-login.md",
+      "title": "Return to Original Page After Login",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-009",
+      "feature": "telegram-auth",
+      "file": "features/telegram-auth/US-009-current-user-and-role-based-access.md",
+      "title": "Current User & Role-Based Access",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-010",
+      "feature": "creator-onboarding",
+      "file": "features/creator-onboarding/US-010-apply-to-become-a-creator.md",
+      "title": "Apply to Become a Creator",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-011",
+      "feature": "creator-onboarding",
+      "file": "features/creator-onboarding/US-011-admin-reviews-creator-applications.md",
+      "title": "Admin Reviews Creator Applications",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-012",
+      "feature": "creator-onboarding",
+      "file": "features/creator-onboarding/US-012-creator-edits-profile.md",
+      "title": "Creator Edits Profile",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-013",
+      "feature": "public-creator-page",
+      "file": "features/public-creator-page/US-013-public-creator-page.md",
+      "title": "Public Creator Page",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-015",
+      "feature": "creator-content",
+      "file": "features/creator-content/US-015-create-and-edit-draft-posts.md",
+      "title": "Create and Edit Draft Posts",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-016",
+      "feature": "creator-content",
+      "file": "features/creator-content/US-016-upload-images-to-private-storage.md",
+      "title": "Upload Images to Private Storage",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-017",
+      "feature": "creator-content",
+      "file": "features/creator-content/US-017-upload-video-to-posts.md",
+      "title": "Upload Video to Posts",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-018",
+      "feature": "creator-content",
+      "file": "features/creator-content/US-018-set-premium-post-price-and-duration.md",
+      "title": "Set Premium Post Price & Duration",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-019",
+      "feature": "creator-content",
+      "file": "features/creator-content/US-019-publish-a-post.md",
+      "title": "Publish a Post",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-046",
+      "feature": "creator-content",
+      "file": "features/creator-content/US-046-permanent-unlock-offer.md",
+      "title": "Permanent Unlock Offer (5–1,000 Koin)",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-047",
+      "feature": "creator-content",
+      "file": "features/creator-content/US-047-archive-and-restore-a-post.md",
+      "title": "Archive & Restore a Post",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-020",
+      "feature": "content-access",
+      "file": "features/content-access/US-020-server-side-access-check.md",
+      "title": "Server-Side Access Check",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-048",
+      "feature": "creator-content",
+      "file": "features/creator-content/US-048-safe-cover-and-blurred-preview.md",
+      "title": "Safe Cover & Blurred Preview for Premium Posts",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-021",
+      "feature": "content-access",
+      "file": "features/content-access/US-021-short-lived-media-access-for-entitled-viewers.md",
+      "title": "Short-Lived Media Access for Entitled Viewers",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-014",
+      "feature": "public-creator-page",
+      "file": "features/public-creator-page/US-014-post-detail-and-paywall-preview.md",
+      "title": "Post Detail & Paywall Preview",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-049",
+      "feature": "creator-content",
+      "file": "features/creator-content/US-049-upload-limits-and-stale-upload-cleanup.md",
+      "title": "Upload Limits & Stale Upload Cleanup",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-051",
+      "feature": "engagement",
+      "file": "features/engagement/US-051-like-a-post.md",
+      "title": "Like a Post",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-052",
+      "feature": "engagement",
+      "file": "features/engagement/US-052-comment-on-a-post.md",
+      "title": "Comment on a Post",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-042",
+      "feature": "admin-operations",
+      "file": "features/admin-operations/US-042-report-content-and-moderation-queue.md",
+      "title": "Report Content & Moderation Queue",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-022",
+      "feature": "koin-wallet",
+      "file": "features/koin-wallet/US-022-wallet-balance-and-transaction-history.md",
+      "title": "Wallet Balance & Transaction History",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-023",
+      "feature": "koin-wallet",
+      "file": "features/koin-wallet/US-023-koin-package-catalog.md",
+      "title": "Koin Package Catalog",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-024",
+      "feature": "koin-wallet",
+      "file": "features/koin-wallet/US-024-simulated-top-up-for-development.md",
+      "title": "Simulated Top-Up for Development",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-025",
+      "feature": "content-purchases",
+      "file": "features/content-purchases/US-025-unlock-a-premium-post-with-koin.md",
+      "title": "Unlock a Premium Post with Koin",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-026",
+      "feature": "content-purchases",
+      "file": "features/content-purchases/US-026-creator-subscription-plans.md",
+      "title": "Creator Subscription Plans",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-027",
+      "feature": "content-purchases",
+      "file": "features/content-purchases/US-027-subscribe-to-a-creator.md",
+      "title": "Subscribe to a Creator",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-028",
+      "feature": "content-purchases",
+      "file": "features/content-purchases/US-028-manual-renewal-and-expiry.md",
+      "title": "Manual Renewal & Expiry",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-050",
+      "feature": "content-access",
+      "file": "features/content-access/US-050-access-via-purchases-subscriptions-and-archive.md",
+      "title": "Access via Purchases, Subscriptions & Archive Grants",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-029",
+      "feature": "content-purchases",
+      "file": "features/content-purchases/US-029-my-library-and-subscriptions.md",
+      "title": "My Library & Subscriptions",
+      "status": "backlog",
+      "priority": "medium"
+    },
+    {
+      "id": "US-030",
+      "feature": "content-purchases",
+      "file": "features/content-purchases/US-030-revenue-allocation-on-purchase.md",
+      "title": "Revenue Allocation on Purchase",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-031",
+      "feature": "midtrans-topup",
+      "file": "features/midtrans-topup/US-031-top-up-koin-via-midtrans-snap-sandbox.md",
+      "title": "Top Up Koin via Midtrans Snap Sandbox",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-032",
+      "feature": "midtrans-topup",
+      "file": "features/midtrans-topup/US-032-credit-koin-from-verified-payment-notification.md",
+      "title": "Credit Koin from Verified Payment Notification",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-033",
+      "feature": "midtrans-topup",
+      "file": "features/midtrans-topup/US-033-top-up-status-page.md",
+      "title": "Top-Up Status Page",
+      "status": "backlog",
+      "priority": "medium"
+    },
+    {
+      "id": "US-034",
+      "feature": "midtrans-topup",
+      "file": "features/midtrans-topup/US-034-reconcile-pending-top-ups.md",
+      "title": "Reconcile Pending Top-Ups",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-035",
+      "feature": "telegram-notifications",
+      "file": "features/telegram-notifications/US-035-notification-consent.md",
+      "title": "Notification Consent",
+      "status": "backlog",
+      "priority": "medium"
+    },
+    {
+      "id": "US-036",
+      "feature": "telegram-notifications",
+      "file": "features/telegram-notifications/US-036-top-up-success-notification.md",
+      "title": "Top-Up Success Notification",
+      "status": "backlog",
+      "priority": "medium"
+    },
+    {
+      "id": "US-037",
+      "feature": "creator-earnings",
+      "file": "features/creator-earnings/US-037-creator-earnings-dashboard.md",
+      "title": "Creator Earnings Dashboard",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-038",
+      "feature": "creator-earnings",
+      "file": "features/creator-earnings/US-038-request-a-payout.md",
+      "title": "Request a Payout",
+      "status": "backlog",
+      "priority": "medium"
+    },
+    {
+      "id": "US-039",
+      "feature": "creator-earnings",
+      "file": "features/creator-earnings/US-039-admin-processes-payouts-simulated.md",
+      "title": "Admin Processes Payouts (Simulated)",
+      "status": "backlog",
+      "priority": "medium"
+    },
+    {
+      "id": "US-040",
+      "feature": "admin-operations",
+      "file": "features/admin-operations/US-040-payments-and-reconciliation-report.md",
+      "title": "Payments & Reconciliation Report",
+      "status": "backlog",
+      "priority": "medium"
+    },
+    {
+      "id": "US-041",
+      "feature": "admin-operations",
+      "file": "features/admin-operations/US-041-refund-a-top-up-with-compensating-entries.md",
+      "title": "Refund a Top-Up with Compensating Entries",
+      "status": "backlog",
+      "priority": "medium"
+    },
+    {
+      "id": "US-043",
+      "feature": "admin-operations",
+      "file": "features/admin-operations/US-043-audit-log-of-sensitive-actions.md",
+      "title": "Audit Log of Sensitive Actions",
+      "status": "backlog",
+      "priority": "medium"
+    },
+    {
+      "id": "US-044",
+      "feature": "mvp-acceptance",
+      "file": "features/mvp-acceptance/US-044-demo-data-for-sandbox.md",
+      "title": "Demo Data for Sandbox",
+      "status": "backlog",
+      "priority": "medium"
+    },
+    {
+      "id": "US-045",
+      "feature": "mvp-acceptance",
+      "file": "features/mvp-acceptance/US-045-end-to-end-sandbox-journey.md",
+      "title": "End-to-End Sandbox Journey",
+      "status": "backlog",
+      "priority": "medium"
+    },
+    {
+      "id": "US-053",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-053-light-social-design-tokens.md",
+      "title": "Light Social Design Tokens",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-054",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-054-app-shell-top-bar-bottom-nav.md",
+      "title": "App Shell — Home Top Bar & 4-Tab Bottom Nav",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-055",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-055-right-account-drawer.md",
+      "title": "Right Account Drawer",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-056",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-056-reusable-post-card.md",
+      "title": "Reusable Post Card & Media Carousel",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-057",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-057-muted-autoplay-video.md",
+      "title": "Muted Autoplay Video",
+      "status": "backlog",
+      "priority": "medium"
+    },
+    {
+      "id": "US-058",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-058-home-feed.md",
+      "title": "Home Feed with Recommended Creators",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-059",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-059-creator-profile.md",
+      "title": "Creator Profile — Header, Posts & Grid",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-060",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-060-comments-bottom-sheet.md",
+      "title": "Comments Bottom Sheet",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-061",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-061-unlock-subscribe-tip-sheets.md",
+      "title": "Unlock, Subscribe & Tip Sheets",
+      "status": "backlog",
+      "priority": "medium"
+    },
+    {
+      "id": "US-062",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-062-my-collection.md",
+      "title": "My Collection — Saved & Purchased",
+      "status": "backlog",
+      "priority": "medium"
+    },
+    {
+      "id": "US-063",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-063-following-page.md",
+      "title": "Following Page",
+      "status": "backlog",
+      "priority": "medium"
+    },
+    {
+      "id": "US-064",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-064-subscriptions-page.md",
+      "title": "Subscriptions Page",
+      "status": "backlog",
+      "priority": "medium"
+    },
+    {
+      "id": "US-065",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-065-my-profile.md",
+      "title": "My Profile",
+      "status": "backlog",
+      "priority": "medium"
+    },
+    {
+      "id": "US-066",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-066-onboarding-stepper.md",
+      "title": "Onboarding Stepper (User & Creator Paths)",
+      "status": "backlog",
+      "priority": "medium"
+    },
+    {
+      "id": "US-067",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-067-discover.md",
+      "title": "Discover — Videos & Search",
+      "status": "backlog",
+      "priority": "low"
+    },
+    {
+      "id": "US-068",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-068-post-detail-and-media-viewer.md",
+      "title": "Post Detail Page & Full-Screen Media Viewer",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-069",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-069-login-landing.md",
+      "title": "Login Landing",
+      "status": "backlog",
+      "priority": "high"
+    },
+    {
+      "id": "US-070",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-070-notifications-page.md",
+      "title": "Notifications Page",
+      "status": "backlog",
+      "priority": "low"
+    },
+    {
+      "id": "US-071",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-071-wallet-page.md",
+      "title": "Wallet Page",
+      "status": "backlog",
+      "priority": "medium"
+    },
+    {
+      "id": "US-072",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-072-creator-earnings-payout-accounts.md",
+      "title": "Creator Earnings & Payout Accounts",
+      "status": "backlog",
+      "priority": "low"
+    },
+    {
+      "id": "US-073",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-073-new-edit-post-form.md",
+      "title": "New / Edit Post Form",
+      "status": "backlog",
+      "priority": "medium"
+    },
+    {
+      "id": "US-074",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-074-edit-profile.md",
+      "title": "Edit Profile",
+      "status": "backlog",
+      "priority": "medium"
+    },
+    {
+      "id": "US-075",
+      "feature": "mobile-first-ui",
+      "file": "features/mobile-first-ui/US-075-settings-page.md",
+      "title": "Settings Page",
+      "status": "backlog",
+      "priority": "low"
+    }
+  ]
+}

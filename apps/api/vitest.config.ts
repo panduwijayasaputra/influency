@@ -1,10 +1,43 @@
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
+
+const rootEnv = fileURLToPath(new URL('../../.env', import.meta.url));
+if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
+// global-setup.ts checks the test DB is not the dev DB.
+process.env.DEV_DATABASE_URL = process.env.DATABASE_URL;
 
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['src/**/*.spec.ts'],
-    // Placeholder so the app boots in tests; unit tests never connect to it.
-    env: { DATABASE_URL: 'postgresql://influency:test@localhost:5432/influency_test' },
+    include: ['src/**/*.spec.ts', 'prisma/**/*.spec.ts', 'test/**/*.spec.ts'],
+    globalSetup: ['./test/global-setup.ts'],
+    // Integration specs use the test database (wiped by global-setup.ts); unit tests never connect.
+    // Telegram and R2 values are placeholders so tests never depend on the local .env
+    // (specs override OBJECT_STORAGE with test/memory-storage.ts; R2 is never contacted).
+    env: {
+      DATABASE_URL: process.env.TEST_DATABASE_URL ?? '',
+      WEB_ORIGIN: 'http://localhost:3000',
+      TELEGRAM_OIDC_CLIENT_ID: '123456789',
+      TELEGRAM_OIDC_CLIENT_SECRET: 'test-client-secret',
+      TELEGRAM_OIDC_REDIRECT_URI: 'http://localhost:3000/api/v1/auth/telegram/callback',
+      STORAGE_DRIVER: 'r2',
+      R2_ACCOUNT_ID: 'test-account',
+      R2_ACCESS_KEY_ID: 'test-access-key',
+      R2_SECRET_ACCESS_KEY: 'test-secret',
+      R2_BUCKET: 'test-bucket',
+      // Never the real gateway, whatever the local .env says.
+      PAYMENT_PROVIDER: 'fake',
+      // Test-only key (32 bytes of 0x07), never a real one.
+      PAYOUT_ACCOUNT_ENC_KEY: 'BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc=',
+      // Specs call TopupReconcileService directly; no background timer.
+      TOPUP_RECONCILE_INTERVAL_SECONDS: '0',
+      // Specs call PostMediaService.sweep directly; no background timer.
+      MEDIA_SWEEP_INTERVAL_SECONDS: '0',
+      // Specs call NotificationProducer.remindEndingSubscriptions directly; no background timer.
+      SUBSCRIPTION_REMINDER_INTERVAL_SECONDS: '0',
+      // Specs call NotificationDeliveryService.deliverDue directly; no background timer.
+      NOTIFICATION_DELIVERY_INTERVAL_SECONDS: '0',
+    },
   },
 });
