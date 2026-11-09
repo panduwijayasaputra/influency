@@ -13,16 +13,9 @@ import {
   type WalletTransactionsPage,
   walletTransactionsPageSchema,
 } from '@influency/shared';
+import { ApiError } from './errors';
 
-/** An API error response, with the shared error code so callers branch on `code`, not on the message. */
-export class ApiError extends Error {
-  constructor(
-    readonly code: string,
-    message: string,
-  ) {
-    super(message);
-  }
-}
+export { ApiError };
 
 async function request(path: string, init: RequestInit = {}): Promise<Response> {
   return fetch(`/${API_PREFIX}${path}`, { credentials: 'include', ...init });

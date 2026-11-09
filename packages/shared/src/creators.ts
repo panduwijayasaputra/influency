@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PLAN_PRICE_MAX, PLAN_PRICE_MIN } from './constants.js';
 
 /** Top-level route segments that can never be creator slugs. Add every new top-level web route here. */
 export const RESERVED_SLUGS = [
@@ -19,6 +20,7 @@ export const RESERVED_SLUGS = [
   'me',
   'notifications',
   'following',
+  'welcome',
   'recommended', // GET /creators/recommended would shadow /creators/:slug
 ] as const;
 
@@ -52,6 +54,12 @@ export const creatorApplicationSchema = z.object({
   slug: slugSchema,
   bio: z.string().trim().max(500, 'Bio maksimal 500 karakter.').optional(),
   category: z.string().trim().max(50, 'Kategori maksimal 50 karakter.').optional(),
+  /** Koin per 30 days; becomes the creator's plan when an admin approves. Optional for older clients. */
+  subscriptionPriceCoins: z
+    .int('Masukkan angka 10–5.000 Koin.')
+    .min(PLAN_PRICE_MIN, 'Masukkan angka 10–5.000 Koin.')
+    .max(PLAN_PRICE_MAX, 'Masukkan angka 10–5.000 Koin.')
+    .optional(),
   acceptAgreement: z.literal(true, {
     error: 'Anda harus menyetujui Perjanjian Kreator dan Kebijakan Konten.',
   }),
@@ -67,6 +75,8 @@ export const creatorApplicationResponseSchema = z.object({
   slug: z.string(),
   bio: z.string().nullable(),
   category: z.string().nullable(),
+  /** The price chosen in the application (Koin per 30 days), or null. */
+  subscriptionPriceCoins: z.int().nullable(),
   submittedAt: z.string(),
   /** Latest rejection reason; null unless status is REJECTED. */
   rejectionReason: z.string().nullable(),

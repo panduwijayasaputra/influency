@@ -17,23 +17,28 @@ export function GridTile({
   post,
   href,
   creator,
+  tag,
+  aspect = 'square',
 }: {
   post: PublicPost;
   href: string;
   creator: PostCardCreator;
+  /** Small label bottom-left (Koleksi Saya: "Disimpan" / "Dibeli"). The video badge then moves to the top-left. */
+  tag?: string;
+  aspect?: 'square' | 'portrait';
 }) {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [like, setLike] = useState({ liked: post.viewer?.liked ?? false, count: post.likeCount });
   const locked = post.access === 'locked';
   const first = post.media[0];
   const label = `${locked ? 'Post premium terkunci' : 'Post'} · ${mediaSummary(post)}`;
-  const className =
-    'relative block aspect-square w-full overflow-hidden bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none';
+  const ratio = aspect === 'portrait' ? 'aspect-[3/4]' : 'aspect-square';
+  const className = `relative block ${ratio} w-full overflow-hidden bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`;
   const inner = (
     <>
       {locked ? (
         <>
-          <PremiumCover previewUrl={post.previewUrl} className="aspect-square rounded-none" />
+          <PremiumCover previewUrl={post.previewUrl} className={`${ratio} rounded-none`} />
           <span className="absolute top-1.5 right-1.5 rounded-full bg-black/50 p-1 text-white">
             <Lock aria-hidden className="size-3.5" />
           </span>
@@ -42,9 +47,16 @@ export function GridTile({
         <AccessibleThumb post={post} />
       )}
       {first?.kind === 'VIDEO' && (
-        <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded bg-black/60 px-1.5 text-[11px] font-semibold text-white">
+        <span
+          className={`absolute ${tag ? 'top-1.5' : 'bottom-1.5'} left-1.5 flex items-center gap-1 rounded bg-black/60 px-1.5 text-[11px] font-semibold text-white`}
+        >
           <Play aria-hidden className="size-3 fill-current" />
           {first.durationSeconds !== null && formatDuration(first.durationSeconds)}
+        </span>
+      )}
+      {tag && (
+        <span className="absolute bottom-1.5 left-1.5 rounded-md bg-card/95 px-1.5 py-0.5 text-[10.5px] font-extrabold text-foreground">
+          {tag}
         </span>
       )}
     </>

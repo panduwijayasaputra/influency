@@ -4,13 +4,13 @@ import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { safeReturnTo } from '@influency/shared';
 import { BrandLogo } from '@/components/brand-logo';
+import { LegalSheet } from '@/components/legal-sheet';
 import { Button } from '@/components/ui/button';
 import { getCurrentUser } from '@/lib/api/current-user';
 import { PRIVACY, TERMS } from '@/lib/legal-placeholder';
 import { TELEGRAM_START, telegramStartHref } from '@/lib/login-href';
 import { DevLoginLinks } from './dev-login-links';
 import { InAppBrowserNotice } from './in-app-browser-notice';
-import { LegalSheet } from './legal-sheet';
 import { LoginErrorMessage } from './login-error-message';
 import { LoginHero } from './login-hero';
 

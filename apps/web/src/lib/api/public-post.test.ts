@@ -25,7 +25,14 @@ const POST = {
   previewUrl: null,
   access: 'locked',
   likeCount: 2,
-  viewer: { liked: false, canLike: false, canReport: true },
+  viewer: {
+    liked: false,
+    saved: false,
+    canLike: false,
+    canReport: true,
+    canTip: false,
+    subscribed: false,
+  },
   commentCount: 0,
   media: [{ kind: 'IMAGE', durationSeconds: null }],
 };

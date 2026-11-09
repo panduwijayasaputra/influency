@@ -11,6 +11,7 @@ import {
   fetchWalletTransactions,
 } from '@/lib/api/wallet';
 import { formatKoin, formatRupiah } from '@/lib/format';
+import { rememberReturnTo } from '@/lib/return-after-topup';
 import { BalanceCard } from './balance-card';
 import { PackagePicker } from './package-picker';
 import { TopupSheet } from './topup-sheet';
@@ -48,6 +49,9 @@ export function WalletView() {
   const [moreFailed, setMoreFailed] = useState(false);
   const [buying, setBuying] = useState<CoinPackage | null>(null);
   const inFlight = useRef(false);
+
+  // Where "Isi Koin" in a purchase sheet came from, for the status page after paying.
+  useEffect(() => rememberReturnTo(window.location.search), []);
 
   useEffect(() => {
     let cancelled = false;

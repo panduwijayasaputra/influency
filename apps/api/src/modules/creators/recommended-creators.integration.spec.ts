@@ -45,7 +45,8 @@ describe('GET /creators/recommended', () => {
         userId,
         slug: PFX + slug,
         status: opts.status ?? 'APPROVED',
-        createdAt: opts.createdAt ?? new Date(2026, 0, n),
+        // Far in the future: these always outrank creators other specs create "now" within the 15-item cap.
+        createdAt: opts.createdAt ?? new Date(2099, 0, n),
         ...profileFields(slug),
       },
     });

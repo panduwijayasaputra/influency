@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { MediaAccessItem, MediaAccessResponse } from '@influency/shared';
+import { MEDIA_ORDER } from '../../common/media-order.js';
 import { sha256hex } from '../../common/crypto.js';
 import { DomainError } from '../../common/domain-error.js';
 import { ENV, type Env } from '../../common/env.js';
@@ -44,7 +45,7 @@ export class MediaAccessService {
     const ttl = this.env.MEDIA_ACCESS_TTL_SECONDS;
     const rows = await this.prisma.mediaAsset.findMany({
       where: { postId, status: 'READY' },
-      orderBy: { createdAt: 'asc' },
+      orderBy: MEDIA_ORDER,
       select: { id: true, kind: true, objectKey: true, videoUid: true, durationSeconds: true },
     });
     const items = await Promise.all(

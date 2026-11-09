@@ -5,6 +5,7 @@ import { IfSignedIn } from '@/components/if-signed-in';
 import { PageHeader } from '@/components/page-header';
 import { PostCard, type PostCardCreator } from '@/components/post-card/post-card';
 import { POST_STATUS_LABELS } from '@/app/studio/posts/labels';
+import { getCreatorSubscription } from '@/lib/api/creator-subscription.server';
 import { getPostComments } from '@/lib/api/post-comments';
 import { getPublicCreator } from '@/lib/api/public-creator';
 import { getPublicPost } from '@/lib/api/public-post';
@@ -65,6 +66,7 @@ export async function PostDetail({
 }) {
   const post = await getPublicPost(creator.slug, postId);
   if (!post) notFound();
+  const { plan } = await getCreatorSubscription(creator.slug);
 
   return (
     <article className="flex flex-col">
@@ -73,7 +75,7 @@ export async function PostDetail({
           {POST_STATUS_LABELS[post.status]} · tidak terlihat publik
         </p>
       )}
-      <PostCard post={post} creator={creator} detail />
+      <PostCard post={post} creator={{ ...creator, plan }} detail />
       {post.status === 'PUBLISHED' && (
         <section
           id="komentar"

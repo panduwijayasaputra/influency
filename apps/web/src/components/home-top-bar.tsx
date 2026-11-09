@@ -65,7 +65,7 @@ export function HomeTopBar({
           <BrandLogo />
         </Link>
         <div className="flex items-center gap-0.5">
-          <Link href="/discover" aria-label="Cari" className={ICON_BUTTON_CLASS}>
+          <Link href="/discover?tab=cari" aria-label="Cari" className={ICON_BUTTON_CLASS}>
             <Search aria-hidden className="size-5.5" />
           </Link>
           <Link

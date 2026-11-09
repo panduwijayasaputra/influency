@@ -15,10 +15,10 @@ import { TELEGRAM_OIDC_CLIENT } from '../auth/telegram-oidc.client.js';
 const WEB_ORIGIN = 'http://localhost:3000';
 // Fixed ids outside DEMO_USER_IDS so this spec owns (and cleans up) its rows.
 const USERS = {
-  creator: '0190a000-0000-7000-8000-000000290001',
-  fanA: '0190a000-0000-7000-8000-000000290002',
-  fanB: '0190a000-0000-7000-8000-000000290003',
-  pending: '0190a000-0000-7000-8000-000000290004',
+  creator: '0190a000-0000-7000-8000-0000003c0001',
+  fanA: '0190a000-0000-7000-8000-0000003c0002',
+  fanB: '0190a000-0000-7000-8000-0000003c0003',
+  pending: '0190a000-0000-7000-8000-0000003c0004',
 } as const;
 type UserName = keyof typeof USERS;
 const token = (name: UserName) => `creator-follows-spec-${name}`;

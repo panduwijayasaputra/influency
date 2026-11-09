@@ -37,7 +37,7 @@ describe('HomeTopBar', () => {
         .map((a) => [a.getAttribute('aria-label'), a.getAttribute('href')]),
     ).toEqual([
       ['Influency, ke atas Beranda', '/'],
-      ['Cari', '/discover'],
+      ['Cari', '/discover?tab=cari'],
       ['Notifikasi', '/notifications'],
     ]);
     expect(screen.getByRole('button', { name: 'X' })).toBeInTheDocument();

@@ -6,7 +6,14 @@ import { ReportPostButton } from './report-post-button';
 
 const POST_ID = '0190a000-0000-7000-8000-000000000001';
 const PATH = `/ana/posts/${POST_ID}`;
-const VIEWER = { liked: false, canLike: true, canReport: true };
+const VIEWER = {
+  liked: false,
+  saved: false,
+  canLike: true,
+  canReport: true,
+  canTip: false,
+  subscribed: false,
+};
 
 function stubFetch(impl: () => Promise<Response>) {
   const fetchMock = vi.fn(impl);
@@ -32,7 +39,11 @@ describe('ReportPostButton', () => {
 
   it('renders nothing when the viewer cannot report', () => {
     render(
-      <ReportPostButton postId={POST_ID} path={PATH} viewer={{ ...VIEWER, canReport: false }} />,
+      <ReportPostButton
+        postId={POST_ID}
+        path={PATH}
+        viewer={{ ...VIEWER, canReport: false, canTip: false, subscribed: false }}
+      />,
       { wrapper: Toaster },
     );
     expect(screen.queryByRole('button', { name: 'Laporkan' })).toBeNull();

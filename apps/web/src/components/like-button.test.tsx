@@ -30,7 +30,14 @@ describe('LikeButton', () => {
         postId={POST_ID}
         path={PATH}
         likeCount={4}
-        viewer={{ liked: false, canLike: false, canReport: true }}
+        viewer={{
+          liked: false,
+          saved: false,
+          canLike: false,
+          canReport: true,
+          canTip: false,
+          subscribed: false,
+        }}
       />,
     );
     expect(screen.getByText('4')).toBeInTheDocument();
@@ -44,7 +51,14 @@ describe('LikeButton', () => {
         postId={POST_ID}
         path={PATH}
         likeCount={5}
-        viewer={{ liked: false, canLike: true, canReport: true }}
+        viewer={{
+          liked: false,
+          saved: false,
+          canLike: true,
+          canReport: true,
+          canTip: false,
+          subscribed: false,
+        }}
       />,
     );
 
@@ -71,7 +85,14 @@ describe('LikeButton', () => {
         postId={POST_ID}
         path={PATH}
         likeCount={2}
-        viewer={{ liked: true, canLike: true, canReport: true }}
+        viewer={{
+          liked: true,
+          saved: false,
+          canLike: true,
+          canReport: true,
+          canTip: false,
+          subscribed: false,
+        }}
       />,
     );
 
@@ -87,7 +108,14 @@ describe('LikeButton hooks (US-013)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
-  const viewer = { liked: false, canLike: true, canReport: true };
+  const viewer = {
+    liked: false,
+    saved: false,
+    canLike: true,
+    canReport: true,
+    canTip: false,
+    subscribed: false,
+  };
 
   it('reports the server result through onChange, and not on failure', async () => {
     const onChange = vi.fn();
@@ -116,7 +144,7 @@ describe('LikeButton hooks (US-013)', () => {
         postId={POST_ID}
         path={PATH}
         likeCount={1}
-        viewer={{ ...viewer, canLike: false }}
+        viewer={{ ...viewer, saved: false, canLike: false }}
         className="x-test"
       />,
     );

@@ -5,6 +5,8 @@ import {
   MEDIA_REJECTION_REASONS,
   mediaUploadResponseSchema,
   POST_IMAGE_MAX_BYTES,
+  POST_MEDIA_MAX_PER_POST,
+  reorderPostMediaSchema,
   POST_VIDEO_MAX_BYTES,
   studioMediaSchema,
 } from './index.js';
@@ -129,5 +131,29 @@ describe('studioMediaSchema rejectionReason', () => {
 
   it('rejects an unknown reason', () => {
     expect(studioMediaSchema.safeParse({ ...base, rejectionReason: 'NOPE' }).success).toBe(false);
+  });
+});
+
+describe('POST_MEDIA_MAX_PER_POST', () => {
+  it('is 5 (design handoff business rule)', () => {
+    expect(POST_MEDIA_MAX_PER_POST).toBe(5);
+  });
+});
+
+describe('reorderPostMediaSchema', () => {
+  const id = (n: number) => `0190a000-0000-7000-8000-00000000010${n}`;
+  it('accepts a list of media ids', () => {
+    expect(reorderPostMediaSchema.parse({ mediaIds: [id(2), id(1)] })).toEqual({
+      mediaIds: [id(2), id(1)],
+    });
+  });
+  it.each([
+    ['an empty list', { mediaIds: [] }],
+    ['a malformed id', { mediaIds: ['nope'] }],
+    ['no list', {}],
+    ['an extra key', { mediaIds: [id(1)], position: 1 }],
+    ['an over-long list', { mediaIds: Array.from({ length: 51 }, () => id(1)) }],
+  ])('rejects %s', (_label, input) => {
+    expect(reorderPostMediaSchema.safeParse(input).success).toBe(false);
   });
 });

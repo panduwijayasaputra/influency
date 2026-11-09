@@ -12,8 +12,8 @@ export type PostVideoType = (typeof POST_VIDEO_TYPES)[number];
 export const POST_VIDEO_MAX_BYTES = 200 * 1024 * 1024;
 /** Placeholder (TBD business decision): max video length, enforced by the provider at upload and re-checked when ready. */
 export const POST_VIDEO_MAX_DURATION_SECONDS = 600;
-/** Placeholder (TBD business decision): max media items (images + videos) per post. */
-export const POST_MEDIA_MAX_PER_POST = 10;
+/** Max media items (images + videos) per post: 5 (design handoff business rule). */
+export const POST_MEDIA_MAX_PER_POST = 5;
 export const MEDIA_KINDS = ['IMAGE', 'VIDEO'] as const;
 export const MEDIA_STATUSES = ['PENDING_UPLOAD', 'PROCESSING', 'READY', 'REJECTED'] as const;
 export type MediaKind = (typeof MEDIA_KINDS)[number];
@@ -53,6 +53,19 @@ export const createMediaUploadSchema = z
       });
   });
 export type CreateMediaUploadInput = z.infer<typeof createMediaUploadSchema>;
+
+/**
+ * Body of PUT /creators/me/posts/:postId/media/order: the post's media ids in the creator's order. Every item the studio
+ * list shows must be present; the position of each id is its index. The max is only a sanity bound; the service checks
+ * the real set.
+ */
+export const reorderPostMediaSchema = z.strictObject({
+  mediaIds: z
+    .array(z.uuid('Media tidak valid.'))
+    .min(1, 'Urutan media tidak boleh kosong.')
+    .max(50),
+});
+export type ReorderPostMediaInput = z.infer<typeof reorderPostMediaSchema>;
 
 /** A media item of the caller's own post (studio endpoints). */
 export const studioMediaSchema = z.object({

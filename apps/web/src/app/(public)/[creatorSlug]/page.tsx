@@ -5,11 +5,12 @@ import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { APP_NAME, type CreatorProfileResponse } from '@influency/shared';
 import { PageHeader } from '@/components/page-header';
+import { RecordRecentCreator } from '@/components/record-recent-creator';
 import { getFollowState } from '@/lib/api/creator-follow.server';
+import { getCreatorSubscription } from '@/lib/api/creator-subscription.server';
 import { getCurrentUser } from '@/lib/api/current-user';
 import { getMyCreatorProfile } from '@/lib/api/creator-profile';
 import { getPublicCreator } from '@/lib/api/public-creator';
-import { DEMO_SUBSCRIBED } from '@/lib/demo';
 import { loginHref } from '@/lib/login-href';
 import { CreatorPosts } from './creator-posts';
 import { FollowerCount, FollowProvider } from './follow-state';
@@ -51,6 +52,7 @@ export async function CreatorView({ creator }: { creator: CreatorProfileResponse
     getFollowState(creator.slug),
   ]);
   const signedIn = user !== null;
+  const subscription = await getCreatorSubscription(creator.slug);
   const login = loginHref(`/${creator.slug}`);
   // UX only: the studio guards decide. Only creators pay for the extra lookup; a failure means "not the owner".
   const isOwner =
@@ -60,6 +62,15 @@ export async function CreatorView({ creator }: { creator: CreatorProfileResponse
   return (
     <>
       {signedIn && <PageHeader title={creator.displayName} />}
+      {!isOwner && (
+        <RecordRecentCreator
+          creator={{
+            slug: creator.slug,
+            displayName: creator.displayName,
+            avatarUrl: creator.avatarUrl,
+          }}
+        />
+      )}
       <main className="mx-auto flex w-full max-w-feed flex-1 flex-col pb-6">
         <FollowProvider initial={follow}>
           <ProfileHeader
@@ -80,12 +91,9 @@ export async function CreatorView({ creator }: { creator: CreatorProfileResponse
                 <ProfileActions
                   slug={creator.slug}
                   creatorName={creator.displayName}
+                  avatarUrl={creator.avatarUrl}
                   loginHref={signedIn ? undefined : login}
-                  subscribedDaysLeft={
-                    signedIn && DEMO_SUBSCRIBED.slugs.includes(creator.slug)
-                      ? DEMO_SUBSCRIBED.daysLeft
-                      : undefined
-                  }
+                  subscription={subscription}
                 />
               )
             }
@@ -96,10 +104,12 @@ export async function CreatorView({ creator }: { creator: CreatorProfileResponse
           {/* Uncached so hidden posts disappear immediately; the profile above stays cached. */}
           <Suspense fallback={<p className="text-sm text-muted-foreground">Memuat konten…</p>}>
             <CreatorPosts
+              isOwner={isOwner}
               creator={{
                 slug: creator.slug,
                 displayName: creator.displayName,
                 avatarUrl: creator.avatarUrl,
+                plan: subscription.plan,
               }}
             />
           </Suspense>

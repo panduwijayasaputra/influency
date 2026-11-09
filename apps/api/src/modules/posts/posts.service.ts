@@ -13,6 +13,7 @@ import {
 import { DomainError } from '../../common/domain-error.js';
 import { ENV, type Env } from '../../common/env.js';
 import { PrismaService } from '../../common/prisma.service.js';
+import { NotificationProducer } from '../notifications/notification-producer.service.js';
 import type { Post, PostOffer, Prisma } from '../../generated/prisma/client.js';
 
 /** Generated cover previews (US-048): `post-previews/<uuid>`; the uuid is the only part ever put in a URL. */
@@ -56,6 +57,7 @@ export class PostsService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(ENV) private readonly env: Env,
+    private readonly notifications: NotificationProducer,
   ) {}
 
   /** Status comes from the DB default (DRAFT). */
@@ -124,13 +126,29 @@ export class PostsService {
       ) {
         throw new DomainError('OFFER_REQUIRED');
       }
+      const now = new Date();
+      const live = !this.env.POST_MODERATION_REQUIRED;
       await tx.post.update({
         where: { id },
         data: {
-          status: this.env.POST_MODERATION_REQUIRED ? 'PENDING_REVIEW' : 'PUBLISHED',
-          publishedAt: post.publishedAt ?? new Date(),
+          status: live ? 'PUBLISHED' : 'PENDING_REVIEW',
+          publishedAt: post.publishedAt ?? now,
         },
       });
+      // First publish only (not a re-publish). Under POST_MODERATION_REQUIRED the admin approval must notify instead
+      // (no such approval path exists yet; moderation "unhide" only undoes a hide and must not notify).
+      if (live && !post.publishedAt) {
+        const { userId } = await tx.creatorProfile.findUniqueOrThrow({
+          where: { id: creatorProfileId },
+          select: { userId: true },
+        });
+        await this.notifications.notifyNewPostInTx(tx, {
+          creatorProfileId,
+          creatorUserId: userId,
+          postId: id,
+          now,
+        });
+      }
     });
     return this.get(creatorProfileId, id);
   }

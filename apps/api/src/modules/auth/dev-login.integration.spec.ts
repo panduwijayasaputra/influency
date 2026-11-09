@@ -68,6 +68,23 @@ describe('GET /auth/dev/login', () => {
     expect(me.json()).toMatchObject({ id: DEMO_USER_IDS.claudia, roles: ['USER', 'CREATOR'] });
   });
 
+  it('sends a user who has not finished onboarding to /welcome, keeping returnTo', async () => {
+    await prisma.user.update({
+      where: { id: DEMO_USER_IDS.subscriberB },
+      data: { onboardingCompletedAt: null },
+    });
+    try {
+      const res = await devLogin(dev, 'user=subscriberB&returnTo=%2Fana');
+      expect(res.headers.location).toBe('/welcome?returnTo=%2Fana');
+      expect((await devLogin(dev, 'user=subscriberB')).headers.location).toBe('/welcome');
+    } finally {
+      await prisma.user.update({
+        where: { id: DEMO_USER_IDS.subscriberB },
+        data: { onboardingCompletedAt: new Date() },
+      });
+    }
+  });
+
   it('falls back to / for an unsafe returnTo', async () => {
     const res = await devLogin(dev, 'user=admin&returnTo=https%3A%2F%2Fevil.com');
     expect(res.headers.location).toBe('/');

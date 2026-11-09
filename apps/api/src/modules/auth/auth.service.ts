@@ -1,9 +1,16 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { type LoginErrorCode, type MeResponse, type Role, safeReturnTo } from '@influency/shared';
+import {
+  type LoginErrorCode,
+  type MeResponse,
+  type Role,
+  safeReturnTo,
+  type UpdateMyProfileInput,
+} from '@influency/shared';
 import { sha256hex } from '../../common/crypto.js';
 import { DEMO_USER_IDS } from '../../common/demo-ids.js';
 import { DomainError } from '../../common/domain-error.js';
 import { ENV, type Env } from '../../common/env.js';
+import { markOnboardingCompleted } from '../../common/onboarding.js';
 import { PrismaService } from '../../common/prisma.service.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import {
@@ -114,21 +121,58 @@ export class AuthService {
     }
 
     const userId = await this.findOrCreateUser(identity);
-    return { ok: true, sessionToken: await this.createSession(userId), returnTo };
+    return {
+      ok: true,
+      sessionToken: await this.createSession(userId),
+      returnTo: await this.postLoginLocation(userId, returnTo),
+    };
   }
 
   /**
    * Dev only: a session for a seeded demo user, skipping Telegram. The caller refuses in production.
    * NOT_FOUND for an unknown key or an unseeded user (run `pnpm db:seed`).
    */
-  async devLogin(user: string): Promise<string> {
+  async devLogin(
+    user: string,
+    returnTo: string,
+  ): Promise<{ sessionToken: string; location: string }> {
     const userId = Object.hasOwn(DEMO_USER_IDS, user)
       ? DEMO_USER_IDS[user as keyof typeof DEMO_USER_IDS]
       : undefined;
     if (!userId || !(await this.prisma.user.findUnique({ where: { id: userId } }))) {
       throw new DomainError('NOT_FOUND');
     }
-    return this.createSession(userId);
+    return {
+      sessionToken: await this.createSession(userId),
+      location: await this.postLoginLocation(userId, returnTo),
+    };
+  }
+
+  /**
+   * Where a fresh login lands: `returnTo`, or the welcome stepper (keeping `returnTo`) for a user who has not
+   * finished onboarding. `returnTo` is already a validated same-origin path.
+   */
+  private async postLoginLocation(userId: string, returnTo: string): Promise<string> {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { onboardingCompletedAt: true },
+    });
+    if (user.onboardingCompletedAt) return returnTo;
+    return returnTo === '/' ? '/welcome' : `/welcome?returnTo=${encodeURIComponent(returnTo)}`;
+  }
+
+  /** PATCH /me/profile: only users.display_name and users.bio of the caller (the creator profile name is separate). */
+  async updateProfile(userId: string, input: UpdateMyProfileInput): Promise<MeResponse> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { displayName: input.displayName, bio: input.bio || null },
+    });
+    return this.me(userId);
+  }
+
+  /** POST /me/onboarding/complete: idempotent, only the caller's own row. */
+  completeOnboarding(userId: string): Promise<void> {
+    return markOnboardingCompleted(this.prisma, userId);
   }
 
   /** Revokes the session for this cookie token, if any. Never throws for unknown/expired/revoked tokens. */
@@ -148,9 +192,11 @@ export class AuthService {
       select: {
         id: true,
         displayName: true,
+        bio: true,
+        onboardingCompletedAt: true,
         authIdentities: { where: { provider: 'TELEGRAM' }, select: { username: true }, take: 1 },
         roles: { select: { role: true } },
-        creatorProfile: { select: { status: true } },
+        creatorProfile: { select: { status: true, slug: true } },
       },
     });
     const roles: Role[] = ['USER'];
@@ -161,6 +207,9 @@ export class AuthService {
       displayName: user.displayName,
       username: user.authIdentities[0]?.username ?? null,
       roles,
+      bio: user.bio,
+      creatorSlug: user.creatorProfile?.status === 'APPROVED' ? user.creatorProfile.slug : null,
+      onboardingCompleted: user.onboardingCompletedAt !== null,
     };
   }
 

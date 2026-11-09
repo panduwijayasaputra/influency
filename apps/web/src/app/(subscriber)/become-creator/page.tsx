@@ -1,20 +1,23 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import { PageHeader } from '@/components/page-header';
 import { BecomeCreator } from './become-creator';
 
-export const metadata: Metadata = { title: 'Jadi Kreator' };
+export const metadata: Metadata = { title: 'Jadi Creator' };
 
-export default function BecomeCreatorPage() {
+export default function BecomeCreatorPage({ searchParams }: PageProps<'/become-creator'>) {
   return (
-    <>
-      <PageHeader title="Jadi Kreator" fallbackHref="/me" asHeading />
-      <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-6 py-8">
-        {/* Reads the session cookie, so it must stream inside Suspense (cacheComponents). */}
-        <Suspense fallback={<p className="text-muted-foreground">Memuat…</p>}>
-          <BecomeCreator />
-        </Suspense>
-      </main>
-    </>
+    <main className="flex flex-1 flex-col">
+      {/* Reads the session cookie and the query, so it must stream inside Suspense (cacheComponents). */}
+      <Suspense fallback={<p className="p-6 text-muted-foreground">Memuat…</p>}>
+        <BecomeCreatorFromQuery searchParams={searchParams} />
+      </Suspense>
+    </main>
   );
+}
+
+async function BecomeCreatorFromQuery({
+  searchParams,
+}: Pick<PageProps<'/become-creator'>, 'searchParams'>) {
+  const { from } = await searchParams;
+  return <BecomeCreator from={typeof from === 'string' ? from : undefined} />;
 }

@@ -37,6 +37,8 @@ type Props = {
   loginUrl: string;
   /** The post's own page: no "Lihat detail post" link. */
   detail?: boolean;
+  /** Called after a successful unlock so the card can re-render with its media. */
+  onUnlocked: () => void;
 };
 
 /** The card's media: locked premium preview (never media-access), or lazily loaded media in a carousel. */
@@ -50,6 +52,7 @@ export function PostMedia({ like, onLikeChange, ...props }: Props) {
         postHref={postHref}
         loginUrl={loginUrl}
         detail={detail}
+        onUnlocked={props.onUnlocked}
       />
     );
   }
@@ -62,7 +65,10 @@ function LockedMedia({
   postHref,
   loginUrl,
   detail,
-}: Pick<Props, 'post' | 'postHref' | 'loginUrl' | 'detail'> & { creatorName: string }) {
+  onUnlocked,
+}: Pick<Props, 'post' | 'postHref' | 'loginUrl' | 'detail' | 'onUnlocked'> & {
+  creatorName: string;
+}) {
   const price = post.offer?.priceCoins ?? 0;
   const buka = (
     <span className="flex h-11 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground">
@@ -88,6 +94,9 @@ function LockedMedia({
           <PostUnlockSheet
             post={post}
             creatorName={creatorName}
+            returnPath={postHref}
+            onUnlocked={onUnlocked}
+            subscribedToCreator={post.viewer?.subscribed === true}
             trigger={
               <button
                 type="button"

@@ -7,7 +7,15 @@ import { SignedInChrome } from './signed-in-chrome';
 vi.mock('@/lib/api/current-user', () => ({ getCurrentUser: vi.fn() }));
 vi.mock('next/navigation', () => ({ usePathname: () => '/discover' }));
 
-const USER = { id: 'u1', displayName: 'Ana', username: null, roles: ['USER' as const] };
+const USER = {
+  id: 'u1',
+  displayName: 'Ana',
+  username: null,
+  roles: ['USER' as const],
+  bio: null,
+  creatorSlug: null,
+  onboardingCompleted: true,
+};
 const states = [
   ['a guest', () => vi.mocked(getCurrentUser).mockResolvedValue(null)],
   ['an API outage', () => vi.mocked(getCurrentUser).mockRejectedValue(new Error('503'))],

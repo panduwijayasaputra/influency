@@ -13,7 +13,8 @@ export async function seedUsers(prisma: PrismaClient): Promise<void> {
   for (const user of DEMO_USERS) {
     await prisma.user.upsert({
       where: { id: user.id },
-      create: user,
+      // Demo users skip the welcome stepper; an update never resets the flag.
+      create: { ...user, onboardingCompletedAt: new Date() },
       update: { displayName: user.displayName },
     });
   }

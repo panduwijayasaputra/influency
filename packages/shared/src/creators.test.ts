@@ -57,6 +57,20 @@ describe('creatorApplicationSchema', () => {
     expect(creatorApplicationSchema.safeParse(input).success).toBe(false);
   });
 
+  it.each([10, 5000])('accepts a subscription price of %i', (price) => {
+    expect(
+      creatorApplicationSchema.parse({ ...valid, subscriptionPriceCoins: price }),
+    ).toMatchObject({
+      subscriptionPriceCoins: price,
+    });
+  });
+
+  it.each([9, 5001, 10.5, '50', 0, -10])('rejects a subscription price of %j', (price) => {
+    expect(
+      creatorApplicationSchema.safeParse({ ...valid, subscriptionPriceCoins: price }).success,
+    ).toBe(false);
+  });
+
   it('explains a missing agreement', () => {
     const result = creatorApplicationSchema.safeParse({ ...valid, acceptAgreement: false });
     expect(result.error?.issues[0]).toMatchObject({
@@ -95,6 +109,7 @@ describe('creatorApplicationResponseSchema', () => {
       slug: 'abc',
       bio: null,
       category: null,
+      subscriptionPriceCoins: null,
       submittedAt: '2026-11-03T00:00:00.000Z',
       rejectionReason: null,
     };

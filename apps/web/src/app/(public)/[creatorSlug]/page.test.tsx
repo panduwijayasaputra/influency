@@ -3,12 +3,14 @@ import type { CreatorProfileResponse } from '@influency/shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Toaster } from '@/components/ui/toast';
 import { getFollowState } from '@/lib/api/creator-follow.server';
+import { getCreatorSubscription } from '@/lib/api/creator-subscription.server';
 import { getCurrentUser } from '@/lib/api/current-user';
 import { getMyCreatorProfile } from '@/lib/api/creator-profile';
 import { getPublicCreator } from '@/lib/api/public-creator';
 import CreatorPage, { CreatorView, generateMetadata } from './page';
 
 vi.mock('@/lib/api/creator-follow.server', () => ({ getFollowState: vi.fn() }));
+vi.mock('@/lib/api/creator-subscription.server', () => ({ getCreatorSubscription: vi.fn() }));
 vi.mock('@/lib/api/current-user', () => ({ getCurrentUser: vi.fn() }));
 vi.mock('@/lib/api/creator-profile', () => ({ getMyCreatorProfile: vi.fn() }));
 vi.mock('@/lib/api/public-creator', () => ({ getPublicCreator: vi.fn() }));
@@ -32,13 +34,21 @@ const props = (creatorSlug = 'claudiandreya') => ({ params: Promise.resolve({ cr
 
 describe('CreatorPage', () => {
   beforeEach(() => {
+    localStorage.clear();
     vi.mocked(getPublicCreator).mockResolvedValue(CREATOR);
     vi.mocked(getFollowState).mockResolvedValue({ following: true, followerCount: 1200 });
+    vi.mocked(getCreatorSubscription).mockResolvedValue({
+      plan: { priceCoins: 300, durationDays: 30 },
+      viewer: null,
+    });
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'u1',
       displayName: 'Ana',
       username: 'ana',
       roles: ['USER'],
+      bio: null,
+      creatorSlug: null,
+      onboardingCompleted: true,
     });
   });
 
@@ -69,6 +79,10 @@ describe('CreatorPage', () => {
     // Page header: the name as plain text (the h1 stays in the profile), no back on a direct visit.
     expect(screen.getByRole('banner')).toHaveTextContent('Claudia Andreya');
     expect(screen.queryByLabelText('Kembali')).toBeNull();
+    // Recorded in "Baru dilihat" on this device (US-066).
+    expect(JSON.parse(localStorage.getItem('influency:recent-creators') ?? '[]')).toEqual([
+      { slug: 'claudiandreya', displayName: 'Claudia Andreya', avatarUrl: CREATOR.avatarUrl },
+    ]);
   });
 
   it('falls back to initials and a gradient without images, and hides empty fields', async () => {
@@ -143,6 +157,9 @@ describe('CreatorView', () => {
       displayName: 'Ana',
       username: 'ana',
       roles: ['USER'],
+      bio: null,
+      creatorSlug: null,
+      onboardingCompleted: true,
     });
     await view();
     expect(screen.getByRole('banner')).toHaveTextContent('Claudia Andreya');
@@ -158,9 +175,13 @@ describe('CreatorView', () => {
       displayName: 'Claudia',
       username: 'claudia',
       roles: ['USER', 'CREATOR'] as ('USER' | 'CREATOR' | 'ADMIN')[],
+      bio: null,
+      creatorSlug: null,
+      onboardingCompleted: true,
     };
 
     it('shows the owner Edit Profil instead of Ikuti and Langganan', async () => {
+      localStorage.clear();
       vi.mocked(getCurrentUser).mockResolvedValue(creatorUser);
       vi.mocked(getMyCreatorProfile).mockResolvedValue(CREATOR);
       await view();
@@ -170,6 +191,8 @@ describe('CreatorView', () => {
       );
       expect(screen.queryByRole('button', { name: 'Ikuti' })).toBeNull();
       expect(screen.queryByRole('button', { name: /Langganan/ })).toBeNull();
+      // The owner's own profile is not added to "Baru dilihat".
+      expect(localStorage.getItem('influency:recent-creators')).toBeNull();
     });
 
     it.each([
@@ -196,12 +219,26 @@ describe('CreatorView', () => {
       expect(getMyCreatorProfile).not.toHaveBeenCalled();
     });
 
-    it('shows the demo subscribed state to a signed-in viewer only', async () => {
+    it('shows the subscribed state the server reports for the viewer', async () => {
       const creatorb = { ...CREATOR, slug: 'creatorb' };
+      const day = 86_400_000;
+      vi.mocked(getCreatorSubscription).mockResolvedValueOnce({
+        plan: { priceCoins: 300, durationDays: 30 },
+        viewer: {
+          current: {
+            periodId: '0198a3c0-0000-7000-8000-0000000000d1',
+            startsAt: new Date(Date.now() - 18 * day).toISOString(),
+            endsAt: new Date(Date.now() + 12 * day).toISOString(),
+            priceCoins: 300,
+          },
+          scheduled: null,
+          canTip: false,
+        },
+      });
       vi.mocked(getCurrentUser).mockResolvedValue({ ...creatorUser, roles: ['USER'] });
       const { unmount } = render(await CreatorView({ creator: creatorb }), { wrapper: Toaster });
       expect(screen.getByRole('button', { name: /Berlangganan/ })).toHaveTextContent(
-        '12 hari lagi (demo)',
+        '12 hari lagi',
       );
       unmount();
       vi.mocked(getCurrentUser).mockResolvedValue(null);

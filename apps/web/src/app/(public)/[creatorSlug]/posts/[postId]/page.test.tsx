@@ -98,12 +98,21 @@ describe('PostDetail', () => {
   });
 
   it('offers Laporkan to other viewers only (US-042)', async () => {
-    const viewer = { liked: false, canLike: true, canReport: true };
+    const viewer = {
+      liked: false,
+      saved: false,
+      canLike: true,
+      canReport: true,
+      canTip: false,
+      subscribed: false,
+    };
     const { unmount } = await renderDetail(post({ viewer }));
     fireEvent.pointerDown(screen.getByRole('button', { name: 'Lainnya' }), { button: 0 });
     expect(await screen.findByRole('menuitem', { name: 'Laporkan' })).toBeInTheDocument();
     unmount();
-    await renderDetail(post({ viewer: { ...viewer, canReport: false } }));
+    await renderDetail(
+      post({ viewer: { ...viewer, canReport: false, canTip: false, subscribed: false } }),
+    );
     fireEvent.pointerDown(screen.getByRole('button', { name: 'Lainnya' }), { button: 0 });
     await screen.findByRole('menuitem', { name: 'Bagikan' });
     expect(screen.queryByRole('menuitem', { name: 'Laporkan' })).toBeNull();
@@ -123,7 +132,14 @@ describe('PostDetail', () => {
   it('opens the Koin sheet for a signed-in viewer of a locked post, with no detail link', async () => {
     await renderDetail({
       ...locked(),
-      viewer: { liked: false, canLike: false, canReport: true },
+      viewer: {
+        liked: false,
+        saved: false,
+        canLike: false,
+        canReport: true,
+        canTip: false,
+        subscribed: false,
+      },
     });
     fireEvent.click(screen.getByRole('button', { name: /Buka · 8 Koin/ }));
     expect(await screen.findByText('Permanen')).toBeInTheDocument();

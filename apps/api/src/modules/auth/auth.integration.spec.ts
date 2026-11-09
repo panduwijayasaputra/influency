@@ -140,7 +140,7 @@ describe('Telegram login (start + callback)', () => {
     const res = await login(sub, { name: 'Claudia Andreya' });
 
     expect(res.statusCode).toBe(302);
-    expect(res.headers.location).toBe('/');
+    expect(res.headers.location).toBe('/welcome');
     const cookie = sessionCookie(res)!;
     expect(cookie).toMatchObject({ httpOnly: true, sameSite: 'Lax', path: '/', maxAge: 2_592_000 });
     expect(cookie.secure).toBeFalsy(); // WEB_ORIGIN is http in tests
@@ -167,9 +167,13 @@ describe('Telegram login (start + callback)', () => {
     const sub = newSub();
     await login(sub, { name: 'First Name' });
     const userId = await userIdOf(sub);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { onboardingCompletedAt: new Date() },
+    });
     const res = await login(sub, { name: 'Changed Name' });
 
-    expect(res.headers.location).toBe('/');
+    expect(res.headers.location).toBe('/'); // finished onboarding: straight to returnTo
     expect(await prisma.authIdentity.count({ where: { providerSub: sub } })).toBe(1);
     expect(await prisma.session.count({ where: { userId } })).toBe(2);
     expect((await prisma.user.findUniqueOrThrow({ where: { id: userId } })).displayName).toBe(
@@ -198,7 +202,7 @@ describe('Telegram login (start + callback)', () => {
   it('logs in with a malformed username and stores none', async () => {
     const sub = newSub();
     const res = await login(sub, { preferred_username: 'bad name!' });
-    expect(res.headers.location).toBe('/');
+    expect(res.headers.location).toBe('/welcome');
     expect(
       (
         await prisma.authIdentity.findUniqueOrThrow({
@@ -247,7 +251,7 @@ describe('Telegram login (start + callback)', () => {
       const attempt = await start();
       fake.nextToken = await fake.signIdToken({ sub, nonce: attempt.nonce });
       const first = await callback({ code: 'c', state: attempt.state }, attempt.binding);
-      expect(first.headers.location).toBe('/');
+      expect(first.headers.location).toBe('/welcome');
       const sessionsBefore = await prisma.session.count();
 
       expectFailed(await callback({ code: 'c', state: attempt.state }, attempt.binding));
@@ -344,7 +348,7 @@ describe('Telegram login (start + callback)', () => {
       fake.nextToken = await fake.signIdToken({ sub: newSub(), nonce: attempt.nonce });
       const res = await callback({ code: 'c', state: attempt.state }, attempt.binding);
       expect(res.statusCode).toBe(302);
-      expect(res.headers.location).toBe(returnTo);
+      expect(res.headers.location).toBe(`/welcome?returnTo=${encodeURIComponent(returnTo)}`);
       expect(sessionCookie(res)).toBeDefined();
     });
 
@@ -373,7 +377,7 @@ describe('Telegram login (start + callback)', () => {
 
       fake.nextToken = await fake.signIdToken({ sub: newSub(), nonce: attempt.nonce });
       const res = await callback({ code: 'c', state: attempt.state }, attempt.binding);
-      expect(res.headers.location).toBe('/');
+      expect(res.headers.location).toBe('/welcome');
     });
 
     it('is kept on /login after a cancelled login so a retry returns to the same page', async () => {
@@ -392,6 +396,19 @@ describe('Telegram login (start + callback)', () => {
       );
     });
 
+    it('goes straight to returnTo for a user who finished onboarding', async () => {
+      const sub = newSub();
+      await login(sub);
+      await prisma.user.update({
+        where: { id: await userIdOf(sub) },
+        data: { onboardingCompletedAt: new Date() },
+      });
+      const attempt = await start({ returnTo: '/kreator?x=1' });
+      fake.nextToken = await fake.signIdToken({ sub, nonce: attempt.nonce });
+      const res = await callback({ code: 'c', state: attempt.state }, attempt.binding);
+      expect(res.headers.location).toBe('/kreator?x=1');
+    });
+
     it('is not used when the state is unknown (no trusted value)', async () => {
       const attempt = await start({ returnTo: '/kreator' });
       expectFailed(await callback({ code: 'c', state: 'unknown' }, attempt.binding));
@@ -402,7 +419,7 @@ describe('Telegram login (start + callback)', () => {
     const sub = newSub();
     const results = await Promise.all([login(sub), login(sub)]);
 
-    expect(results.map((r) => r.headers.location)).toEqual(['/', '/']);
+    expect(results.map((r) => r.headers.location)).toEqual(['/welcome', '/welcome']);
     expect(await prisma.authIdentity.count({ where: { providerSub: sub } })).toBe(1);
     expect(await prisma.session.count({ where: { userId: await userIdOf(sub) } })).toBe(2);
   });
@@ -460,7 +477,7 @@ describe('session cookie on an https origin with a custom lifetime', () => {
       cookies: { influency_oidc: binding.value },
     });
 
-    expect(res.headers.location).toBe('/');
+    expect(res.headers.location).toBe('/welcome');
     const cookie = res.cookies.find((c) => c.name === 'influency_session')!;
     expect(cookie).toMatchObject({ httpOnly: true, secure: true, maxAge: 604_800 });
     const session = await prisma.session.findUniqueOrThrow({

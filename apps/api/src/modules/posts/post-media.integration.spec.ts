@@ -113,7 +113,11 @@ describe('studio post media', () => {
     await prisma.$disconnect();
   });
 
-  beforeEach(() => vi.restoreAllMocks());
+  beforeEach(async () => {
+    vi.restoreAllMocks();
+    // One shared post per creator, and the limit is 5: every test starts with no media.
+    await prisma.mediaAsset.deleteMany({ where: { postId: { in: [POSTS.a, POSTS.b] } } });
+  });
 
   const base = (postId: string) => `/api/v1/creators/me/posts/${postId}/media`;
   const cookies = (name?: UserName): Record<string, string> =>

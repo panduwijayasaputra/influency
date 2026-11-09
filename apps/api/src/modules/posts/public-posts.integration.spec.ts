@@ -232,11 +232,11 @@ describe('GET /creators/:slug/posts', () => {
     const [premiumPost, freePost] = await postsFor(TOKENS.fan);
     expect(premiumPost).toMatchObject({
       access: 'locked',
-      viewer: { liked: false, canLike: false, canReport: true },
+      viewer: { liked: false, canLike: false, canReport: true, canTip: false },
     });
     expect(freePost).toMatchObject({
       access: 'full',
-      viewer: { liked: true, canLike: true, canReport: true },
+      viewer: { liked: true, canLike: true, canReport: true, canTip: false },
     });
   });
 
@@ -244,6 +244,15 @@ describe('GET /creators/:slug/posts', () => {
     const posts = await postsFor(TOKEN);
     expect(posts.map((p) => p.access)).toEqual(['full', 'full']);
     expect(posts.every((p) => p.viewer?.canReport === false)).toBe(true);
+    expect(posts.every((p) => p.viewer?.canTip === false)).toBe(true); // never self-tip
+  });
+
+  it('offers Kirim Tip only to who paid: not on a locked post, not from free admin access', async () => {
+    const [adminPremium] = await postsFor(TOKENS.admin);
+    expect(adminPremium!.access).toBe('full');
+    expect(adminPremium!.viewer?.canTip).toBe(false);
+    const [fanPremium] = await postsFor(TOKENS.fan);
+    expect(fanPremium!.viewer?.canTip).toBe(false);
   });
 
   it('gives an admin full access to premium', async () => {

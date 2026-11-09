@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { WalletTransaction } from '@influency/shared';
 import { Button } from '@/components/ui/button';
 import { formatJakartaDate } from '@/lib/format';
@@ -5,6 +6,11 @@ import { cn } from '@/lib/utils';
 
 const TITLES: Record<WalletTransaction['type'], (t: WalletTransaction) => string> = {
   TOPUP_CREDIT: (t) => `Isi ulang · ${t.amountCoins} Koin`,
+  POST_PURCHASE_DEBIT: (t) => (t.detail ? `Buka post · ${t.detail}` : 'Buka post'),
+  SUBSCRIPTION_DEBIT: (t) => (t.detail ? `Langganan · ${t.detail}` : 'Langganan'),
+  TIP_DEBIT: (t) => (t.detail ? `Tip · ${t.detail}` : 'Tip'),
+  SUBSCRIPTION_REFUND_CREDIT: (t) =>
+    t.detail ? `Perpanjangan dibatalkan · ${t.detail}` : 'Perpanjangan dibatalkan',
 };
 
 type Props = {
@@ -29,7 +35,13 @@ export function WalletActivity({ items, hasMore, loadingMore, loadError, onLoadM
           {items.map((t) => (
             <li key={t.id} className="flex items-center justify-between gap-3 px-4 py-3">
               <span className="flex min-w-0 flex-col">
-                <span className="truncate text-sm font-semibold">{TITLES[t.type](t)}</span>
+                {t.href ? (
+                  <Link href={t.href} className="truncate text-sm font-semibold hover:underline">
+                    {TITLES[t.type](t)}
+                  </Link>
+                ) : (
+                  <span className="truncate text-sm font-semibold">{TITLES[t.type](t)}</span>
+                )}
                 <span className="text-xs text-muted-foreground">
                   {formatJakartaDate(t.createdAt)}
                 </span>

@@ -9,7 +9,15 @@ const replace = vi.fn();
 const refresh = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace, refresh }) }));
 
-const USER: MeResponse = { id: 'u1', displayName: 'Ana Putri', username: 'ana', roles: ['USER'] };
+const USER: MeResponse = {
+  id: 'u1',
+  displayName: 'Ana Putri',
+  username: 'ana',
+  roles: ['USER'],
+  bio: null,
+  creatorSlug: null,
+  onboardingCompleted: true,
+};
 
 const openDrawer = (user: MeResponse = USER) => {
   render(<AccountDrawer user={user} />);

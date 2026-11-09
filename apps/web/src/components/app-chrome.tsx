@@ -5,8 +5,14 @@ import { useEffect, useRef } from 'react';
 import { BottomNav } from '@/components/bottom-nav';
 import { markInAppNavigation } from '@/lib/in-app-history';
 
-/** Routes without the bottom nav. Add onboarding here when its route lands. */
-export const STANDALONE_PREFIXES = ['/login', '/studio', '/admin', '/become-creator'] as const;
+/** Routes without the bottom nav. */
+export const STANDALONE_PREFIXES = [
+  '/login',
+  '/studio',
+  '/admin',
+  '/become-creator',
+  '/welcome',
+] as const;
 
 export function isStandalone(pathname: string): boolean {
   return STANDALONE_PREFIXES.some(

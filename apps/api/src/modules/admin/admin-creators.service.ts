@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { AdminCreatorApplication, CreatorReviewResult } from '@influency/shared';
 import { DomainError } from '../../common/domain-error.js';
 import { PrismaService } from '../../common/prisma.service.js';
+import type { Prisma } from '../../generated/prisma/client.js';
 
 type Decision = 'APPROVED' | 'REJECTED';
 
@@ -61,7 +62,32 @@ export class AdminCreatorsService {
       await tx.creatorApplicationReview.create({
         data: { creatorProfileId: profileId, reviewerId, decision, reason },
       });
+      if (decision === 'APPROVED') await this.createRequestedPlan(tx, profileId);
     });
     return { id: profileId, status: decision };
+  }
+
+  /**
+   * Plan v1 at the price chosen in the application. Same transaction as the approval, whose conditional update already
+   * locked the profile row; the unique (creator_profile_id, version) is the backstop. Without a price (or if the creator
+   * already has a plan) nothing is created.
+   */
+  private async createRequestedPlan(
+    tx: Prisma.TransactionClient,
+    profileId: string,
+  ): Promise<void> {
+    const profile = await tx.creatorProfile.findUniqueOrThrow({
+      where: { id: profileId },
+      select: { requestedPlanPriceCoins: true, _count: { select: { subscriptionPlans: true } } },
+    });
+    if (profile.requestedPlanPriceCoins === null || profile._count.subscriptionPlans > 0) return;
+    await tx.creatorSubscriptionPlan.create({
+      data: {
+        creatorProfileId: profileId,
+        version: 1,
+        priceCoins: profile.requestedPlanPriceCoins,
+        active: true,
+      },
+    });
   }
 }

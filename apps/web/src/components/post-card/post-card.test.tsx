@@ -3,12 +3,21 @@ import { renderToString } from 'react-dom/server';
 import type { PublicPost } from '@influency/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Toaster } from '@/components/ui/toast';
+import { fetchPublicPost, purchasePost } from '@/lib/api/purchases';
 import { PostCard } from './post-card';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock('@/lib/api/purchases', () => ({ purchasePost: vi.fn(), fetchPublicPost: vi.fn() }));
 
 const CREATOR = { slug: 'ana', displayName: 'Ana Putri', avatarUrl: null };
-const SIGNED_IN = { liked: false, canLike: true, canReport: true };
+const SIGNED_IN = {
+  liked: false,
+  saved: false,
+  canLike: true,
+  canReport: true,
+  canTip: false,
+  subscribed: false,
+};
 const LOGIN = '/login?returnTo=%2Fana';
 const SIGNED_URL = 'https://storage.example/signed/one?sig=x';
 const PUBLISHED_AT = new Date(Date.now() - 2 * 3600_000).toISOString();
@@ -86,6 +95,22 @@ describe('PostCard', () => {
     expect(screen.getByRole('menuitem', { name: 'Laporkan' })).toBeInTheDocument();
   });
 
+  it('adds an Edit item to the menu only when given an editHref (the owner profile)', async () => {
+    const { unmount } = renderCard(post());
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Lainnya' }), { button: 0 });
+    await screen.findByRole('menuitem', { name: 'Bagikan' });
+    expect(screen.queryByRole('menuitem', { name: 'Edit' })).toBeNull();
+    unmount();
+    render(<PostCard post={post()} creator={CREATOR} editHref="/studio/posts/p1" />, {
+      wrapper: Toaster,
+    });
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Lainnya' }), { button: 0 });
+    expect(await screen.findByRole('menuitem', { name: 'Edit' })).toHaveAttribute(
+      'href',
+      '/studio/posts/p1',
+    );
+  });
+
   it('links the creator to their profile only when asked (Home feed)', () => {
     const { unmount } = renderCard(post());
     expect(screen.queryByRole('link', { name: /Ana Putri/ })).toBeNull();
@@ -115,6 +140,47 @@ describe('PostCard', () => {
     renderCard(lockedPost(SIGNED_IN));
     fireEvent.click(screen.getByRole('button', { name: /Buka · 8 Koin/ }));
     expect(screen.getByRole('dialog', { name: 'Rahasia' })).toBeInTheDocument();
+  });
+
+  it('unlocking re-renders the card with its media, using the server\x27s answer', async () => {
+    vi.mocked(purchasePost).mockResolvedValue({
+      purchaseId: '0190a000-0000-7000-8000-0000000000aa',
+      postId: lockedPost(SIGNED_IN).id,
+      priceCoins: 8,
+      balanceCoins: 12,
+      alreadyOwned: false,
+    });
+    vi.mocked(fetchPublicPost).mockResolvedValue({
+      ...lockedPost(SIGNED_IN),
+      access: 'full',
+      status: 'PUBLISHED',
+    } as never);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        const body = url.endsWith('/wallet') ? { balanceCoins: 20 } : media(2);
+        return Promise.resolve(Response.json(body));
+      }),
+    );
+    renderCard(lockedPost(SIGNED_IN));
+    fireEvent.click(screen.getByRole('button', { name: /Buka · 8 Koin/ }));
+    const confirm = screen.getByRole('button', { name: 'Buka dengan 8 Koin' });
+    await waitFor(() => expect(confirm).toBeEnabled());
+    fireEvent.click(confirm);
+    await waitFor(() =>
+      expect(purchasePost).toHaveBeenCalledWith(lockedPost(SIGNED_IN).id, 8, expect.any(String)),
+    );
+    await waitFor(() => expect(screen.getByText('Terbuka')).toBeInTheDocument());
+    expect(fetchPublicPost).toHaveBeenCalledWith('ana', lockedPost(SIGNED_IN).id);
+  });
+
+  it('takes a newer server post over its local copy (router.refresh)', () => {
+    const { rerender } = renderCard(lockedPost(SIGNED_IN));
+    expect(screen.getByText('Premium')).toBeInTheDocument();
+    rerender(
+      <PostCard post={post({ visibility: 'PREMIUM', caption: 'Rahasia' })} creator={CREATOR} />,
+    );
+    expect(screen.getByText('Terbuka')).toBeInTheDocument();
   });
 
   it('loads accessible media lazily into a carousel with a position indicator', async () => {
@@ -178,27 +244,49 @@ describe('PostCard', () => {
   });
 
   it('marks accessible premium as Terbuka and offers Kirim Tip, but not on your own post', async () => {
-    const { unmount } = renderCard(post({ visibility: 'PREMIUM', offer: { priceCoins: 5 } }));
+    const { unmount } = renderCard(
+      post({
+        visibility: 'PREMIUM',
+        offer: { priceCoins: 5 },
+        viewer: { ...SIGNED_IN, canTip: true, subscribed: false },
+      }),
+    );
     // The chip re-renders once media is ready, so wait for the settled card.
     await screen.findByRole('region', { name: 'Media 1/3' });
     expect(screen.getByText('Terbuka')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Kirim Tip' }));
-    expect(await screen.findByText('Segera hadir')).toBeInTheDocument();
+    expect(await screen.findByRole('group', { name: 'Jumlah tip' })).toBeInTheDocument();
     unmount();
     renderCard(
       post({
         visibility: 'PREMIUM',
         offer: { priceCoins: 5 },
-        viewer: { ...SIGNED_IN, canReport: false },
+        viewer: { ...SIGNED_IN, canReport: false, canTip: false, subscribed: false },
       }),
     );
     expect(screen.queryByRole('button', { name: 'Kirim Tip' })).toBeNull();
   });
 
-  it('toasts for Simpan', async () => {
+  it('saves with Simpan and shows the saved state', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(Response.json({ saved: true })));
+    vi.stubGlobal('fetch', fetchMock);
     renderCard(post());
     fireEvent.click(screen.getByRole('button', { name: 'Simpan' }));
-    expect(await screen.findByText('Segera hadir')).toBeInTheDocument();
+    expect(await screen.findByText('Disimpan ke Koleksi Saya')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hapus dari Disimpan' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.queryByText('Segera hadir')).toBeNull();
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/save'), { method: 'PUT' });
+  });
+
+  it('starts Simpan in the server state', () => {
+    renderCard(post({ viewer: { ...SIGNED_IN, saved: true } }));
+    expect(screen.getByRole('button', { name: 'Hapus dari Disimpan' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
   });
 
   it('turns every guest action into a login link', () => {

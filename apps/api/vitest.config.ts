@@ -28,10 +28,16 @@ export default defineConfig({
       R2_BUCKET: 'test-bucket',
       // Never the real gateway, whatever the local .env says.
       PAYMENT_PROVIDER: 'fake',
+      // Test-only key (32 bytes of 0x07), never a real one.
+      PAYOUT_ACCOUNT_ENC_KEY: 'BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc=',
       // Specs call TopupReconcileService directly; no background timer.
       TOPUP_RECONCILE_INTERVAL_SECONDS: '0',
       // Specs call PostMediaService.sweep directly; no background timer.
       MEDIA_SWEEP_INTERVAL_SECONDS: '0',
+      // Specs call NotificationProducer.remindEndingSubscriptions directly; no background timer.
+      SUBSCRIPTION_REMINDER_INTERVAL_SECONDS: '0',
+      // Specs call NotificationDeliveryService.deliverDue directly; no background timer.
+      NOTIFICATION_DELIVERY_INTERVAL_SECONDS: '0',
     },
   },
 });

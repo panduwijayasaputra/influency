@@ -9,6 +9,7 @@ import {
   type ProfileImageKind,
 } from '@influency/shared';
 import { cn } from '@/lib/utils';
+import { refreshOwnPublicProfile } from './actions';
 
 const toMb = (bytes: number) => bytes / (1024 * 1024);
 
@@ -52,6 +53,7 @@ export function ProfileImageInput({
         body: file,
       });
       if (res.ok) {
+        await refreshOwnPublicProfile(); // the cached public page shows the new image at once
         router.refresh(); // new image URL from the server
       } else {
         setError(errorResponseSchema.parse(await res.json()).error.message);

@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   type CreatePostCommentInput,
   POST_COMMENT_REPLIES_PAGE_SIZE,
@@ -16,6 +16,7 @@ import { ENV, type Env } from '../../common/env.js';
 import { PrismaService } from '../../common/prisma.service.js';
 import type { PostAccess } from '../entitlements/post-access.js';
 import { PostAccessService } from '../entitlements/post-access.service.js';
+import { NotificationProducer } from '../notifications/notification-producer.service.js';
 import { encodeTopCursor, TOP_ORDER, topCursorWhere } from './comment-order.js';
 import { canEngage } from './post-likes.service.js';
 
@@ -122,11 +123,47 @@ function mapTop(
 /** Comments (US-052): plain text, Top order, one level of replies, soft-deleted only. */
 @Injectable()
 export class PostCommentsService {
+  private readonly logger = new Logger(PostCommentsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: PostAccessService,
     @Inject(ENV) private readonly env: Env,
+    private readonly notifications: NotificationProducer,
   ) {}
+
+  /**
+   * Reply/like notification for the author of comment `authorOf` (US-072), after the change committed. Only when that
+   * author can fully access the post, so nobody is pointed at a locked post's private thread. Never throws.
+   */
+  async notifyCommentAuthor(e: {
+    type: 'COMMENT_REPLY' | 'COMMENT_LIKE';
+    postId: string;
+    authorOf: string;
+    commentId: string;
+    actorUserId: string;
+    dedupeKey: string;
+  }): Promise<void> {
+    try {
+      const target = await this.prisma.postComment.findUnique({
+        where: { id: e.authorOf },
+        select: { userId: true, post: { select: { creatorProfileId: true } } },
+      });
+      if (!target || target.userId === e.actorUserId) return;
+      if ((await this.access.check(e.postId, target.userId)) !== 'full') return;
+      await this.notifications.notify({
+        userId: target.userId,
+        type: e.type,
+        dedupeKey: e.dedupeKey,
+        actorUserId: e.actorUserId,
+        creatorProfileId: target.post.creatorProfileId,
+        postId: e.postId,
+        commentId: e.commentId,
+      });
+    } catch (err) {
+      this.logger.warn(`notification ${e.type} skipped: ${(err as Error).message}`);
+    }
+  }
 
   /** hidden → NOT_FOUND, not published → POST_NOT_AVAILABLE, locked without the policy flag → FORBIDDEN. */
   async gate(
@@ -284,12 +321,24 @@ export class PostCommentsService {
       if (!parent) throw new DomainError('NOT_FOUND');
       parentId = parent.parentId ?? parent.id;
     }
+    const repliedTo = input.parentId ?? null;
     // shortcut: no post-row lock; a comment racing an archive is invisible (post not PUBLISHED) and non-financial.
     // shortcut: a reply racing its parent's delete attaches to a now-deleted parent and shows under the placeholder.
     const row = await this.prisma.postComment.create({
       data: { postId, userId, body: input.body, parentId },
       select: commentFields,
     });
+    if (repliedTo) {
+      // The author of the comment that was answered (also when it is itself a reply).
+      await this.notifyCommentAuthor({
+        type: 'COMMENT_REPLY',
+        postId,
+        authorOf: repliedTo,
+        commentId: row.id,
+        actorUserId: userId,
+        dedupeKey: `reply:${row.id}`,
+      });
+    }
     const none = new Set<string>(); // a new comment is never liked yet
     if (parentId) return mapReply(row, userId, ownerUserId, isAdmin, none);
     return mapTop(

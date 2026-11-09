@@ -13,6 +13,12 @@ export const DEMO_CREATOR_PROFILE_IDS = {
   subscriberB: '0190a000-0000-7000-8000-000000000103',
 } as const;
 
+/** Version 1 of the demo creators' subscription plans (purchases US-035). */
+export const DEMO_SUBSCRIPTION_PLAN_IDS = {
+  claudia: '0190a000-0000-7000-8000-000000000201',
+  creatorB: '0190a000-0000-7000-8000-000000000202',
+} as const;
+
 /** The LOCKED Koin top-up packages (Monetization Spec v1 §2), keyed by Koin amount. */
 export const DEMO_COIN_PACKAGE_IDS = {
   10: '0190a000-0000-7000-8000-000000000a10',

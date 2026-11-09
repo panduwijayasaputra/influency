@@ -239,13 +239,19 @@ describe('PUT / DELETE /posts/:id/like', () => {
     it('logged-in detail: liked and canLike', async () => {
       expect((await detail(posts.concurrent!, 'fanA')).viewer).toEqual({
         liked: true,
+        saved: false,
         canLike: true,
         canReport: true,
+        canTip: false,
+        subscribed: false,
       });
       expect((await detail(posts.concurrent!, 'fanB')).viewer).toEqual({
         liked: false,
+        saved: false,
         canLike: true,
         canReport: true,
+        canTip: false,
+        subscribed: false,
       });
     });
 

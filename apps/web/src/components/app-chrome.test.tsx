@@ -21,14 +21,18 @@ describe('AppChrome', () => {
     },
   );
 
-  it.each(['/login', '/studio', '/studio/posts/new', '/admin/creators', '/become-creator'])(
-    'renders nothing on standalone %s',
-    (pathname) => {
-      at(pathname);
-      const { container } = render(<AppChrome />);
-      expect(container).toBeEmptyDOMElement();
-    },
-  );
+  it.each([
+    '/login',
+    '/studio',
+    '/studio/posts/new',
+    '/admin/creators',
+    '/become-creator',
+    '/welcome',
+  ])('renders nothing on standalone %s', (pathname) => {
+    at(pathname);
+    const { container } = render(<AppChrome />);
+    expect(container).toBeEmptyDOMElement();
+  });
 
   it('marks in-app navigation only after the pathname changes', () => {
     at('/ana');

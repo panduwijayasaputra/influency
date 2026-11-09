@@ -18,5 +18,22 @@ export const meResponseSchema = z.object({
   /** Telegram username, display only; null when Telegram sent none. */
   username: z.string().nullable(),
   roles: z.array(z.enum(ROLES)),
+  /** Profile text (users.bio); null until Edit Profil exists. */
+  bio: z.string().nullable(),
+  /** Slug of the user's APPROVED creator profile, else null (a pending applicant has none). */
+  creatorSlug: z.string().nullable(),
+  /** false until the welcome stepper is finished or skipped (onboarding US-051). */
+  onboardingCompleted: z.boolean(),
 });
 export type MeResponse = z.infer<typeof meResponseSchema>;
+
+/** Body of PATCH /me/profile (onboarding Profil step). Strict: nothing but these two fields can be sent. */
+export const updateMyProfileSchema = z.strictObject({
+  displayName: z
+    .string()
+    .trim()
+    .min(1, 'Masukkan nama tampilan.')
+    .max(60, 'Nama tampilan maksimal 60 karakter.'),
+  bio: z.string().trim().max(500, 'Bio maksimal 500 karakter.'),
+});
+export type UpdateMyProfileInput = z.infer<typeof updateMyProfileSchema>;

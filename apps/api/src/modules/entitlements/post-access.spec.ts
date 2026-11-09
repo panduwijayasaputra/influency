@@ -15,7 +15,12 @@ const decide = (
   visibility: PostVisibility,
   viewer: keyof typeof viewers,
   creatorPublic = true,
-) => decidePostAccess({ status, visibility, ownerUserId: OWNER, creatorPublic }, viewers[viewer]);
+  paid = false,
+) =>
+  decidePostAccess(
+    { status, visibility, ownerUserId: OWNER, creatorPublic, paid },
+    viewers[viewer],
+  );
 
 describe('decidePostAccess', () => {
   it.each<[PostVisibility, PostAccess]>([
@@ -61,5 +66,36 @@ describe('decidePostAccess', () => {
   it('non-public creator: hidden from the public, still full for the owner', () => {
     expect(decide('PUBLISHED', 'FREE', 'anonymous', false)).toBe('hidden');
     expect(decide('PUBLISHED', 'FREE', 'owner', false)).toBe('full');
+  });
+
+  describe('paid access (purchase)', () => {
+    it('unlocks a published premium post for who paid, not for who did not', () => {
+      expect(decide('PUBLISHED', 'PREMIUM', 'stranger', true, true)).toBe('full');
+      expect(decide('PUBLISHED', 'PREMIUM', 'stranger', true, false)).toBe('locked');
+    });
+
+    it('keeps an archived premium post private to who paid; everyone else gets hidden', () => {
+      expect(decide('ARCHIVED', 'PREMIUM', 'stranger', true, true)).toBe('full');
+      expect(decide('ARCHIVED', 'PREMIUM', 'stranger', true, false)).toBe('hidden');
+      expect(decide('ARCHIVED', 'PREMIUM', 'anonymous', true, false)).toBe('hidden');
+    });
+
+    it.each<PostStatus>(['DRAFT', 'PROCESSING', 'PENDING_REVIEW', 'REMOVED'])(
+      'never opens a %s post, paid or not',
+      (status) => {
+        expect(decide(status, 'PREMIUM', 'stranger', true, true)).toBe('hidden');
+      },
+    );
+
+    it('does not open an archived FREE post, or any post of a non-public creator', () => {
+      expect(decide('ARCHIVED', 'FREE', 'stranger', true, true)).toBe('hidden');
+      expect(decide('PUBLISHED', 'PREMIUM', 'stranger', false, true)).toBe('hidden');
+      expect(decide('ARCHIVED', 'PREMIUM', 'stranger', false, true)).toBe('hidden');
+    });
+
+    it('does not change what owner and admin see', () => {
+      expect(decide('REMOVED', 'PREMIUM', 'owner', true, true)).toBe('hidden');
+      expect(decide('REMOVED', 'PREMIUM', 'admin', true, false)).toBe('full');
+    });
   });
 });

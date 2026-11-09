@@ -4,8 +4,10 @@ import {
   type CreatorApplicationInput,
   type CreatorApplicationResponse,
 } from '@influency/shared';
+import { toSafeInt } from '../../common/bigint.js';
 import { DomainError } from '../../common/domain-error.js';
 import { PrismaService } from '../../common/prisma.service.js';
+import { markOnboardingCompleted } from '../../common/onboarding.js';
 import { Prisma } from '../../generated/prisma/client.js';
 
 /** Latest review, for the rejection reason shown to the applicant. */
@@ -22,6 +24,8 @@ function toResponse(
     slug: profile.slug,
     bio: profile.bio,
     category: profile.category,
+    subscriptionPriceCoins:
+      profile.requestedPlanPriceCoins === null ? null : toSafeInt(profile.requestedPlanPriceCoins),
     submittedAt: profile.updatedAt.toISOString(),
     rejectionReason: profile.status === 'REJECTED' ? (profile.reviews[0]?.reason ?? null) : null,
   };
@@ -41,6 +45,8 @@ export class CreatorsService {
       slug: input.slug,
       bio: input.bio || null,
       category: input.category || null,
+      requestedPlanPriceCoins:
+        input.subscriptionPriceCoins === undefined ? null : BigInt(input.subscriptionPriceCoins),
       agreementVersion: CREATOR_AGREEMENT_VERSION,
       agreementAcceptedAt: new Date(),
       status: 'PENDING_REVIEW' as const,
@@ -55,18 +61,19 @@ export class CreatorsService {
     await this.assertSlugFree(userId, input.slug);
     try {
       if (!existing) {
-        return toResponse(
-          await this.prisma.creatorProfile.create({
-            data: { userId, ...data },
-            include: latestReview,
-          }),
-        );
+        const created = await this.prisma.creatorProfile.create({
+          data: { userId, ...data },
+          include: latestReview,
+        });
+        await markOnboardingCompleted(this.prisma, userId); // applying ends the welcome
+        return toResponse(created);
       }
       const { count } = await this.prisma.creatorProfile.updateMany({
         where: { userId, status: 'REJECTED' },
         data,
       });
       if (count === 0) throw new DomainError('CREATOR_APPLICATION_EXISTS'); // raced with another submit
+      await markOnboardingCompleted(this.prisma, userId);
     } catch (error) {
       if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')) {
         throw error;

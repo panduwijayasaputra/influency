@@ -4,7 +4,14 @@ import type { PostCardPost } from '@/components/post-card/post-card';
 import { Toaster } from '@/components/ui/toast';
 import { CommentsSheet } from './comments-sheet';
 
-const creator = { slug: 'ana', displayName: 'Ana', avatarUrl: null };
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+
+const creator = {
+  slug: 'ana',
+  displayName: 'Ana',
+  avatarUrl: null,
+  plan: { priceCoins: 300, durationDays: 30 } as const,
+};
 const post = (viewer: PostCardPost['viewer'], extra: Partial<PostCardPost> = {}) =>
   ({ id: 'p1', viewer, access: 'full', commentCount: 3, ...extra }) as unknown as PostCardPost;
 const list = {
@@ -50,7 +57,14 @@ describe('CommentsSheet', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     rerender(
       <CommentsSheet
-        post={post({ liked: false, canLike: true, canReport: true })}
+        post={post({
+          liked: false,
+          saved: false,
+          canLike: true,
+          canReport: true,
+          canTip: false,
+          subscribed: false,
+        })}
         creator={creator}
         open
         onOpenChange={vi.fn()}
@@ -73,7 +87,14 @@ describe('CommentsSheet', () => {
     );
     render(
       <CommentsSheet
-        post={post({ liked: false, canLike: true, canReport: true })}
+        post={post({
+          liked: false,
+          saved: false,
+          canLike: true,
+          canReport: true,
+          canTip: false,
+          subscribed: false,
+        })}
         creator={creator}
         open
         onOpenChange={onOpenChange}
@@ -150,7 +171,18 @@ describe('CommentsSheet', () => {
     it('never fetches and shows only the ways to get access', () => {
       const fetchMock = vi.fn();
       vi.stubGlobal('fetch', fetchMock);
-      setup(true, { liked: false, canLike: true, canReport: true }, locked);
+      setup(
+        true,
+        {
+          liked: false,
+          saved: false,
+          canLike: true,
+          canReport: true,
+          canTip: false,
+          subscribed: false,
+        },
+        locked,
+      );
       expect(fetchMock).not.toHaveBeenCalled();
       expect(screen.getByText('Komentar khusus pendukung')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Buka post · 8 Koin' })).toBeInTheDocument();
@@ -161,9 +193,47 @@ describe('CommentsSheet', () => {
       expect(screen.queryByLabelText('Tulis komentar')).toBeNull();
     });
 
+    it('shows no Langganan CTA when the creator\x27s plan is unknown', () => {
+      vi.stubGlobal('fetch', vi.fn());
+      render(
+        <CommentsSheet
+          post={post(
+            {
+              liked: false,
+              saved: false,
+              canLike: true,
+              canReport: true,
+              canTip: false,
+              subscribed: false,
+            },
+            locked,
+          )}
+          creator={{ ...creator, plan: null }}
+          open
+          onOpenChange={vi.fn()}
+          size="compact"
+          count={3}
+        />,
+        { wrapper: Toaster },
+      );
+      expect(screen.getByRole('button', { name: 'Buka post · 8 Koin' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Langganan/ })).toBeNull();
+    });
+
     it('Buka opens the unlock sheet over the comments sheet', () => {
       vi.stubGlobal('fetch', vi.fn());
-      setup(true, { liked: false, canLike: true, canReport: true }, locked);
+      setup(
+        true,
+        {
+          liked: false,
+          saved: false,
+          canLike: true,
+          canReport: true,
+          canTip: false,
+          subscribed: false,
+        },
+        locked,
+      );
       fireEvent.click(screen.getByRole('button', { name: 'Buka post · 8 Koin' }));
       expect(screen.getByRole('button', { name: 'Buka dengan 8 Koin' })).toBeInTheDocument();
     });

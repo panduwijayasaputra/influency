@@ -223,6 +223,300 @@
       "title": "Reconcile Pending Top-Ups",
       "status": "ready_for_uat",
       "completedAt": "2026-11-07"
+    },
+    {
+      "id": "US-033",
+      "feature": "purchases",
+      "title": "Unlock & Langganan Sheets UI",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-034",
+      "feature": "purchases",
+      "title": "Kirim Tip Sheet UI",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-035",
+      "feature": "purchases",
+      "title": "Creator Subscription Plan API",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-036",
+      "feature": "purchases",
+      "title": "Unlock Premium Post (Atomic Purchase & Revenue Ledger)",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-037",
+      "feature": "purchases",
+      "title": "Subscribe & Early Renewal",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-038",
+      "feature": "purchases",
+      "title": "Cancel Scheduled Renewal",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-039",
+      "feature": "purchases",
+      "title": "Send Tip",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-040",
+      "feature": "user-area",
+      "title": "Koleksi Saya Page UI",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-041",
+      "feature": "user-area",
+      "title": "Diikuti Page UI",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-042",
+      "feature": "user-area",
+      "title": "Langganan Page UI",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-043",
+      "feature": "user-area",
+      "title": "Profil Saya Page UI",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-044",
+      "feature": "user-area",
+      "title": "Save Post API & Simpan Button",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-045",
+      "feature": "user-area",
+      "title": "Collection (Library) API",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-046",
+      "feature": "user-area",
+      "title": "Following List API",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-047",
+      "feature": "user-area",
+      "title": "My Subscriptions List API",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-048",
+      "feature": "onboarding",
+      "title": "Welcome Stepper Shell & Path Choice",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-049",
+      "feature": "onboarding",
+      "title": "User Onboarding Path UI",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-050",
+      "feature": "onboarding",
+      "title": "Creator Onboarding Path UI",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-051",
+      "feature": "onboarding",
+      "title": "Onboarding Status & First-Login Redirect",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-052",
+      "feature": "onboarding",
+      "title": "Update My Profile API",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-053",
+      "feature": "onboarding",
+      "title": "Subscription Price in the Creator Application",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-054",
+      "feature": "creator-studio",
+      "title": "Post Baru / Edit Post Form UI",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-055",
+      "feature": "creator-studio",
+      "title": "Edit Profil UI",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-056",
+      "feature": "creator-studio",
+      "title": "Penghasilan Page UI",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-057",
+      "feature": "creator-studio",
+      "title": "Rekening Pencairan Page UI",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-058",
+      "feature": "creator-studio",
+      "title": "Ajukan Pencairan Sheet UI",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-059",
+      "feature": "creator-studio",
+      "title": "Post Media Order & 5-Item Limit API",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-060",
+      "feature": "creator-studio",
+      "title": "Earnings Balance API",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-061",
+      "feature": "creator-studio",
+      "title": "Earnings Activity API",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-062",
+      "feature": "creator-studio",
+      "title": "Payout Accounts API",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-063",
+      "feature": "creator-studio",
+      "title": "Request Payout (Quote & Atomic Reservation)",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-065",
+      "feature": "discover-notifications-settings",
+      "title": "Jelajahi Video Tab UI",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-064",
+      "feature": "creator-studio",
+      "title": "Payout History & Cancel Request",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-066",
+      "feature": "discover-notifications-settings",
+      "title": "Jelajahi Cari Tab UI",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-067",
+      "feature": "discover-notifications-settings",
+      "title": "Notifikasi Page UI",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-068",
+      "feature": "discover-notifications-settings",
+      "title": "Pengaturan Page UI",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-069",
+      "feature": "discover-notifications-settings",
+      "title": "Discover Videos API",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-070",
+      "feature": "discover-notifications-settings",
+      "title": "Creator Search API",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-071",
+      "feature": "discover-notifications-settings",
+      "title": "Notifications Inbox API",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-072",
+      "feature": "discover-notifications-settings",
+      "title": "Notification Events",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-073",
+      "feature": "discover-notifications-settings",
+      "title": "Notification Preferences API",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
+    },
+    {
+      "id": "US-074",
+      "feature": "discover-notifications-settings",
+      "title": "Telegram Bot Notification Delivery",
+      "status": "ready_for_uat",
+      "completedAt": "2026-11-09"
     }
   ]
 }

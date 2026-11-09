@@ -1,6 +1,8 @@
 import { existsSync } from 'node:fs';
 import { isIP } from 'node:net';
 import { z } from 'zod';
+import { PAYOUT_MIN_IDR } from '@influency/shared';
+import { isFieldKey } from './field-encryption.js';
 
 export const R2_VARS = [
   'R2_ACCOUNT_ID',
@@ -16,6 +18,10 @@ export const MIDTRANS_VARS = [
 ] as const;
 
 export const STREAM_VARS = ['CLOUDFLARE_STREAM_ACCOUNT_ID', 'CLOUDFLARE_STREAM_TOKEN'] as const;
+
+/** An optional setting left empty or at the .env.example placeholder counts as unset. */
+const unlessPlaceholder = <T extends z.ZodType>(schema: T) =>
+  z.preprocess((v) => (v === '' || v === 'SET_LOCALLY' ? undefined : v), schema);
 
 /** One proxy address or CIDR, e.g. 127.0.0.1, ::1, 10.0.0.0/8. */
 function isProxyAddress(entry: string): boolean {
@@ -125,6 +131,25 @@ export const envSchema = z
       .enum(['true', 'false'])
       .default('false')
       .transform((v) => v === 'true'),
+    // Payout account numbers are encrypted at rest with this AES-256-GCM key: base64 of exactly 32 random bytes
+    // (`openssl rand -base64 32`). Required: losing it makes stored numbers unreadable, so keep a backup (creator-studio US-062).
+    PAYOUT_ACCOUNT_ENC_KEY: z
+      .string()
+      .refine(isFieldKey, 'must be base64 of exactly 32 bytes (openssl rand -base64 32)'),
+    // TBD placeholder (EXAMPLE value, creator-studio US-063): the bank transfer fee of a payout in whole rupiah, borne by the
+    // creator and shown before they confirm. The real cost is OPEN ("Perlu konfirmasi"). Below the Rp100.000 minimum, so a
+    // valid request always leaves a positive net.
+    PAYOUT_TRANSFER_FEE_IDR: z.coerce
+      .number()
+      .int()
+      .min(0)
+      .max(PAYOUT_MIN_IDR - 1)
+      .default(2500),
+    // TBD placeholder: true once the transfer fee above is the confirmed real cost. While false the UI labels it "Perlu konfirmasi".
+    PAYOUT_TRANSFER_FEE_CONFIRMED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
     // TBD placeholder: comments one user may create per rolling minute (spam brake).
     COMMENT_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(1000).default(10),
     // Payments: `fake` (in-process gateway, development/test only) or `midtrans` (Snap Sandbox, needs the keys below).
@@ -136,6 +161,39 @@ export const envSchema = z
     TOPUP_RECONCILE_INTERVAL_SECONDS: z.coerce.number().int().min(0).max(3600).default(60),
     // TBD placeholder: how long a top-up checkout stays payable.
     TOPUP_EXPIRY_MINUTES: z.coerce.number().int().min(15).max(1440).default(60),
+    // EXAMPLE (not final policy): notifications older than this are left out of the inbox and the unread count.
+    NOTIFICATION_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(90),
+    // EXAMPLE: a follower gets at most one new-post notification per creator per window.
+    NEW_POST_NOTIFY_WINDOW_MINUTES: z.coerce.number().int().min(1).max(1440).default(60),
+    // EXAMPLE: how long before a subscription period ends the reminder is created.
+    SUBSCRIPTION_REMINDER_LEAD_HOURS: z.coerce.number().int().min(1).max(720).default(72),
+    // How often the subscription reminder sweep runs (in-process timer); 0 = off.
+    SUBSCRIPTION_REMINDER_INTERVAL_SECONDS: z.coerce.number().int().min(0).max(86400).default(3600),
+    // The one official Influency bot (US-074, docs/telegram-bot.md). Unset (or the SET_LOCALLY placeholder from
+    // .env.example) = Telegram notifications unavailable.
+    TELEGRAM_BOT_TOKEN: unlessPlaceholder(
+      z
+        .string()
+        .regex(/^\d+:[\w-]+$/, 'must be a BotFather token')
+        .optional(),
+    ),
+    TELEGRAM_BOT_USERNAME: unlessPlaceholder(
+      z
+        .string()
+        .regex(/^\w{5,32}$/, 'bot username without @')
+        .optional(),
+    ),
+    // setWebhook secret_token: 1–256 of A-Z a-z 0-9 _ - (Telegram's rule).
+    TELEGRAM_BOT_WEBHOOK_SECRET: unlessPlaceholder(
+      z
+        .string()
+        .regex(/^[\w-]{1,256}$/)
+        .optional(),
+    ),
+    // How often queued Telegram messages are sent (in-process timer, US-074); 0 = off. Never runs without a bot.
+    NOTIFICATION_DELIVERY_INTERVAL_SECONDS: z.coerce.number().int().min(0).max(3600).default(10),
+    // Sends per message before it is given up (FAILED).
+    NOTIFICATION_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(5),
     MIDTRANS_IS_PRODUCTION: z
       .enum(['true', 'false'])
       .default('false')
@@ -143,6 +201,16 @@ export const envSchema = z
       .transform(() => false as const),
   })
   .superRefine((env, ctx) => {
+    if (env.TELEGRAM_BOT_TOKEN) {
+      for (const name of ['TELEGRAM_BOT_USERNAME', 'TELEGRAM_BOT_WEBHOOK_SECRET'] as const) {
+        if (!env[name])
+          ctx.addIssue({
+            code: 'custom',
+            path: [name],
+            message: 'required when TELEGRAM_BOT_TOKEN is set',
+          });
+      }
+    }
     if (env.STORAGE_DRIVER === 'r2') {
       for (const name of R2_VARS) {
         if (!env[name])

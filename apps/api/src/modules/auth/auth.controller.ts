@@ -109,14 +109,14 @@ export class AuthController {
     @Res() reply: FastifyReply,
   ): Promise<void> {
     if (this.production || typeof user !== 'string') throw new DomainError('NOT_FOUND');
-    const sessionToken = await this.auth.devLogin(user);
+    const { sessionToken, location } = await this.auth.devLogin(user, safeReturnTo(returnTo));
     void reply
       .header('cache-control', 'no-store')
       .setCookie(SESSION_COOKIE, sessionToken, {
         ...this.sessionCookie,
         maxAge: this.sessionMaxAge,
       })
-      .redirect(safeReturnTo(returnTo), 302);
+      .redirect(location, 302);
   }
 
   /** Current user and roles, read from the DB on every call (never from Telegram claims). */

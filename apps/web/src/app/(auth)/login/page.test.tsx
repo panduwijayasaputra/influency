@@ -11,7 +11,15 @@ vi.mock('next/navigation', () => ({
   },
 }));
 
-const USER = { id: 'u1', displayName: 'Ana', username: 'ana', roles: ['USER' as const] };
+const USER = {
+  id: 'u1',
+  displayName: 'Ana',
+  username: 'ana',
+  roles: ['USER' as const],
+  bio: null,
+  creatorSlug: null,
+  onboardingCompleted: true,
+};
 const params = (query: Record<string, string>) => ({ searchParams: Promise.resolve(query) });
 
 describe('LoginPage', () => {

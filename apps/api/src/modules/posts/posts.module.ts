@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { EntitlementsModule } from '../entitlements/entitlements.module.js';
+import { NotificationsModule } from '../notifications/notifications.module.js';
 import { FeedController } from './feed.controller.js';
+import { LibraryController } from './library.controller.js';
 import { MediaSweeper } from './media-sweeper.js';
 import { PostCoverController } from './post-cover.controller.js';
 import { PostCoverService } from './post-cover.service.js';
@@ -13,15 +15,17 @@ import { PublicPostsService } from './public-posts.service.js';
 import { VideoWebhookController } from './video-webhook.controller.js';
 
 @Module({
-  imports: [EntitlementsModule],
+  imports: [EntitlementsModule, NotificationsModule],
   controllers: [
     PostsController,
     PostMediaController,
     PostCoverController,
     PublicPostsController,
     FeedController,
+    LibraryController,
     VideoWebhookController,
   ],
   providers: [PostsService, PostMediaService, PostCoverService, PublicPostsService, MediaSweeper],
+  exports: [PublicPostsService],
 })
 export class PostsModule {}

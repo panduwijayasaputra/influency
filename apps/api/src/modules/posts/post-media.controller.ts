@@ -7,6 +7,7 @@ import {
   HttpCode,
   Param,
   Post,
+  Put,
   Req,
   Res,
   UseGuards,
@@ -17,6 +18,8 @@ import {
   type CreateMediaUploadInput,
   createMediaUploadSchema,
   type MediaUploadResponse,
+  type ReorderPostMediaInput,
+  reorderPostMediaSchema,
   type StudioMedia,
   type StudioMediaList,
 } from '@influency/shared';
@@ -60,6 +63,17 @@ export class PostMediaController {
     @Param('postId', uuidPipe) postId: string,
   ): Promise<StudioMediaList> {
     return { media: await this.media.list(req.creatorProfileId!, postId) };
+  }
+
+  /** The creator's order. Only while the post is a draft, like every other media change. */
+  @Put('order')
+  @Header('cache-control', 'no-store')
+  async reorder(
+    @Req() req: FastifyRequest,
+    @Param('postId', uuidPipe) postId: string,
+    @Body(new ZodValidationPipe(reorderPostMediaSchema)) body: ReorderPostMediaInput,
+  ): Promise<StudioMediaList> {
+    return { media: await this.media.reorder(req.creatorProfileId!, postId, body.mediaIds) };
   }
 
   @Get(':mediaId/content')

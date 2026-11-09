@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { createRemoteJWKSet } from 'jose';
 import { ENV, type Env } from '../../common/env.js';
 import { AuthController } from './auth.controller.js';
+import { MeProfileController } from './me-profile.controller.js';
+import { OnboardingController } from './onboarding.controller.js';
 import { AuthService } from './auth.service.js';
 import {
   TELEGRAM_JWKS_URL,
@@ -10,7 +12,7 @@ import {
 } from './telegram-oidc.client.js';
 
 @Module({
-  controllers: [AuthController],
+  controllers: [AuthController, MeProfileController, OnboardingController],
   providers: [
     AuthService,
     {

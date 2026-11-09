@@ -255,6 +255,342 @@
       "title": "Reconcile Pending Top-Ups",
       "status": "ready_for_uat",
       "priority": "high"
+    },
+    {
+      "id": "US-033",
+      "feature": "purchases",
+      "file": "features/purchases/US-033-unlock-and-langganan-sheets-ui.md",
+      "title": "Unlock & Langganan Sheets UI",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-034",
+      "feature": "purchases",
+      "file": "features/purchases/US-034-kirim-tip-sheet-ui.md",
+      "title": "Kirim Tip Sheet UI",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-035",
+      "feature": "purchases",
+      "file": "features/purchases/US-035-creator-subscription-plan-api.md",
+      "title": "Creator Subscription Plan API",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-036",
+      "feature": "purchases",
+      "file": "features/purchases/US-036-unlock-premium-post.md",
+      "title": "Unlock Premium Post (Atomic Purchase & Revenue Ledger)",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-037",
+      "feature": "purchases",
+      "file": "features/purchases/US-037-subscribe-and-early-renewal.md",
+      "title": "Subscribe & Early Renewal",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-038",
+      "feature": "purchases",
+      "file": "features/purchases/US-038-cancel-scheduled-renewal.md",
+      "title": "Cancel Scheduled Renewal",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-039",
+      "feature": "purchases",
+      "file": "features/purchases/US-039-send-tip.md",
+      "title": "Send Tip",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-040",
+      "feature": "user-area",
+      "file": "features/user-area/US-040-koleksi-saya-page-ui.md",
+      "title": "Koleksi Saya Page UI",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-041",
+      "feature": "user-area",
+      "file": "features/user-area/US-041-diikuti-page-ui.md",
+      "title": "Diikuti Page UI",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-042",
+      "feature": "user-area",
+      "file": "features/user-area/US-042-langganan-page-ui.md",
+      "title": "Langganan Page UI",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-043",
+      "feature": "user-area",
+      "file": "features/user-area/US-043-profil-saya-page-ui.md",
+      "title": "Profil Saya Page UI",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-044",
+      "feature": "user-area",
+      "file": "features/user-area/US-044-save-post-api-and-simpan-button.md",
+      "title": "Save Post API & Simpan Button",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-045",
+      "feature": "user-area",
+      "file": "features/user-area/US-045-collection-library-api.md",
+      "title": "Collection (Library) API",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-046",
+      "feature": "user-area",
+      "file": "features/user-area/US-046-following-list-api.md",
+      "title": "Following List API",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-047",
+      "feature": "user-area",
+      "file": "features/user-area/US-047-my-subscriptions-list-api.md",
+      "title": "My Subscriptions List API",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-048",
+      "feature": "onboarding",
+      "file": "features/onboarding/US-048-welcome-stepper-shell.md",
+      "title": "Welcome Stepper Shell & Path Choice",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-049",
+      "feature": "onboarding",
+      "file": "features/onboarding/US-049-user-onboarding-path.md",
+      "title": "User Onboarding Path UI",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-050",
+      "feature": "onboarding",
+      "file": "features/onboarding/US-050-creator-onboarding-path.md",
+      "title": "Creator Onboarding Path UI",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-051",
+      "feature": "onboarding",
+      "file": "features/onboarding/US-051-onboarding-status-api.md",
+      "title": "Onboarding Status & First-Login Redirect",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-052",
+      "feature": "onboarding",
+      "file": "features/onboarding/US-052-update-my-profile-api.md",
+      "title": "Update My Profile API",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-053",
+      "feature": "onboarding",
+      "file": "features/onboarding/US-053-application-subscription-price.md",
+      "title": "Subscription Price in the Creator Application",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-054",
+      "feature": "creator-studio",
+      "file": "features/creator-studio/US-054-post-form-ui.md",
+      "title": "Post Baru / Edit Post Form UI",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-055",
+      "feature": "creator-studio",
+      "file": "features/creator-studio/US-055-edit-profil-ui.md",
+      "title": "Edit Profil UI",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-056",
+      "feature": "creator-studio",
+      "file": "features/creator-studio/US-056-penghasilan-page-ui.md",
+      "title": "Penghasilan Page UI",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-057",
+      "feature": "creator-studio",
+      "file": "features/creator-studio/US-057-rekening-pencairan-page-ui.md",
+      "title": "Rekening Pencairan Page UI",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-058",
+      "feature": "creator-studio",
+      "file": "features/creator-studio/US-058-ajukan-pencairan-sheet-ui.md",
+      "title": "Ajukan Pencairan Sheet UI",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-059",
+      "feature": "creator-studio",
+      "file": "features/creator-studio/US-059-post-media-order-api.md",
+      "title": "Post Media Order & 5-Item Limit API",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-060",
+      "feature": "creator-studio",
+      "file": "features/creator-studio/US-060-earnings-balance-api.md",
+      "title": "Earnings Balance API",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-061",
+      "feature": "creator-studio",
+      "file": "features/creator-studio/US-061-earnings-activity-api.md",
+      "title": "Earnings Activity API",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-062",
+      "feature": "creator-studio",
+      "file": "features/creator-studio/US-062-payout-accounts-api.md",
+      "title": "Payout Accounts API",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-063",
+      "feature": "creator-studio",
+      "file": "features/creator-studio/US-063-request-payout-api.md",
+      "title": "Request Payout (Quote & Atomic Reservation)",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-064",
+      "feature": "creator-studio",
+      "file": "features/creator-studio/US-064-payout-history-cancel-api.md",
+      "title": "Payout History & Cancel Request",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-065",
+      "feature": "discover-notifications-settings",
+      "file": "features/discover-notifications-settings/US-065-jelajahi-video-tab-ui.md",
+      "title": "Jelajahi Video Tab UI",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-066",
+      "feature": "discover-notifications-settings",
+      "file": "features/discover-notifications-settings/US-066-jelajahi-cari-tab-ui.md",
+      "title": "Jelajahi Cari Tab UI",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-067",
+      "feature": "discover-notifications-settings",
+      "file": "features/discover-notifications-settings/US-067-notifikasi-page-ui.md",
+      "title": "Notifikasi Page UI",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-068",
+      "feature": "discover-notifications-settings",
+      "file": "features/discover-notifications-settings/US-068-pengaturan-page-ui.md",
+      "title": "Pengaturan Page UI",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-069",
+      "feature": "discover-notifications-settings",
+      "file": "features/discover-notifications-settings/US-069-discover-videos-api.md",
+      "title": "Discover Videos API",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-070",
+      "feature": "discover-notifications-settings",
+      "file": "features/discover-notifications-settings/US-070-creator-search-api.md",
+      "title": "Creator Search API",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-071",
+      "feature": "discover-notifications-settings",
+      "file": "features/discover-notifications-settings/US-071-notifications-inbox-api.md",
+      "title": "Notifications Inbox API",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-072",
+      "feature": "discover-notifications-settings",
+      "file": "features/discover-notifications-settings/US-072-notification-events.md",
+      "title": "Notification Events",
+      "status": "ready_for_uat",
+      "priority": "high"
+    },
+    {
+      "id": "US-073",
+      "feature": "discover-notifications-settings",
+      "file": "features/discover-notifications-settings/US-073-notification-preferences-api.md",
+      "title": "Notification Preferences API",
+      "status": "ready_for_uat",
+      "priority": "medium"
+    },
+    {
+      "id": "US-074",
+      "feature": "discover-notifications-settings",
+      "file": "features/discover-notifications-settings/US-074-telegram-bot-delivery.md",
+      "title": "Telegram Bot Notification Delivery",
+      "status": "ready_for_uat",
+      "priority": "medium"
     }
   ]
 }

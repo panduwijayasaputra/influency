@@ -28,8 +28,18 @@ describe('wallet contract', () => {
       createdAt: '2026-11-07T00:00:00.000Z',
       topupOrderId: id,
       detail: null,
+      href: null,
     };
     expect(walletTransactionSchema.parse(tx).amountCoins).toBe(50);
+    const debit = {
+      ...tx,
+      type: 'POST_PURCHASE_DEBIT',
+      amountCoins: -25,
+      topupOrderId: null,
+      detail: 'Ana',
+      href: '/ana/posts/p1',
+    };
+    expect(walletTransactionSchema.parse(debit).amountCoins).toBe(-25);
     expect(walletTransactionSchema.safeParse({ ...tx, type: 'NOPE' }).success).toBe(false);
   });
 

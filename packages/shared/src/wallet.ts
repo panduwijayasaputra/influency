@@ -14,8 +14,14 @@ export const coinPackagesResponseSchema = z.object({ items: z.array(coinPackageS
 export const walletSchema = z.object({ balanceCoins: z.int().nonnegative() });
 export type Wallet = z.infer<typeof walletSchema>;
 
-/** Purchases (feature 6) adds the debit types. */
-export const walletEntryTypeSchema = z.enum(['TOPUP_CREDIT']);
+/** Top-ups, and the spends of the purchases feature: unlock, subscription (with its refund) and tips. */
+export const walletEntryTypeSchema = z.enum([
+  'TOPUP_CREDIT',
+  'POST_PURCHASE_DEBIT',
+  'SUBSCRIPTION_DEBIT',
+  'SUBSCRIPTION_REFUND_CREDIT',
+  'TIP_DEBIT',
+]);
 export const walletTransactionSchema = z.object({
   id: z.uuid(),
   type: walletEntryTypeSchema,
@@ -25,6 +31,8 @@ export const walletTransactionSchema = z.object({
   topupOrderId: z.uuid().nullable(),
   /** E.g. a creator name for purchases; null for top-ups. */
   detail: z.string().nullable(),
+  /** Relative link to the related item (the unlocked post); null for top-ups. */
+  href: z.string().nullable(),
 });
 export type WalletTransaction = z.infer<typeof walletTransactionSchema>;
 export const walletTransactionsPageSchema = z.object({

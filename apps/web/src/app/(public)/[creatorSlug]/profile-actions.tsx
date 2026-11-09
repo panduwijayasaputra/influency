@@ -1,64 +1,103 @@
 'use client';
 
+import { Coins } from 'lucide-react';
 import Link from 'next/link';
-import { SubscribeSheet } from '@/components/purchase-sheet';
+import type { CreatorSubscriptionState } from '@influency/shared';
+import { SubscribeSheet, SubscriptionManageSheet } from '@/components/subscription-sheet';
+import { TipSheet } from '@/components/tip-sheet';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/toast';
-import { DEMO_SUBSCRIPTION } from '@/lib/demo';
+import { daysLeft } from '@/lib/format';
 import { ProfileFollowButton } from './follow-state';
 
-/** Ikuti + Langganan, equal width. plan values are dummies until the purchases feature. */
+/** Ikuti + Langganan, equal width. A creator without a plan has no Langganan button. */
 export function ProfileActions({
   slug,
   creatorName,
+  avatarUrl,
   loginHref,
-  subscribedDaysLeft,
+  subscription,
 }: {
   slug: string;
   creatorName: string;
+  avatarUrl: string | null;
   /** Set for guests: both actions go to login instead (US-007). */
   loginHref?: string;
-  /** Set (demo) when the viewer is subscribed: Langganan becomes Berlangganan. */
-  subscribedDaysLeft?: number;
+  subscription: CreatorSubscriptionState;
 }) {
-  const toast = useToast();
-  const { priceCoins, days } = DEMO_SUBSCRIPTION;
+  const { plan, viewer } = subscription;
+  const path = `/${slug}`;
+  const layout = plan ? 'grid grid-cols-2 gap-2' : 'grid gap-2';
 
   if (loginHref) {
     return (
-      <div className="grid grid-cols-2 gap-2">
+      <div className={layout}>
         <Button asChild variant="secondary">
           <Link href={loginHref}>Ikuti</Link>
         </Button>
-        <Button asChild>
-          <Link href={loginHref}>Langganan</Link>
-        </Button>
+        {plan && (
+          <Button asChild>
+            <Link href={loginHref}>Langganan</Link>
+          </Button>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-2 gap-2">
-      <ProfileFollowButton slug={slug} />
-      {subscribedDaysLeft !== undefined ? (
-        <Button
-          type="button"
-          variant="outline"
-          className="h-auto min-h-12 flex-col gap-0 py-1.5"
-          onClick={() => toast('Segera hadir')}
-        >
-          Berlangganan
-          <span className="text-xs font-medium text-muted-foreground">
-            {subscribedDaysLeft} hari lagi (demo)
-          </span>
-        </Button>
-      ) : (
-        <SubscribeSheet
-          creatorName={creatorName}
+    <div className="flex flex-col gap-2">
+      <div className={layout}>
+        <ProfileFollowButton slug={slug} />
+        {plan && viewer?.current ? (
+          <SubscriptionManageSheet
+            slug={slug}
+            creatorName={creatorName}
+            plan={plan}
+            viewer={viewer}
+            returnPath={path}
+            trigger={
+              <Button
+                type="button"
+                variant="outline"
+                className="h-auto min-h-12 flex-col gap-0 py-1.5"
+              >
+                Berlangganan
+                <span className="text-xs font-medium text-muted-foreground">
+                  {daysLeft(viewer.current.endsAt, new Date())} hari lagi
+                </span>
+              </Button>
+            }
+          />
+        ) : (
+          plan && (
+            <SubscribeSheet
+              slug={slug}
+              creatorName={creatorName}
+              plan={plan}
+              returnPath={path}
+              trigger={
+                <Button
+                  type="button"
+                  aria-label={`Langganan · ${plan.priceCoins} Koin / ${plan.durationDays} hari`}
+                >
+                  Langganan
+                </Button>
+              }
+            />
+          )
+        )}
+      </div>
+      {viewer?.canTip && (
+        <TipSheet
+          creator={{ slug, displayName: creatorName, avatarUrl }}
+          returnPath={path}
           trigger={
-            <Button type="button" aria-label={`Langganan · ${priceCoins} Koin / ${days} hari`}>
-              Langganan
-            </Button>
+            <button
+              type="button"
+              className="flex h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-koin-surface text-sm font-bold text-koin-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            >
+              <Coins aria-hidden className="size-5" />
+              Kirim Tip
+            </button>
           }
         />
       )}

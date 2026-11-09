@@ -16,6 +16,7 @@ import { AdminGuard, ApprovedCreatorGuard } from './role.guards.js';
 import { RateLimitGuard } from './rate-limit.guard.js';
 import { OptionalSessionGuard, SessionGuard } from './session.guard.js';
 import { StubVideoProvider } from './stub-video-provider.js';
+import { TELEGRAM_BOT, telegramBotFromEnv } from './telegram-bot.js';
 import { VIDEO_PROVIDER } from './video-provider.js';
 
 @Global()
@@ -46,6 +47,7 @@ import { VIDEO_PROVIDER } from './video-provider.js';
           : new FakePaymentGateway(),
       inject: [ENV],
     },
+    { provide: TELEGRAM_BOT, useFactory: telegramBotFromEnv, inject: [ENV] },
     IdempotencyService,
     PrismaService,
     PreviewGenerator,
@@ -61,6 +63,7 @@ import { VIDEO_PROVIDER } from './video-provider.js';
     OBJECT_STORAGE,
     VIDEO_PROVIDER,
     PAYMENT_GATEWAY,
+    TELEGRAM_BOT,
     IdempotencyService,
     PrismaService,
     PreviewGenerator,

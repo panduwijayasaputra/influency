@@ -5,12 +5,12 @@ import { useState } from 'react';
 import { errorResponseSchema, type StudioPost } from '@influency/shared';
 import { Button } from '@/components/ui/button';
 
-type Action = 'publish' | 'archive' | 'restore';
+type Action = 'archive' | 'restore';
 
 const BY_STATUS: Partial<
   Record<StudioPost['status'], { action?: Action; label?: string; notice?: string }>
 > = {
-  DRAFT: { action: 'publish', label: 'Publikasikan' },
+  // A draft is published from the editor (Publikasikan), which saves the form first.
   // Also an admin hold (US-042): the creator cannot change it.
   PENDING_REVIEW: { notice: 'Sedang ditinjau admin; tidak terlihat publik.' },
   PUBLISHED: {
@@ -27,7 +27,7 @@ const BY_STATUS: Partial<
   REMOVED: { notice: 'Dihapus oleh admin karena melanggar aturan. Tidak terlihat publik.' },
 };
 
-/** Publish a draft, archive a published post or restore an archived one. The API decides whether that is allowed. */
+/** Archive a published post or restore an archived one (drafts are published from the editor). The API decides whether that is allowed. */
 export function PostStatusActions({ post }: { post: StudioPost }) {
   const router = useRouter();
   const [error, setError] = useState<string>();

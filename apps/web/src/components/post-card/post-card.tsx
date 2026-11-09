@@ -1,16 +1,20 @@
 'use client';
 
-import { Bookmark, Coins, Flag, MessageCircle, MoreHorizontal, Share2 } from 'lucide-react';
+import { Bookmark, Coins, Flag, MessageCircle, MoreHorizontal, Pencil, Share2 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { DropdownMenu } from 'radix-ui';
 import { useState } from 'react';
-import type { PublicPost } from '@influency/shared';
+import type { CreatorSubscriptionState, PublicPost } from '@influency/shared';
 import { ShareButton } from '@/app/(public)/[creatorSlug]/share-button';
 import { CommentsSheet } from '@/components/comments/comments-sheet';
 import { ExpandableText } from '@/components/expandable-text';
 import { LikeButton } from '@/components/like-button';
 import { ReportPostButton } from '@/components/report-post-button';
+import { TipSheet } from '@/components/tip-sheet';
+import { SaveButton } from '@/components/save-button';
 import { useToast } from '@/components/ui/toast';
+import { fetchPublicPost } from '@/lib/api/purchases';
 import { loginHref } from '@/lib/login-href';
 import { formatRelativeTime } from '@/lib/relative-time';
 import { initials } from '@/lib/utils';
@@ -19,29 +23,53 @@ import { PostMedia } from './post-media';
 /** A feed post or a post-page post (whose `publishedAt` is null for a never-published post). */
 export type PostCardPost = Omit<PublicPost, 'publishedAt'> & { publishedAt: string | null };
 
-export type PostCardCreator = { slug: string; displayName: string; avatarUrl: string | null };
+export type PostCardCreator = {
+  slug: string;
+  displayName: string;
+  avatarUrl: string | null;
+  /** The creator's Langganan plan when the page knows it (profile, post page); the Home feed does not. */
+  plan?: CreatorSubscriptionState['plan'];
+};
 
 const ICON =
   'flex size-11 items-center justify-center rounded-full text-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none';
 const MENU_ITEM =
   'flex h-11 cursor-pointer items-center gap-3 rounded-lg px-3 text-sm font-semibold outline-none select-none data-highlighted:bg-muted';
-const SOON = 'Segera hadir';
 
 /** A post in a feed (US-008): header, media (carousel / locked preview), actions, caption. */
 export function PostCard({
-  post,
+  post: initialPost,
   creator,
   detail = false,
   linkCreator = false,
+  editHref,
 }: {
   post: PostCardPost;
   creator: PostCardCreator;
+  /** Only the creator's own profile passes this: adds "Edit" to the menu (opens the studio editor). */
+  editHref?: string;
   /** Home feed: the creator's avatar and name open their profile (it is the current page everywhere else). */
   linkCreator?: boolean;
   /** The post's own page: full caption, Komentar scrolls to the comments below, login returns to the post. */
   detail?: boolean;
 }) {
   const toast = useToast();
+  const router = useRouter();
+  // Replaced by the server's answer after an unlock, so the card flips to its media without a full reload.
+  const [post, setPost] = useState(initialPost);
+  // A newer server render (router.refresh after a subscribe) replaces the local copy.
+  const [seen, setSeen] = useState(initialPost);
+  if (seen !== initialPost) {
+    setSeen(initialPost);
+    setPost(initialPost);
+  }
+  async function refreshPost() {
+    try {
+      setPost(await fetchPublicPost(creator.slug, initialPost.id));
+    } catch {
+      router.refresh();
+    }
+  }
   const [reporting, setReporting] = useState(false);
   // Shared with the full-screen viewer's Suka so both show the same state.
   const [like, setLike] = useState({ liked: post.viewer?.liked ?? false, count: post.likeCount });
@@ -57,9 +85,8 @@ export function PostCard({
   const returnPath = detail ? postHref : path;
   const login = loginHref(returnPath);
   const postUrl = () => `${window.location.origin}${postHref}`;
-  // canReport is false only on the viewer's own published post: never self-tip.
-  const canTip =
-    post.visibility === 'PREMIUM' && post.access === 'full' && post.viewer?.canReport === true;
+  // The server decides (premium, accessible, not the viewer's own post).
+  const canTip = post.viewer?.canTip === true;
 
   async function sharePost() {
     const url = postUrl();
@@ -126,6 +153,14 @@ export function PostCard({
               sideOffset={4}
               className="z-50 flex w-48 flex-col rounded-xl border bg-popover p-1.5 text-popover-foreground shadow-lg"
             >
+              {editHref && (
+                <DropdownMenu.Item asChild className={MENU_ITEM}>
+                  <Link href={editHref}>
+                    <Pencil aria-hidden className="size-4.5" />
+                    Edit
+                  </Link>
+                </DropdownMenu.Item>
+              )}
               <DropdownMenu.Item className={MENU_ITEM} onSelect={() => void sharePost()}>
                 <Share2 aria-hidden className="size-4.5" />
                 Bagikan
@@ -168,6 +203,7 @@ export function PostCard({
         postHref={postHref}
         loginUrl={login}
         detail={detail}
+        onUnlocked={() => void refreshPost()}
       />
 
       <div className="flex items-center px-2">
@@ -215,20 +251,28 @@ export function PostCard({
               <Bookmark aria-hidden className="size-5" />
             </Link>
           ) : (
-            <button type="button" aria-label="Simpan" onClick={() => toast(SOON)} className={ICON}>
-              <Bookmark aria-hidden className="size-5" />
-            </button>
+            <SaveButton
+              postId={post.id}
+              initialSaved={post.viewer?.saved ?? false}
+              className={ICON}
+            />
           )}
         </div>
         {canTip && (
-          <button
-            type="button"
-            onClick={() => toast(SOON)}
-            className="flex h-11 items-center gap-1.5 rounded-full px-3 text-sm font-bold text-koin-foreground hover:bg-koin-surface focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-          >
-            <Coins aria-hidden className="size-5" />
-            Kirim Tip
-          </button>
+          <TipSheet
+            creator={creator}
+            postId={post.id}
+            returnPath={postHref}
+            trigger={
+              <button
+                type="button"
+                className="flex h-11 items-center gap-1.5 rounded-full px-3 text-sm font-bold text-koin-foreground hover:bg-koin-surface focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              >
+                <Coins aria-hidden className="size-5" />
+                Kirim Tip
+              </button>
+            }
+          />
         )}
       </div>
 
@@ -247,6 +291,7 @@ export function PostCard({
         <CommentsSheet
           post={post}
           creator={creator}
+          onUnlocked={() => void refreshPost()}
           open={comments.open}
           onOpenChange={(open) => setComments((c) => ({ ...c, open }))}
           size="tall"

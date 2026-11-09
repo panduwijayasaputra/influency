@@ -50,10 +50,10 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-function renderViewer(onOpenChange = vi.fn()) {
+function renderViewer(onOpenChange = vi.fn(), viewer: PostCardPost['viewer'] = null) {
   render(
     <MediaViewer
-      post={post}
+      post={{ ...post, viewer }}
       creator={creator}
       startIndex={0}
       open
@@ -124,12 +124,20 @@ describe('MediaViewer', () => {
     expect(await screen.findByText('Konten ini terkunci.')).toBeInTheDocument();
   });
 
-  it('opens the comments sheet from Komentar and Kirim Tip says Segera hadir', async () => {
+  it('opens the comments sheet from Komentar and the tip sheet from Kirim Tip', async () => {
     respond(200, access(1));
-    renderViewer();
+    renderViewer(vi.fn(), {
+      liked: false,
+      saved: false,
+      canLike: true,
+      canReport: true,
+      canTip: true,
+      subscribed: false,
+    });
     await screen.findByRole('toolbar', { name: 'Aksi post' });
     fireEvent.click(screen.getByRole('button', { name: 'Kirim Tip' }));
-    expect(await screen.findByText('Segera hadir')).toBeInTheDocument();
+    expect(await screen.findByRole('group', { name: 'Jumlah tip' })).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'Kirim Tip' }), { key: 'Escape' });
     respond(200, { items: [], nextCursor: null });
     fireEvent.click(screen.getByRole('button', { name: 'Komentar, 0' }));
     expect(await screen.findByRole('dialog', { name: 'Komentar · 0' })).toBeInTheDocument();

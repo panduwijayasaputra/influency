@@ -3,6 +3,7 @@ import { renderToString } from 'react-dom/server';
 import type { PublicPost } from '@influency/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Toaster } from '@/components/ui/toast';
+import { GridTile } from './grid-tile';
 import { filterPosts, PostGrid } from './post-grid';
 
 const SIGNED_URL = 'https://storage.example/signed/one?sig=x';
@@ -172,5 +173,32 @@ describe('PostGrid', () => {
     );
     expect(html).not.toContain('storage.example');
     expect(html).not.toContain('media-access');
+  });
+});
+
+describe('GridTile tag and aspect', () => {
+  const creator = { slug: 'ana', displayName: 'Nama', avatarUrl: null };
+
+  it('shows the tag and the portrait ratio, moving the video badge up', () => {
+    render(
+      <GridTile
+        post={FREE_VIDEO}
+        href="/ana/posts/free-video"
+        creator={creator}
+        tag="Dibeli"
+        aspect="portrait"
+      />,
+      { wrapper: Toaster },
+    );
+    const tile = screen.getByRole('button', { name: /^Post ·/ });
+    expect(tile).toHaveClass('aspect-[3/4]');
+    expect(screen.getByText('Dibeli')).toBeInTheDocument();
+    expect(screen.getByText('1:05')).toHaveClass('top-1.5');
+  });
+
+  it('keeps the square tile without a tag by default', () => {
+    render(<GridTile post={FREE_VIDEO} href="/x" creator={creator} />, { wrapper: Toaster });
+    expect(screen.getByRole('button', { name: /^Post ·/ })).toHaveClass('aspect-square');
+    expect(screen.getByText('1:05')).toHaveClass('bottom-1.5');
   });
 });

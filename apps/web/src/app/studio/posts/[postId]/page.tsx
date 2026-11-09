@@ -1,22 +1,22 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { isPostEditable } from '@influency/shared';
-import { PostMediaViewer } from '@/components/post-media-viewer';
+import { getMyCreatorProfile } from '@/lib/api/creator-profile';
 import { getMyPost, getMyPostMedia } from '@/lib/api/studio-posts';
 import { POST_STATUS_LABELS } from '../labels';
-import { PostForm } from '../post-form';
-import { PostCover } from './post-cover';
-import { PostMedia } from './post-media';
-import { PostOfferForm } from './post-offer-form';
+import { PostEditor } from '../post-editor';
 import { PostStatusActions } from './post-status-actions';
 
-export const metadata: Metadata = { title: 'Edit Post' };
+export const metadata: Metadata = { title: 'Edit post' };
 
-async function PostEditor({ params }: { params: Promise<{ postId: string }> }) {
+async function EditPost({ params }: { params: Promise<{ postId: string }> }) {
   const { postId } = await params;
-  const [post, media] = await Promise.all([getMyPost(postId), getMyPostMedia(postId)]);
-  if (!post || !media) {
+  const [post, media, profile] = await Promise.all([
+    getMyPost(postId),
+    getMyPostMedia(postId),
+    getMyCreatorProfile(),
+  ]);
+  if (!post || !media || !profile) {
     return (
       <div className="flex flex-col gap-2">
         <p className="text-muted-foreground">Post tidak ditemukan.</p>
@@ -30,38 +30,24 @@ async function PostEditor({ params }: { params: Promise<{ postId: string }> }) {
     <div className="flex flex-col gap-6">
       <p className="text-sm text-muted-foreground">Status: {POST_STATUS_LABELS[post.status]}</p>
       <PostStatusActions post={post} />
-      <PostForm post={post} />
-      {post.visibility === 'PREMIUM' && (
-        <>
-          <PostOfferForm postId={post.id} offer={post.offer} />
-          <PostCover postId={post.id} cover={post.cover} />
-        </>
-      )}
-      <PostMedia
-        postId={post.id}
+      {/* A new key remounts the editor with fresh server data after a status change. */}
+      <PostEditor
+        key={`${post.id}:${post.status}:${post.updatedAt}`}
+        post={post}
         media={media.media}
-        locked={!isPostEditable(post.status)}
-        coverMediaId={post.visibility === 'PREMIUM' ? (post.cover?.mediaId ?? null) : undefined}
+        creatorSlug={profile.slug}
       />
-      {media.media.some((item) => item.status === 'READY') && (
-        <section aria-labelledby="preview-heading" className="flex flex-col gap-3">
-          <h2 id="preview-heading" className="text-lg font-semibold">
-            Pratinjau
-          </h2>
-          <PostMediaViewer postId={post.id} />
-        </section>
-      )}
     </div>
   );
 }
 
 export default function EditPostPage({ params }: PageProps<'/studio/posts/[postId]'>) {
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-6 py-12">
-      <h1 className="text-3xl font-bold tracking-tight">Edit Post</h1>
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 py-6">
+      <h1 className="text-2xl font-extrabold tracking-tight">Edit post</h1>
       {/* Params and the session cookie are request data, so they stream inside Suspense (cacheComponents). */}
       <Suspense fallback={<p className="text-muted-foreground">Memuat…</p>}>
-        <PostEditor params={params} />
+        <EditPost params={params} />
       </Suspense>
     </main>
   );

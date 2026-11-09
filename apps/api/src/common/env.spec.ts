@@ -17,7 +17,8 @@ const R2 = {
   R2_SECRET_ACCESS_KEY: 'test-secret',
   R2_BUCKET: 'test-bucket',
 };
-const BASE = { DATABASE_URL, ...TELEGRAM, ...R2, STORAGE_DRIVER: 'r2' };
+const PAYOUT_ACCOUNT_ENC_KEY = 'BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc='; // test-only key, 32 bytes of 0x07
+const BASE = { DATABASE_URL, ...TELEGRAM, ...R2, STORAGE_DRIVER: 'r2', PAYOUT_ACCOUNT_ENC_KEY };
 const MIDTRANS = {
   PAYMENT_PROVIDER: 'midtrans',
   MIDTRANS_SERVER_KEY: 'SB-Mid-server-secret',
@@ -46,6 +47,8 @@ describe('parseEnv', () => {
       MEDIA_SWEEP_INTERVAL_SECONDS: 300,
       MEDIA_ACCESS_TTL_SECONDS: 1800,
       POST_MODERATION_REQUIRED: false,
+      PAYOUT_TRANSFER_FEE_IDR: 2500,
+      PAYOUT_TRANSFER_FEE_CONFIRMED: false,
       PREMIUM_COVER_CLEAR_ALLOWED: false,
       PREMIUM_LIKES_WITHOUT_ACCESS: false,
       PREMIUM_COMMENTS_READ_WITHOUT_ACCESS: false,
@@ -54,6 +57,12 @@ describe('parseEnv', () => {
       PAYMENT_PROVIDER: 'fake',
       TOPUP_EXPIRY_MINUTES: 60,
       TOPUP_RECONCILE_INTERVAL_SECONDS: 60,
+      NOTIFICATION_RETENTION_DAYS: 90,
+      NEW_POST_NOTIFY_WINDOW_MINUTES: 60,
+      SUBSCRIPTION_REMINDER_LEAD_HOURS: 72,
+      SUBSCRIPTION_REMINDER_INTERVAL_SECONDS: 3600,
+      NOTIFICATION_DELIVERY_INTERVAL_SECONDS: 10,
+      NOTIFICATION_MAX_ATTEMPTS: 5,
       MIDTRANS_IS_PRODUCTION: false,
     });
   });
@@ -68,15 +77,15 @@ describe('parseEnv', () => {
   });
 
   it('defaults to local storage without any R2 variables', () => {
-    const env = parseEnv({ DATABASE_URL, ...TELEGRAM });
+    const env = parseEnv({ DATABASE_URL, ...TELEGRAM, PAYOUT_ACCOUNT_ENC_KEY });
     expect(env.STORAGE_DRIVER).toBe('local');
     expect(env.R2_BUCKET).toBeUndefined();
   });
 
   it('rejects local storage in production', () => {
-    expect(() => parseEnv({ DATABASE_URL, ...TELEGRAM, NODE_ENV: 'production' })).toThrow(
-      '- STORAGE_DRIVER: local storage is for development only',
-    );
+    expect(() =>
+      parseEnv({ DATABASE_URL, ...TELEGRAM, PAYOUT_ACCOUNT_ENC_KEY, NODE_ENV: 'production' }),
+    ).toThrow('- STORAGE_DRIVER: local storage is for development only');
     expect(
       parseEnv({ ...BASE, ...STREAM, ...MIDTRANS, NODE_ENV: 'production' }).STORAGE_DRIVER,
     ).toBe('r2');
@@ -335,5 +344,110 @@ describe('loadEnvFile', () => {
   it('bounds the top-up expiry', () => {
     expect(() => parseEnv({ ...BASE, TOPUP_EXPIRY_MINUTES: '14' })).toThrow();
     expect(parseEnv({ ...BASE, TOPUP_EXPIRY_MINUTES: '30' }).TOPUP_EXPIRY_MINUTES).toBe(30);
+  });
+
+  describe('payout transfer fee (creator-studio US-063)', () => {
+    it('defaults to the example fee, unconfirmed', () => {
+      const env = parseEnv(BASE);
+      expect(env.PAYOUT_TRANSFER_FEE_IDR).toBe(2500);
+      expect(env.PAYOUT_TRANSFER_FEE_CONFIRMED).toBe(false);
+    });
+
+    it('takes a whole-rupiah fee below the minimum withdrawal and the confirmed flag', () => {
+      const env = parseEnv({
+        ...BASE,
+        PAYOUT_TRANSFER_FEE_IDR: '6500',
+        PAYOUT_TRANSFER_FEE_CONFIRMED: 'true',
+      });
+      expect(env.PAYOUT_TRANSFER_FEE_IDR).toBe(6500);
+      expect(env.PAYOUT_TRANSFER_FEE_CONFIRMED).toBe(true);
+      expect(parseEnv({ ...BASE, PAYOUT_TRANSFER_FEE_IDR: '0' }).PAYOUT_TRANSFER_FEE_IDR).toBe(0);
+      expect(parseEnv({ ...BASE, PAYOUT_TRANSFER_FEE_IDR: '99999' }).PAYOUT_TRANSFER_FEE_IDR).toBe(
+        99_999,
+      );
+    });
+
+    it.each(['100000', '150000', '-1', '2500.5', 'abc'])('rejects the fee %s', (fee) => {
+      expect(() => parseEnv({ ...BASE, PAYOUT_TRANSFER_FEE_IDR: fee })).toThrow(
+        /- PAYOUT_TRANSFER_FEE_IDR:/,
+      );
+    });
+
+    it('rejects a confirmed flag that is not true or false', () => {
+      expect(() => parseEnv({ ...BASE, PAYOUT_TRANSFER_FEE_CONFIRMED: 'yes' })).toThrow(
+        /- PAYOUT_TRANSFER_FEE_CONFIRMED:/,
+      );
+    });
+  });
+
+  describe('PAYOUT_ACCOUNT_ENC_KEY (creator-studio US-062)', () => {
+    it('is required and the error names it', () => {
+      const withoutKey: Record<string, string> = { ...BASE };
+      delete withoutKey.PAYOUT_ACCOUNT_ENC_KEY;
+      expect(() => parseEnv(withoutKey)).toThrow(/- PAYOUT_ACCOUNT_ENC_KEY:/);
+    });
+
+    it('accepts base64 of exactly 32 bytes and keeps it unchanged', () => {
+      const key = Buffer.alloc(32, 9).toString('base64');
+      expect(parseEnv({ ...BASE, PAYOUT_ACCOUNT_ENC_KEY: key }).PAYOUT_ACCOUNT_ENC_KEY).toBe(key);
+    });
+
+    it.each([
+      ['16 bytes', Buffer.alloc(16, 9).toString('base64')],
+      ['48 bytes', Buffer.alloc(48, 9).toString('base64')],
+      ['not base64', 'not a key!'],
+      ['the .env.example placeholder', 'SET_LOCALLY'],
+      ['empty', ''],
+    ])('rejects a key that is %s, without echoing it', (_label, value) => {
+      expect(() => parseEnv({ ...BASE, PAYOUT_ACCOUNT_ENC_KEY: value })).toThrow(
+        /- PAYOUT_ACCOUNT_ENC_KEY:/,
+      );
+      if (value.length > 5) {
+        try {
+          parseEnv({ ...BASE, PAYOUT_ACCOUNT_ENC_KEY: value });
+        } catch (err) {
+          expect((err as Error).message).not.toContain(value);
+        }
+      }
+    });
+  });
+});
+
+describe('Telegram bot settings (US-074)', () => {
+  const BOT = {
+    TELEGRAM_BOT_TOKEN: '123456:ABC-def_123',
+    TELEGRAM_BOT_USERNAME: 'InfluencyBot',
+    TELEGRAM_BOT_WEBHOOK_SECRET: 'hook-secret_1',
+  };
+
+  it('is off by default and with the .env.example placeholders', () => {
+    for (const env of [
+      BASE,
+      { ...BASE, TELEGRAM_BOT_TOKEN: 'SET_LOCALLY', TELEGRAM_BOT_WEBHOOK_SECRET: '' },
+    ]) {
+      const parsed = parseEnv(env);
+      expect(parsed.TELEGRAM_BOT_TOKEN).toBeUndefined();
+      expect(parsed.TELEGRAM_BOT_WEBHOOK_SECRET).toBeUndefined();
+    }
+  });
+
+  it('accepts a full bot config', () => {
+    expect(parseEnv({ ...BASE, ...BOT }).TELEGRAM_BOT_USERNAME).toBe('InfluencyBot');
+  });
+
+  it.each(['TELEGRAM_BOT_USERNAME', 'TELEGRAM_BOT_WEBHOOK_SECRET'] as const)(
+    'needs %s when the token is set',
+    (name) => {
+      expect(() => parseEnv({ ...BASE, ...BOT, [name]: undefined })).toThrow(`- ${name}:`);
+    },
+  );
+
+  it('rejects a malformed token or secret', () => {
+    expect(() => parseEnv({ ...BASE, ...BOT, TELEGRAM_BOT_TOKEN: 'nope' })).toThrow(
+      '- TELEGRAM_BOT_TOKEN:',
+    );
+    expect(() => parseEnv({ ...BASE, ...BOT, TELEGRAM_BOT_WEBHOOK_SECRET: 'has space' })).toThrow(
+      '- TELEGRAM_BOT_WEBHOOK_SECRET:',
+    );
   });
 });

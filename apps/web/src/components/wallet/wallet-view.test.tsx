@@ -30,6 +30,7 @@ const tx = (n: number, amountCoins = 50): WalletTransaction => ({
   createdAt: '2026-11-03T05:00:00.000Z',
   topupOrderId: id(200 + n),
   detail: null,
+  href: null,
 });
 
 beforeEach(() => {

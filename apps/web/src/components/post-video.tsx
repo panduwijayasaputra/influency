@@ -3,6 +3,7 @@
 import { Play, Volume2, VolumeX } from 'lucide-react';
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import type { MediaAccessItem } from '@influency/shared';
+import { useAutoplayEnabled } from '@/lib/autoplay-preference';
 import { cn } from '@/lib/utils';
 import {
   AUTOPLAY_VISIBLE_RATIO,
@@ -51,6 +52,8 @@ export function PostVideo({
   const attachedUrl = useRef<string | null>(null);
   // Reduced motion / data saving, read in the browser only (false during SSR and hydration).
   const prefersTap = useSyncExternalStore(noSubscribe, prefersTapToPlay, () => false);
+  // "Putar video otomatis" off in Pengaturan (US-068): same tap-to-play path as reduced motion.
+  const autoplay = useAutoplayEnabled();
   const [blocked, setBlocked] = useState(false);
   // A tap allows one playback; once it pauses, tap-to-play needs a tap again.
   const [tapped, setTapped] = useState(false);
@@ -61,7 +64,7 @@ export function PostVideo({
   const [failed, setFailed] = useState(false);
   const [duration, setDuration] = useState(item.durationSeconds);
 
-  const tapMode = (prefersTap || blocked) && !tapped;
+  const tapMode = (prefersTap || !autoplay || blocked) && !tapped;
   const { url, player } = item;
   const wants = active && visible && pageVisible && !tapMode && !userPaused && !failed;
   const playing = usePlaybackActive(id) && wants;

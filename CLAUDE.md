@@ -53,7 +53,7 @@ pnpm monorepo, TypeScript strict, Node LTS pinned in `.nvmrc`, modular monolith 
 
 Boundaries: PostgreSQL is authoritative for balances/ledger/entitlements; Redis is delivery only; Midtrans browser redirects never mean "paid"; Telegram is identity + outbound notifications only; R2/Stream hold bytes but the API decides access and mints short-lived URLs.
 
-Reserved top-level route segments (cannot be creator slugs): `login, wallet, studio, admin, auth, api, discover, subscriptions, library, terms, privacy, help, become-creator, account, me, notifications, following`. Slugs are lowercase-normalized and unique case-insensitively.
+Reserved top-level route segments (cannot be creator slugs): `login, wallet, studio, admin, auth, api, discover, subscriptions, library, terms, privacy, help, become-creator, account, me, notifications, following, welcome`. Slugs are lowercase-normalized and unique case-insensitively.
 
 ## Non-negotiable invariants
 

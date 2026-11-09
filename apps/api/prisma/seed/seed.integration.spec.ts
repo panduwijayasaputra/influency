@@ -7,6 +7,23 @@ describe('demo seed', () => {
   const prisma = createTestPrisma();
   afterAll(() => prisma.$disconnect());
 
+  it('marks demo users as done with onboarding and a re-seed does not reset it', async () => {
+    await seed(prisma);
+    const where = { id: { in: Object.values(DEMO_USER_IDS) } };
+    expect(await prisma.user.count({ where: { ...where, onboardingCompletedAt: null } })).toBe(0);
+    await prisma.user.update({
+      where: { id: DEMO_USER_IDS.subscriberA },
+      data: { onboardingCompletedAt: null },
+    });
+    await seed(prisma);
+    const row = await prisma.user.findUniqueOrThrow({ where: { id: DEMO_USER_IDS.subscriberA } });
+    expect(row.onboardingCompletedAt).toBeNull(); // update never touches the flag
+    await prisma.user.update({
+      where: { id: DEMO_USER_IDS.subscriberA },
+      data: { onboardingCompletedAt: new Date() },
+    });
+  });
+
   it('creates the demo users, roles and creator profiles and is idempotent', async () => {
     await seed(prisma);
     await seed(prisma);

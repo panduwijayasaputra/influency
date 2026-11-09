@@ -7,6 +7,7 @@ import { type TopupOrder, type TopupStatus as Status } from '@influency/shared';
 import { Button } from '@/components/ui/button';
 import { fetchTopup } from '@/lib/api/wallet';
 import { formatKoin, formatRupiah } from '@/lib/format';
+import { recallReturnTo } from '@/lib/return-after-topup';
 
 const FAST_MS = 3000;
 const SLOW_MS = 10_000;
@@ -32,6 +33,7 @@ function Card({ children, tone = 'plain' }: { children: ReactNode; tone?: 'plain
 
 function Body({ order }: { order: TopupOrder }) {
   const status: Status = order.status;
+  const returnTo = status === 'CREDITED' ? recallReturnTo() : null; // only rendered after the client fetch
   if (status === 'CREDITED') {
     return (
       <Card tone="success">
@@ -40,7 +42,12 @@ function Body({ order }: { order: TopupOrder }) {
         {order.balanceCoins !== null && (
           <p className="text-sm">Saldo sekarang {formatKoin(order.balanceCoins)}</p>
         )}
-        <Button asChild className="mt-2 w-full">
+        {returnTo && (
+          <Button asChild className="mt-2 w-full">
+            <Link href={returnTo}>Lanjutkan</Link>
+          </Button>
+        )}
+        <Button asChild variant={returnTo ? 'outline' : 'default'} className="mt-2 w-full">
           <Link href="/wallet">Kembali ke Dompet</Link>
         </Button>
       </Card>

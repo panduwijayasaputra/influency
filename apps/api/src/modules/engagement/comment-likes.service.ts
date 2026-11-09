@@ -18,8 +18,9 @@ export class CommentLikesService {
     @Inject(ENV) private readonly env: Env,
   ) {}
 
-  like(postId: string, commentId: string, userId: string): Promise<CommentLikeResponse> {
-    return this.run(postId, commentId, userId, async (tx) => {
+  async like(postId: string, commentId: string, userId: string): Promise<CommentLikeResponse> {
+    let added = false;
+    const result = await this.run(postId, commentId, userId, async (tx) => {
       const { count } = await tx.commentLike.createMany({
         data: [{ commentId, userId }],
         skipDuplicates: true,
@@ -31,9 +32,22 @@ export class CommentLikesService {
           data: { likeCount: { increment: 1 } },
         });
         if (r.count === 0) throw new DomainError('NOT_FOUND');
+        added = true;
       }
       return true;
     });
+    // After commit; the key holds the liker, so unlike + like again doesn't notify twice.
+    if (added) {
+      await this.comments.notifyCommentAuthor({
+        type: 'COMMENT_LIKE',
+        postId,
+        authorOf: commentId,
+        commentId,
+        actorUserId: userId,
+        dedupeKey: `comment-like:${commentId}:${userId}`,
+      });
+    }
+    return result;
   }
 
   unlike(postId: string, commentId: string, userId: string): Promise<CommentLikeResponse> {

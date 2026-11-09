@@ -184,7 +184,14 @@ describe('publicPostDetailSchema', () => {
   });
 
   it('accepts a logged-in viewer and requires likeCount', () => {
-    const viewer = { liked: true, canLike: false, canReport: true };
+    const viewer = {
+      liked: true,
+      saved: true,
+      canLike: false,
+      canReport: true,
+      canTip: false,
+      subscribed: false,
+    };
     expect(publicPostDetailSchema.parse({ ...locked, viewer }).viewer).toEqual(viewer);
     expect(publicPostDetailSchema.safeParse({ ...locked, likeCount: undefined }).success).toBe(
       false,

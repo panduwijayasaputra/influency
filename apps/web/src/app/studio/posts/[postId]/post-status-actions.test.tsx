@@ -30,15 +30,9 @@ describe('PostStatusActions', () => {
     vi.clearAllMocks();
   });
 
-  it('publishes a draft and refreshes the page', async () => {
-    const fetchMock = stubFetch(new Response('{}', { status: 200 }));
+  it('offers no action on a draft: the editor publishes it', () => {
     render(<PostStatusActions post={post('DRAFT')} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Publikasikan' }));
-    await waitFor(() => expect(router.refresh).toHaveBeenCalled());
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/creators/me/posts/0190a000-0000-7000-8000-000000000001/publish',
-      expect.objectContaining({ method: 'POST', credentials: 'include' }),
-    );
+    expect(screen.queryByRole('button')).toBeNull();
   });
 
   it('shows the API message when an action is refused', async () => {

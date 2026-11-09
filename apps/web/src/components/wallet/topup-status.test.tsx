@@ -100,6 +100,17 @@ describe('TopupStatus', () => {
     window.history.replaceState(null, '', '/');
   });
 
+  it('offers Lanjutkan back to the page the user came from once credited', async () => {
+    sessionStorage.setItem('topup-return-to', '/ana/posts/p1');
+    mocked.mockResolvedValue(order('CREDITED', { balanceCoins: 45 }));
+    await show();
+    expect(screen.getByRole('link', { name: 'Lanjutkan' })).toHaveAttribute(
+      'href',
+      '/ana/posts/p1',
+    );
+    sessionStorage.clear();
+  });
+
   it('backs off after a minute and offers a reload after 15', async () => {
     mocked.mockResolvedValue(order('PENDING'));
     await show();

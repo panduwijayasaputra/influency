@@ -1,9 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { refreshOwnPublicProfile } from './actions';
 import { ProfileImageInput } from './profile-image-input';
 
 const router = vi.hoisted(() => ({ refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => router }));
+vi.mock('./actions', () => ({ refreshOwnPublicProfile: vi.fn(() => Promise.resolve()) }));
 
 function stubFetch(impl: () => Promise<Response>) {
   const fetchMock = vi.fn(impl);
@@ -48,6 +50,7 @@ describe('ProfileImageInput', () => {
     choose('Banner', file);
 
     await waitFor(() => expect(router.refresh).toHaveBeenCalled());
+    expect(refreshOwnPublicProfile).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('/api/v1/creators/me/banner');
     expect(init).toMatchObject({

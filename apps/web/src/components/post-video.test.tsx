@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { MediaAccessItem } from '@influency/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setAutoplayEnabled } from '@/lib/autoplay-preference';
 import { pauseAllVideos } from '@/lib/video-playback';
 import { formatDuration, PostVideo } from './post-video';
 
@@ -173,6 +174,19 @@ describe('PostVideo', () => {
     show(videoOf(container), 1);
     expect(play).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('button', { name: 'Putar video' })).toBeInTheDocument();
+  });
+
+  it('waits for a tap when autoplay is turned off in Pengaturan', async () => {
+    setAutoplayEnabled(false);
+    try {
+      const { container } = render(<PostVideo item={item()} />);
+      show(videoOf(container), 1);
+      expect(play).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('button', { name: 'Putar video' }));
+      await waitFor(() => expect(play).toHaveBeenCalledTimes(1));
+    } finally {
+      setAutoplayEnabled(true);
+    }
   });
 
   it('toggles sound and shows the duration', () => {

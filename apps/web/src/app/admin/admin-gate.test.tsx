@@ -12,9 +12,17 @@ vi.mock('next/navigation', () => ({
 }));
 
 const as = (roles: MeResponse['roles'] | null) =>
-  vi
-    .mocked(getCurrentUser)
-    .mockResolvedValue(roles && { id: 'u1', displayName: 'Ana', username: 'ana', roles });
+  vi.mocked(getCurrentUser).mockResolvedValue(
+    roles && {
+      id: 'u1',
+      displayName: 'Ana',
+      username: 'ana',
+      roles,
+      bio: null,
+      creatorSlug: null,
+      onboardingCompleted: true,
+    },
+  );
 
 describe('AdminGate', () => {
   it('redirects logged-out visitors to login, returning to /admin', async () => {

@@ -4,6 +4,7 @@ import { type MidtransNotification, verifyMidtransSignature } from '../../common
 import { PAYMENT_GATEWAY, type PaymentGateway } from '../../common/payment-gateway.js';
 import { PrismaService } from '../../common/prisma.service.js';
 import type { TopupOrder } from '../../generated/prisma/client.js';
+import { NotificationProducer } from '../notifications/notification-producer.service.js';
 import { WalletsService } from '../wallets/wallets.service.js';
 import {
   mapMidtransStatus,
@@ -37,6 +38,7 @@ export class TopupCreditService {
     private readonly wallets: WalletsService,
     @Inject(PAYMENT_GATEWAY) private readonly gateway: PaymentGateway,
     @Inject(ENV) private readonly env: Env,
+    private readonly notifications: NotificationProducer,
   ) {}
 
   /** Stores a payload before anything else (the same delivery twice keeps one row), then returns its id. */
@@ -150,6 +152,14 @@ export class TopupCreditService {
                 now,
               creditedAt: now,
             },
+          });
+          // Outbox row in the same transaction; it can never undo the credit (savepoint).
+          await this.notifications.notifyInTx(tx, {
+            userId: order.userId,
+            type: 'TOPUP_CREDITED',
+            dedupeKey: `topup:${order.id}`,
+            sourceId: order.id,
+            coins: order.coins,
           });
           return 'CREDITED';
         }

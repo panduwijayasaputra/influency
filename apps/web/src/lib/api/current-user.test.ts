@@ -13,7 +13,15 @@ vi.mock('next/headers', () => ({
     }),
 }));
 
-const USER = { id: 'u1', displayName: 'Ana', username: 'ana', roles: ['USER', 'CREATOR'] };
+const USER = {
+  id: 'u1',
+  displayName: 'Ana',
+  username: 'ana',
+  roles: ['USER', 'CREATOR'],
+  bio: null,
+  creatorSlug: null,
+  onboardingCompleted: true,
+};
 
 function stubFetch(response: Response) {
   const fetchMock = vi.fn(() => Promise.resolve(response));

@@ -8,7 +8,7 @@ import {
   studioMediaListSchema,
   studioMediaSchema,
 } from '@influency/shared';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { profileFields } from '../../../test/creator-profile.js';
 import { createFakeTelegram } from '../../../test/fake-telegram.js';
 import { createFakeVideoProvider } from '../../../test/fake-video-provider.js';
@@ -93,6 +93,11 @@ describe('studio post video', () => {
     );
     await app.init();
     await app.getHttpAdapter().getInstance().ready();
+  });
+
+  // One shared post per creator, and the limit is 5: every test starts with no media.
+  beforeEach(async () => {
+    await prisma.mediaAsset.deleteMany({ where: { postId: { in: [POSTS.a, POSTS.b] } } });
   });
 
   afterAll(async () => {

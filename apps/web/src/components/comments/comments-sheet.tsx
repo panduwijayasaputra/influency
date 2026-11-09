@@ -5,10 +5,10 @@ import { API_PREFIX, type PostCommentList, postCommentListSchema } from '@influe
 import Link from 'next/link';
 import type { PostCardCreator, PostCardPost } from '@/components/post-card/post-card';
 import { PostComments } from '@/components/comments/post-comments';
-import { PostUnlockSheet, SubscribeSheet } from '@/components/purchase-sheet';
+import { PostUnlockSheet } from '@/components/purchase-sheet';
+import { SubscribeSheet } from '@/components/subscription-sheet';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
-import { DEMO_SUBSCRIPTION } from '@/lib/demo';
 import { loginHref } from '@/lib/login-href';
 
 type State =
@@ -34,6 +34,7 @@ export function CommentsSheet({
   size,
   count,
   onCountChange,
+  onUnlocked,
 }: {
   post: PostCardPost;
   creator: PostCardCreator;
@@ -43,6 +44,8 @@ export function CommentsSheet({
   /** Shown in the title; the parent adjusts it through `onCountChange`. */
   count: number;
   onCountChange?: (delta: 1 | -1) => void;
+  /** After an unlock from the locked view, so the owner re-renders the post. */
+  onUnlocked?: () => void;
 }) {
   const locked = post.access === 'locked';
   const path = `/${creator.slug}/posts/${post.id}`;
@@ -69,7 +72,13 @@ export function CommentsSheet({
       className={size === 'compact' ? 'h-[40dvh]' : 'h-[85dvh]'}
     >
       {locked && (
-        <LockedComments post={post} creator={creator} path={path} guest={post.viewer === null} />
+        <LockedComments
+          post={post}
+          creator={creator}
+          path={path}
+          guest={post.viewer === null}
+          onUnlocked={onUnlocked}
+        />
       )}
       {!locked && state.kind === 'loading' && (
         <p className="text-sm text-muted-foreground">Memuat komentar…</p>
@@ -107,15 +116,18 @@ function LockedComments({
   creator,
   path,
   guest,
+  onUnlocked,
 }: {
   post: PostCardPost;
   creator: PostCardCreator;
   path: string;
   guest: boolean;
+  onUnlocked?: () => void;
 }) {
   const unlock = `Buka post · ${post.offer?.priceCoins ?? 0} Koin`;
-  const { priceCoins, days } = DEMO_SUBSCRIPTION;
-  const subscribe = `Langganan · ${priceCoins} Koin / ${days} hari`;
+  // No plan known (Home feed) or none offered: no Langganan CTA.
+  const plan = creator.plan ?? null;
+  const subscribe = plan && `Langganan · ${plan.priceCoins} Koin / ${plan.durationDays} hari`;
   return (
     <div className="flex flex-col gap-3">
       <div>
@@ -129,25 +141,34 @@ function LockedComments({
           <Button asChild className="h-12">
             <Link href={loginHref(path)}>{unlock}</Link>
           </Button>
-          <Button asChild variant="outline" className="h-12">
-            <Link href={loginHref(path)}>{subscribe}</Link>
-          </Button>
+          {subscribe && (
+            <Button asChild variant="outline" className="h-12">
+              <Link href={loginHref(path)}>{subscribe}</Link>
+            </Button>
+          )}
         </>
       ) : (
         <>
           <PostUnlockSheet
             post={post}
             creatorName={creator.displayName}
+            returnPath={path}
+            onUnlocked={() => onUnlocked?.()}
             trigger={<Button className="h-12">{unlock}</Button>}
           />
-          <SubscribeSheet
-            creatorName={creator.displayName}
-            trigger={
-              <Button variant="outline" className="h-12">
-                {subscribe}
-              </Button>
-            }
-          />
+          {plan && (
+            <SubscribeSheet
+              slug={creator.slug}
+              creatorName={creator.displayName}
+              plan={plan}
+              returnPath={path}
+              trigger={
+                <Button variant="outline" className="h-12">
+                  {subscribe}
+                </Button>
+              }
+            />
+          )}
         </>
       )}
       <p className="text-xs text-muted-foreground">

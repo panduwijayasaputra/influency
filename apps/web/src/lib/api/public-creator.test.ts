@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { API_ORIGIN } from './origin';
 import { getPublicCreator } from './public-creator';
 
-vi.mock('next/cache', () => ({ cacheLife: vi.fn() }));
+vi.mock('next/cache', () => ({ cacheLife: vi.fn(), cacheTag: vi.fn() }));
 
 const CREATOR = {
   slug: 'ana',

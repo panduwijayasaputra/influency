@@ -1,5 +1,7 @@
 'use client';
 
+import { Plus } from 'lucide-react';
+import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Tabs } from 'radix-ui';
 import type { PublicPost } from '@influency/shared';
@@ -9,13 +11,31 @@ import { PostGrid } from '@/components/post-grid/post-grid';
 const TRIGGER =
   'min-h-11 text-sm font-bold text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=active]:text-foreground data-[state=active]:shadow-[inset_0_-2px_0_var(--brand)]';
 
-/** Postingan / Grid tabs (US-011). The tab lives in `?tab=grid` so it survives a reload; only the open tab is mounted. */
+/** Owner-only entry to the studio editor (creator-studio US-054). */
+export function NewPostLink() {
+  return (
+    <Link
+      href="/studio/posts/new"
+      className="mx-5 my-3 flex h-12 items-center justify-center gap-2 rounded-[14px] bg-primary text-sm font-bold text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+    >
+      <Plus aria-hidden className="size-5" />
+      Post Baru
+    </Link>
+  );
+}
+
+/**
+ * Postingan / Grid tabs (US-011). The tab lives in `?tab=grid` so it survives a reload; only the open tab is mounted.
+ * `isOwner` (UX only; the studio guards decide) adds "Post Baru" and an "Edit" item on every card.
+ */
 export function CreatorContent({
   posts,
   creator,
+  isOwner = false,
 }: {
   posts: PublicPost[];
   creator: PostCardCreator;
+  isOwner?: boolean;
 }) {
   const tab = useSearchParams().get('tab') === 'grid' ? 'grid' : 'posts';
   const pathname = usePathname();
@@ -36,8 +56,14 @@ export function CreatorContent({
         </Tabs.Trigger>
       </Tabs.List>
       <Tabs.Content value="posts" className="-mx-5 flex flex-col divide-y">
+        {isOwner && <NewPostLink />}
         {posts.map((post) => (
-          <PostCard key={post.id} post={post} creator={creator} />
+          <PostCard
+            key={post.id}
+            post={post}
+            creator={creator}
+            editHref={isOwner ? `/studio/posts/${post.id}` : undefined}
+          />
         ))}
       </Tabs.Content>
       <Tabs.Content value="grid" className="-mx-5">

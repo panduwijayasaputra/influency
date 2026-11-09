@@ -16,6 +16,7 @@ import {
   type StudioMedia,
 } from '@influency/shared';
 import { DomainError } from '../../common/domain-error.js';
+import { MEDIA_ORDER } from '../../common/media-order.js';
 import { ENV, type Env } from '../../common/env.js';
 import { detectImageType } from '../../common/image-type.js';
 import {
@@ -94,6 +95,11 @@ export class PostMediaService {
               expiresInSeconds: ttl,
             });
           }
+          // The new item goes last. Under the post-row lock, so two uploads can never share a position.
+          const { _max } = await tx.mediaAsset.aggregate({
+            where: { postId },
+            _max: { position: true },
+          });
           return tx.mediaAsset.create({
             data: {
               postId,
@@ -102,6 +108,7 @@ export class PostMediaService {
               contentType: input.contentType,
               byteSize: input.byteSize,
               uploadExpiresAt: new Date(now.getTime() + ttl * 1000),
+              position: (_max.position ?? -1) + 1,
             },
           });
         },
@@ -207,9 +214,45 @@ export class PostMediaService {
     // In-flight PENDING_UPLOAD rows stay hidden; failed ones are listed so the creator can remove or retry them.
     const rows = await this.prisma.mediaAsset.findMany({
       where: { postId, status: { in: ['READY', 'PROCESSING', 'REJECTED'] } },
-      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      orderBy: MEDIA_ORDER,
     });
     return rows.map(toStudioMedia);
+  }
+
+  /**
+   * Sets the order of a draft's media. Under the post-row lock (the same one uploads and deletes take), so an upload
+   * can't slip in between the check and the write. Every item the studio list shows must be listed; an id that is not
+   * this post's (foreign or unknown) or a repeated id is refused. In-flight uploads the list hides may be left out:
+   * they follow the listed items.
+   */
+  async reorder(
+    creatorProfileId: string,
+    postId: string,
+    mediaIds: string[],
+  ): Promise<StudioMedia[]> {
+    const invalid = () =>
+      new DomainError('VALIDATION_FAILED', {
+        issues: [{ path: 'mediaIds', message: 'Urutan media tidak sesuai.' }],
+      });
+    await this.prisma.$transaction(async (tx) => {
+      await lockEditablePost(tx, creatorProfileId, postId);
+      const rows = await tx.mediaAsset.findMany({
+        where: { postId },
+        orderBy: MEDIA_ORDER,
+        select: { id: true, status: true },
+      });
+      const known = new Set(rows.map((r) => r.id));
+      const listed = new Set(mediaIds);
+      if (listed.size !== mediaIds.length) throw invalid();
+      if (mediaIds.some((id) => !known.has(id))) throw invalid();
+      const hidden = (status: string) => status === 'PENDING_UPLOAD';
+      if (rows.some((r) => !hidden(r.status) && !listed.has(r.id))) throw invalid();
+      const order = [...mediaIds, ...rows.filter((r) => !listed.has(r.id)).map((r) => r.id)];
+      for (const [position, id] of order.entries()) {
+        await tx.mediaAsset.update({ where: { id }, data: { position } });
+      }
+    });
+    return this.list(creatorProfileId, postId);
   }
 
   /** Owner preview: the bytes of a READY image, typed by the detected (stored) content type. Video playback is US-021. */

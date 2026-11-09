@@ -105,6 +105,9 @@ describe('GET /auth/me', () => {
       displayName: 'Me Plain',
       username: null,
       roles: ['USER'],
+      bio: null,
+      creatorSlug: null,
+      onboardingCompleted: false,
     });
   });
 
@@ -129,6 +132,24 @@ describe('GET /auth/me', () => {
 
   it('does not grant CREATOR for a pending profile', async () => {
     expect((await me(TOKENS.pending)).json()).toMatchObject({ roles: ['USER'] });
+  });
+
+  it('returns creatorSlug only for an APPROVED creator profile', async () => {
+    expect((await me(TOKENS.creatorAdmin)).json()).toMatchObject({
+      creatorSlug: 'me-spec-creator',
+    });
+    expect((await me(TOKENS.pending)).json()).toMatchObject({ creatorSlug: null });
+    expect((await me(TOKENS.plain)).json()).toMatchObject({ creatorSlug: null });
+  });
+
+  it('returns the bio, and the database refuses one over 500 characters', async () => {
+    await prisma.user.update({ where: { id: PLAIN }, data: { bio: 'Halo' } });
+    expect((await me(TOKENS.plain)).json()).toMatchObject({ bio: 'Halo' });
+    await expect(
+      prisma.user.update({ where: { id: PLAIN }, data: { bio: 'x'.repeat(501) } }),
+    ).rejects.toThrow();
+    await prisma.user.update({ where: { id: PLAIN }, data: { bio: 'x'.repeat(500) } });
+    await prisma.user.update({ where: { id: PLAIN }, data: { bio: null } });
   });
 
   it('reflects DB role changes on the next request with the same cookie', async () => {

@@ -110,10 +110,16 @@ export type PublicMedia = z.infer<typeof publicMediaSchema>;
 /** The signed-in viewer's state on a post; null = anonymous. */
 export const publicPostViewerSchema = z.object({
   liked: z.boolean(),
+  /** The viewer saved this post (Simpan). Private; grants no access. */
+  saved: z.boolean(),
   /** The server-side like rule: published, and access or PREMIUM_LIKES_WITHOUT_ACCESS. */
   canLike: z.boolean(),
   /** Published and not the viewer's own post (US-042). */
   canReport: z.boolean(),
+  /** Server rule: a published premium post the viewer has access to and does not own. US-039 narrows it to paid access. */
+  canTip: z.boolean(),
+  /** The viewer has an active subscription period with this post's creator (Unlock sheet disclosure). */
+  subscribed: z.boolean(),
 });
 
 /** Public feed item, viewer-aware (US-008). Safe preview only: never media ids, keys, provider ids or original URLs. */
@@ -174,3 +180,7 @@ export type PublicPostDetail = z.infer<typeof publicPostDetailSchema>;
 /** PUT / DELETE /posts/:id/like (US-051). */
 export const postLikeResponseSchema = z.object({ liked: z.boolean(), likeCount: z.int() });
 export type PostLikeResponse = z.infer<typeof postLikeResponseSchema>;
+
+/** PUT / DELETE /posts/:id/save (user-area US-044). Private: no count is ever exposed. */
+export const postSaveResponseSchema = z.object({ saved: z.boolean() });
+export type PostSaveResponse = z.infer<typeof postSaveResponseSchema>;

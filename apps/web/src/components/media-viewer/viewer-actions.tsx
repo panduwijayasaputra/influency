@@ -6,7 +6,7 @@ import { Share2 } from 'lucide-react';
 import { ShareButton } from '@/app/(public)/[creatorSlug]/share-button';
 import { LikeButton } from '@/components/like-button';
 import type { PostCardCreator, PostCardPost } from '@/components/post-card/post-card';
-import { useToast } from '@/components/ui/toast';
+import { TipSheet } from '@/components/tip-sheet';
 import { loginHref } from '@/lib/login-href';
 
 const BUTTON =
@@ -22,7 +22,6 @@ type Props = {
 
 /** Suka · Komentar · Bagikan · Kirim Tip under the full-screen media (US-013). */
 export function ViewerActions({ post, creator, like, onLikeChange, onOpenComments }: Props) {
-  const toast = useToast();
   const postHref = `/${creator.slug}/posts/${post.id}`;
   return (
     <div
@@ -59,10 +58,19 @@ export function ViewerActions({ post, creator, like, onLikeChange, onOpenComment
           className={BUTTON}
         />
       )}
-      <button type="button" onClick={() => toast('Segera hadir')} className={BUTTON}>
-        <Coins aria-hidden className="size-5" />
-        Kirim Tip
-      </button>
+      {post.viewer?.canTip && (
+        <TipSheet
+          creator={creator}
+          postId={post.id}
+          returnPath={postHref}
+          trigger={
+            <button type="button" className={BUTTON}>
+              <Coins aria-hidden className="size-5" />
+              Kirim Tip
+            </button>
+          }
+        />
+      )}
     </div>
   );
 }
