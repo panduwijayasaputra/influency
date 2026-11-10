@@ -259,11 +259,16 @@ describe('GET /discover/videos', () => {
   });
 
   it('never returns provider video ids or premium/hidden posts', async () => {
-    const body = (await get()).body;
+    const response = (await get()).json<{ items: DiscoverVideo[] }>();
+    const body = JSON.stringify(response);
     for (const uid of videoUids) expect(body).not.toContain(uid);
     for (const key of ['premium', 'hidden', 'draft', 'archived', 'removed']) {
       expect(body).not.toContain(ids[key]!);
     }
-    expect(body).not.toMatch(/videoUid|objectKey|media-access|https?:\/\//);
+    const media = response.items.flatMap((item) => item.media);
+    for (const item of media) {
+      expect(Object.keys(item).sort()).toEqual(['durationSeconds', 'kind']);
+    }
+    expect(JSON.stringify(media)).not.toMatch(/videoUid|objectKey|media-access|https?:\/\//);
   });
 });
